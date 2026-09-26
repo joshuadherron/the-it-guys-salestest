@@ -16,3 +16,5 @@ document.addEventListener('click',async e=>{const a=e.target.closest('a');if(a&&
 }
 
 document.querySelector('.print-button')?.addEventListener('click',()=>window.print());
+
+const clientStatus=document.querySelector('[data-client-status]');if(clientStatus){const refresh=async()=>{try{const response=await fetch(`/prospects/${clientStatus.dataset.clientStatus}/sharepoint-status`);const data=await response.json();if(!response.ok)throw new Error(data.error);clientStatus.replaceChildren();if(data.client){for(const [key,value] of Object.entries(data.client)){const p=document.createElement('p');p.textContent=`${key}: ${value}`;clientStatus.append(p);}}else clientStatus.textContent='No linked SharePoint client yet.';for(const request of data.requests){const article=document.querySelector(`[data-request="${request.id}"]`);if(article){article.querySelector('.request-status').textContent=request.status;article.querySelector('.request-plain').textContent=request.plain;article.querySelector('.request-raw').textContent=request.result_message||'';}}}catch(e){clientStatus.textContent=e.message;}};refresh();setInterval(()=>{if(!document.hidden)refresh();},30000);}
