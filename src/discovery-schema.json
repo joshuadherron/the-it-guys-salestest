@@ -1,0 +1,568 @@
+[
+  {
+    "id": "Q1.1",
+    "label": "Business name",
+    "wording": "\"What's the business called?\" · Free text · MVD REQUIRED",
+    "section": 1,
+    "type": "text",
+    "required": true
+  },
+  {
+    "id": "Q1.2a",
+    "label": "Contact name",
+    "wording": "asked with Q1.2b: \"Who am I speaking with, and what's your role there?\" · free text · MVD REQUIRED",
+    "section": 1,
+    "type": "text",
+    "required": true
+  },
+  {
+    "id": "Q1.2b",
+    "label": "Contact role",
+    "wording": "free text · DISCOVERY OPTIONAL",
+    "section": 1,
+    "type": "text",
+    "required": false
+  },
+  {
+    "id": "Q1.3",
+    "label": "Phone",
+    "wording": "\"Best phone number to reach you?\" · Phone · MVD REQUIRED (at least one of Q1.3/Q1.4)",
+    "section": 1,
+    "type": "tel",
+    "required": true
+  },
+  {
+    "id": "Q1.4",
+    "label": "Email",
+    "wording": "\"Best email for you?\" · Email · MVD REQUIRED (at least one of Q1.3/Q1.4)",
+    "section": 1,
+    "type": "email",
+    "required": true
+  },
+  {
+    "id": "Q1.5",
+    "label": "Primary location",
+    "wording": "\"Where's your main office located?\" · Free text (city/state) · MVD REQUIRED",
+    "section": 1,
+    "type": "text",
+    "required": true
+  },
+  {
+    "id": "Q1.6",
+    "label": "Industry",
+    "wording": "\"What kind of business is this?\" · single-select: Professional services, Medical/healthcare, Legal, Retail, Construction/trades, Manufacturing, Nonprofit, Government/municipal, Financial services, Hospitality, Other (+free text) · DISCOVERY OPTIONAL",
+    "section": 1,
+    "type": "select",
+    "required": false,
+    "options": [
+      "Professional services",
+      "Medical/healthcare",
+      "Legal",
+      "Retail",
+      "Construction/trades",
+      "Manufacturing",
+      "Nonprofit",
+      "Government/municipal",
+      "Financial services",
+      "Hospitality",
+      "Other"
+    ]
+  },
+  {
+    "id": "Q2.1",
+    "label": "Employee count",
+    "wording": "\"Roughly how many people work there?\" · Number · MVD REQUIRED",
+    "section": 2,
+    "type": "number",
+    "required": true
+  },
+  {
+    "id": "Q2.2",
+    "label": "Computer count",
+    "wording": "\"About how many computers does the business use day-to-day?\" · Number · MVD REQUIRED",
+    "section": 2,
+    "type": "number",
+    "required": true
+  },
+  {
+    "id": "Q2.3",
+    "label": "Integration-user count",
+    "wording": "\"About how many people need their own company email address or login?\" · Same as employee count / Different (number) / Not sure · MVD REQUIRED",
+    "section": 2,
+    "type": "select",
+    "required": true,
+    "options": [
+      "Same as employee count",
+      "Different"
+    ],
+    "follow": {
+      "when": "Different",
+      "type": "number",
+      "label": "Different (number)"
+    }
+  },
+  {
+    "id": "Q2.4",
+    "label": "Locations",
+    "wording": "\"Do you operate out of more than one location?\" · Yes/No → if Yes \"How many?\" · MVD REQUIRED · Flag FLAG-MULTI-LOCATION if >1",
+    "section": 2,
+    "type": "select",
+    "required": true,
+    "options": [
+      "Yes",
+      "No"
+    ],
+    "follow": {
+      "when": "Yes",
+      "type": "number",
+      "label": "How many?"
+    }
+  },
+  {
+    "id": "Q2.5",
+    "label": "Work pattern",
+    "wording": "\"Is everyone on-site, or does some/all of the team work remotely?\" · Everyone on-site / Some remote / Fully remote / Not sure · DISCOVERY OPTIONAL",
+    "section": 2,
+    "type": "select",
+    "required": false,
+    "options": [
+      "Everyone on-site",
+      "Some remote",
+      "Fully remote"
+    ]
+  },
+  {
+    "id": "Q2.6",
+    "label": "Contractors",
+    "wording": "\"Any contractors or outside workers who need company email or system access?\" · Yes/No → number · DISCOVERY OPTIONAL · FLAG-CONTRACTORS if Yes",
+    "section": 2,
+    "type": "select",
+    "required": false,
+    "options": [
+      "Yes",
+      "No"
+    ],
+    "follow": {
+      "when": "Yes",
+      "type": "number",
+      "label": "number"
+    }
+  },
+  {
+    "id": "Q2.7",
+    "label": "Personal-device use",
+    "wording": "\"Does anyone use their own personal phone or computer for company work?\" · Yes / No / Not sure; if Yes \"Is that mostly phones, computers, or both?\" · DISCOVERY OPTIONAL · FLAG-BYOD-MOBILE / FLAG-PERSONAL-COMPUTERS-BUSINESS",
+    "section": 2,
+    "type": "select",
+    "required": false,
+    "options": [
+      "Yes",
+      "No"
+    ],
+    "follow": {
+      "when": "Yes",
+      "type": "devices",
+      "label": "Is that mostly phones, computers, or both?"
+    }
+  },
+  {
+    "id": "Q2.8",
+    "label": "Hardware replacement awareness",
+    "wording": "\"Are any of those computers old, unreliable, or likely to be replaced as part of this project?\" · Yes / No / Not sure; if Yes \"About how many?\" · DISCOVERY OPTIONAL · FLAG-HARDWARE-REPLACEMENT (customer-reported only; never implies replacement is necessary)",
+    "section": 2,
+    "type": "select",
+    "required": false,
+    "options": [
+      "Yes",
+      "No"
+    ],
+    "follow": {
+      "when": "Yes",
+      "type": "number",
+      "label": "About how many?"
+    }
+  },
+  {
+    "id": "Q2.9",
+    "label": "Server awareness",
+    "wording": "\"Do you have any server or dedicated computer that other computers or business software depend on?\" Helper: \"No worries if you're not sure — a lot of owners aren't, and that's totally fine to tell me.\" · Yes / No / Not sure · DISCOVERY OPTIONAL · FLAG-SERVER-REPORTED if Yes",
+    "section": 2,
+    "type": "select",
+    "required": false,
+    "options": [
+      "Yes",
+      "No"
+    ]
+  },
+  {
+    "id": "Q3.1",
+    "label": "Who handles IT today",
+    "wording": "single-select: An employee who also does other jobs / A local IT company/MSP / A break-fix provider / Nobody in particular / We handle it ourselves / Other · MVD REQUIRED · FLAG-CURRENT-PROVIDER if MSP or break-fix",
+    "section": 3,
+    "type": "select",
+    "required": true,
+    "options": [
+      "An employee who also does other jobs",
+      "A local IT company/MSP",
+      "A break-fix provider",
+      "Nobody in particular",
+      "We handle it ourselves",
+      "Other"
+    ]
+  },
+  {
+    "id": "Q3.2",
+    "label": "Management style",
+    "wording": "(only if outside provider) — \"Does your current IT company actively manage and monitor the computers, or do they mostly help when something breaks?\" · Actively managed / Mostly called when needed / Not sure · DISCOVERY OPTIONAL",
+    "section": 3,
+    "type": "select",
+    "required": false,
+    "options": [
+      "Actively managed",
+      "Mostly called when needed"
+    ],
+    "condition": {
+      "id": "Q3.1",
+      "values": [
+        "A local IT company/MSP",
+        "A break-fix provider"
+      ]
+    }
+  },
+  {
+    "id": "Q3.3",
+    "label": "Reason for looking",
+    "wording": "\"What's making you look at a change now?\" · Free text · MVD REQUIRED",
+    "section": 3,
+    "type": "text",
+    "required": true
+  },
+  {
+    "id": "Q3.4",
+    "label": "Pain points",
+    "wording": "\"What's been frustrating? Pick everything that applies.\" · multi-select: Computer problems, Email issues, Slow/unreliable systems, Shared passwords, Unclear ownership, Poor support, Recurring outages, Files hard to find, Remote-work problems, Security concerns, Backup concerns, Old computers, Vendor coordination problems, No standard onboarding/offboarding, Growth outpacing IT, New location coming, Other · DISCOVERY OPTIONAL · FLAG-SHARED-PASSWORDS if selected",
+    "section": 3,
+    "type": "multi",
+    "required": false,
+    "options": [
+      "Computer problems",
+      "Email issues",
+      "Slow/unreliable systems",
+      "Shared passwords",
+      "Unclear ownership",
+      "Poor support",
+      "Recurring outages",
+      "Files hard to find",
+      "Remote-work problems",
+      "Security concerns",
+      "Backup concerns",
+      "Old computers",
+      "Vendor coordination problems",
+      "No standard onboarding/offboarding",
+      "Growth outpacing IT",
+      "New location coming",
+      "Other"
+    ]
+  },
+  {
+    "id": "Q3.5",
+    "label": "Biggest problem",
+    "wording": "\"If we could fix one thing first, what would it be?\" · Free text · MVD REQUIRED",
+    "section": 3,
+    "type": "text",
+    "required": true
+  },
+  {
+    "id": "Q3.6",
+    "label": "Transition considerations",
+    "wording": "(only if outside provider) — \"Anything we should know about transitioning away from them — contract, notice period, or access concerns?\" · free text · DISCOVERY OPTIONAL",
+    "section": 3,
+    "type": "text",
+    "required": false,
+    "condition": {
+      "id": "Q3.1",
+      "values": [
+        "A local IT company/MSP",
+        "A break-fix provider"
+      ]
+    }
+  },
+  {
+    "id": "Q4.1",
+    "label": "Ownership control matrix",
+    "wording": "\"Quick check on two things — who's actually in control of these right now?\" · DISCOVERY OPTIONAL",
+    "section": 4,
+    "type": "matrix",
+    "required": false
+  },
+  {
+    "id": "Q4.2",
+    "label": "Ownership follow-up",
+    "wording": "\"Do either of these apply?\" · multi-select: A former employee or past IT provider might still have access to something / Company email or files are stored in someone's personal Gmail/Microsoft account / Neither that I know of · DISCOVERY OPTIONAL · FLAG-FORMER-VENDOR-ACCESS, FLAG-PERSONAL-ACCOUNTS-BUSINESS",
+    "section": 4,
+    "type": "multi",
+    "required": false,
+    "options": [
+      "A former employee or past IT provider might still have access to something",
+      "Company email or files are stored in someone's personal Gmail/Microsoft account",
+      "Neither that I know of"
+    ]
+  },
+  {
+    "id": "Q4.3",
+    "label": "Email platform",
+    "wording": "Microsoft 365 / Google Workspace / Something else / Not sure · DISCOVERY OPTIONAL",
+    "section": 4,
+    "type": "select",
+    "required": false,
+    "options": [
+      "Microsoft 365",
+      "Google Workspace",
+      "Something else"
+    ]
+  },
+  {
+    "id": "Q4.4",
+    "label": "Where files live",
+    "wording": "multi-select: Individual computers, A server, A NAS/shared drive, Microsoft OneDrive, SharePoint/Teams, Google Drive, Dropbox, USB/external drives, Other, Not sure · DISCOVERY OPTIONAL · FLAG-SHARED-STORAGE if server or NAS",
+    "section": 4,
+    "type": "multi",
+    "required": false,
+    "options": [
+      "Individual computers",
+      "A server",
+      "A NAS/shared drive",
+      "Microsoft OneDrive",
+      "SharePoint/Teams",
+      "Google Drive",
+      "Dropbox",
+      "USB/external drives",
+      "Other"
+    ]
+  },
+  {
+    "id": "Q4.5",
+    "label": "Approximate data volume",
+    "wording": "optional number + GB/TB, or Not sure (default) · DISCOVERY OPTIONAL · FLAG-DATA-SIZE-UNKNOWN if Not sure. No size threshold; stated amounts are data only.",
+    "section": 4,
+    "type": "volume",
+    "required": false
+  },
+  {
+    "id": "Q4.6",
+    "label": "Irreplaceable data",
+    "wording": "\"Is there anything you absolutely could not afford to lose?\" · Free text · DISCOVERY OPTIONAL",
+    "section": 4,
+    "type": "text",
+    "required": false
+  },
+  {
+    "id": "Q4.7",
+    "label": "Backup belief",
+    "wording": "\"Do you believe your business data is backed up somewhere?\" · Yes / No / Not sure; if Yes \"What do you think is backed up, and by whom?\" · DISCOVERY OPTIONAL · FLAG-BACKUP-UNKNOWN if No or Not sure",
+    "section": 4,
+    "type": "select",
+    "required": false,
+    "options": [
+      "Yes",
+      "No"
+    ],
+    "follow": {
+      "when": "Yes",
+      "type": "text",
+      "label": "What do you think is backed up, and by whom?"
+    }
+  },
+  {
+    "id": "Q5.1",
+    "label": "Critical software",
+    "wording": "\"What software could your business not operate without tomorrow?\" Helper: \"Think QuickBooks, industry-specific software, scheduling, point-of-sale — anything the business truly depends on.\" · repeatable entries: application name, what it's used for, Cloud-based / Installed on computers or a server / Not sure · at least one entry or an explicit \"None that I can think of\" toggle · MVD REQUIRED · FLAG-LOB-APP per entry",
+    "section": 5,
+    "type": "apps",
+    "required": true
+  },
+  {
+    "id": "Q6.1",
+    "label": "MFA prompts",
+    "wording": "\"When employees sign in to email or company accounts, do they ever get a phone prompt or an authenticator app code?\" · Yes / No / Not sure · DISCOVERY OPTIONAL",
+    "section": 6,
+    "type": "select",
+    "required": false,
+    "options": [
+      "Yes",
+      "No"
+    ]
+  },
+  {
+    "id": "Q6.2",
+    "label": "Shared passwords",
+    "wording": "\"Do employees ever share logins or passwords with each other?\" · Yes / No / Not sure · DISCOVERY OPTIONAL · FLAG-SHARED-PASSWORDS if Yes",
+    "section": 6,
+    "type": "select",
+    "required": false,
+    "options": [
+      "Yes",
+      "No"
+    ]
+  },
+  {
+    "id": "Q6.3a",
+    "label": "Security history",
+    "wording": "\"Has the business had a known security incident or compromised account recently?\" · Yes / No / Not sure; if Yes \"Can you tell me briefly what happened?\" · DISCOVERY OPTIONAL · FLAG-SECURITY-HISTORY (does NOT hold progression)",
+    "section": 6,
+    "type": "select",
+    "required": false,
+    "options": [
+      "Yes",
+      "No"
+    ],
+    "follow": {
+      "when": "Yes",
+      "type": "text",
+      "label": "Can you tell me briefly what happened?"
+    }
+  },
+  {
+    "id": "Q6.3b",
+    "label": "Current concern",
+    "wording": "\"Is anything happening right now that makes you think an account, computer, or email system may currently be compromised?\" · Yes / No / Not sure; if Yes \"Can you tell me briefly what's concerning you?\" · DISCOVERY OPTIONAL · Only \"Yes\" fires URGENT SECURITY REVIEW (§5)",
+    "section": 6,
+    "type": "select",
+    "required": false,
+    "options": [
+      "Yes",
+      "No"
+    ],
+    "follow": {
+      "when": "Yes",
+      "type": "text",
+      "label": "Can you tell me briefly what's concerning you?"
+    }
+  },
+  {
+    "id": "Q6.4",
+    "label": "Internet/Wi-Fi",
+    "wording": "\"Any problems with internet reliability or Wi-Fi coverage — including recurring outages?\" · Yes / No / Not sure · DISCOVERY OPTIONAL",
+    "section": 6,
+    "type": "select",
+    "required": false,
+    "options": [
+      "Yes",
+      "No"
+    ]
+  },
+  {
+    "id": "Q6.5",
+    "label": "Network management knowledge",
+    "wording": "\"Do you know who manages your firewall/network equipment, and roughly how old it is?\" · Yes (free text) / No / Not sure · DISCOVERY OPTIONAL · FLAG-NETWORK-CONCERN if No, Not sure, Q6.4 = Yes, or the stated age suggests aging hardware",
+    "section": 6,
+    "type": "select",
+    "required": false,
+    "options": [
+      "Yes",
+      "No"
+    ],
+    "follow": {
+      "when": "Yes",
+      "type": "text",
+      "label": "Yes (free text)"
+    }
+  },
+  {
+    "id": "Q7.1",
+    "label": "Regulatory / sensitive data",
+    "wording": "\"Does your business handle information or contracts with special security, privacy, or compliance requirements?\" · multi-select: Patient/medical information; Government work or contracts; Financial-services regulation; Other named regulatory or contractual requirement; Legal/privileged or other sensitive/confidential client data (no specific regulation, but sensitive); We accept credit/debit card payments; None that I know of; Not sure; Other · DISCOVERY OPTIONAL",
+    "section": 7,
+    "type": "multi",
+    "required": false,
+    "options": [
+      "Patient/medical information",
+      "Government work or contracts",
+      "Financial-services regulation",
+      "Other named regulatory or contractual requirement",
+      "Legal/privileged or other sensitive/confidential client data (no specific regulation, but sensitive)",
+      "We accept credit/debit card payments",
+      "None that I know of",
+      "Other"
+    ]
+  },
+  {
+    "id": "Q7.2",
+    "label": "Desired timeframe",
+    "wording": "As soon as possible / Within a month / 1–3 months / No specific deadline / Other · MVD REQUIRED",
+    "section": 7,
+    "type": "select",
+    "required": true,
+    "options": [
+      "As soon as possible",
+      "Within a month",
+      "1–3 months",
+      "No specific deadline",
+      "Other"
+    ]
+  },
+  {
+    "id": "Q7.3",
+    "label": "Driving event",
+    "wording": "\"Is there a move, opening, or deadline driving the timing?\" · Yes (free text) / No · DISCOVERY OPTIONAL · FLAG-DEADLINE",
+    "section": 7,
+    "type": "select",
+    "required": false,
+    "options": [
+      "Yes",
+      "No"
+    ],
+    "follow": {
+      "when": "Yes",
+      "type": "text",
+      "label": "Yes (free text)"
+    }
+  },
+  {
+    "id": "Q7.4",
+    "label": "Downtime tolerance",
+    "wording": "Little to none / Some is fine / Evenings/weekends are fine / Not sure · DISCOVERY OPTIONAL · FLAG-DOWNTIME-INTOLERANT if Little to none",
+    "section": 7,
+    "type": "select",
+    "required": false,
+    "options": [
+      "Little to none",
+      "Some is fine",
+      "Evenings/weekends are fine"
+    ]
+  },
+  {
+    "id": "Q8.1a",
+    "label": "Project approver",
+    "wording": "asked with Q8.1b: \"Who can approve moving forward with a project like this?\" · free text · MVD REQUIRED",
+    "section": 8,
+    "type": "text",
+    "required": true
+  },
+  {
+    "id": "Q8.1b",
+    "label": "Billing contact",
+    "wording": "\"And who handles billing, if that's someone different?\" · free text + \"Billing contact same as approver\" toggle · DISCOVERY OPTIONAL",
+    "section": 8,
+    "type": "billing",
+    "required": false
+  },
+  {
+    "id": "Q8.2",
+    "label": "Services of interest",
+    "wording": "multi-select: Rebuilding the technology foundation (Business IT Integration), Ongoing IT support (Managed IT), New/replacement computers, Network/Wi-Fi improvements, Backup, Security, Microsoft 365 setup/cleanup, Other project work · DISCOVERY OPTIONAL · routing signal only",
+    "section": 8,
+    "type": "multi",
+    "required": false,
+    "options": [
+      "Rebuilding the technology foundation (Business IT Integration)",
+      "Ongoing IT support (Managed IT)",
+      "New/replacement computers",
+      "Network/Wi-Fi improvements",
+      "Backup",
+      "Security",
+      "Microsoft 365 setup/cleanup",
+      "Other project work"
+    ]
+  }
+]
