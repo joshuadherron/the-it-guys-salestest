@@ -14,3 +14,5 @@ const save=q=>{update(q);const cell=read(q);pending++;status.textContent='Saving
 for(const q of discovery.querySelectorAll('.question')){update(q);q.addEventListener('change',()=>save(q));q.querySelector('.add-app')?.addEventListener('click',()=>{const first=q.querySelector('.app-entry');const entry=first.cloneNode(true);entry.querySelectorAll('input').forEach(e=>e.value='');entry.querySelector('select').value='Not discussed';q.querySelector('.app-entries').append(entry);});q.addEventListener('click',e=>{if(e.target.matches('.remove-app')){if(q.querySelectorAll('.app-entry').length>1){e.target.closest('.app-entry').remove();save(q);}}});}
 document.addEventListener('click',async e=>{const a=e.target.closest('a');if(a&&(pending||failed)){e.preventDefault();await queue;if(!failed)location.href=a.href;}});window.addEventListener('beforeunload',e=>{if(pending||failed){e.preventDefault();e.returnValue='';}});
 }
+
+document.querySelector('.print-button')?.addEventListener('click',()=>window.print());
