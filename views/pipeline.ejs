@@ -1,1 +1,62 @@
-<%- include('header') %><div class="row"><div><p class="muted">RELATIONSHIPS → OPPORTUNITIES</p><h1><%= today?'Your next conversations':'Sales pipeline' %></h1><p><%= today?'Follow-ups, earliest first. Keep the next step clear.':'Track each opportunity from first contact to decision.' %></p></div><div><a class="button" href="/prospects/new">+ Quick-add prospect</a></div></div><form method="get"><div class="row"><input name="q" value="<%= search %>" placeholder="Search business or contact" aria-label="Search"><button>Search</button></div></form><% const groups=today?[{name:'Follow-ups',rows}]:stages.map(s=>({name:s.name,rows:rows.filter(p=>p.stage===s.name)}));for(const group of groups){ %><section class="card"><h2><%= group.name %> <span class="pill"><%= group.rows.length %></span></h2><% if(!group.rows.length){ %><p class="muted">No opportunities here yet.</p><% }for(const p of group.rows){ %><article class="card"><div class="row"><div><small><%= opportunity(p.id) %></small><h2><a href="/prospects/<%= p.id %>"><%= p.business_name %></a></h2><p><%= p.contact_name %> · <%= p.phone %></p></div><div><span class="pill"><%= p.stage %></span><p>Follow-up: <%= p.follow_up||'Not scheduled' %></p><% if(p.hold){ %><strong class="error">On Hold — Pending Josh Review</strong><% } %></div></div></article><% } %></section><% } %><%- include('footer') %>
+<%- include('header') %>
+<div class="row">
+<div>
+<p class="muted">RELATIONSHIPS → OPPORTUNITIES</p>
+<h1>
+<%= today?'Your next conversations':'Sales pipeline' %>
+</h1>
+<p>
+<%= today?'Follow-ups, earliest first. Keep the next step clear.':'Track each opportunity from first contact to decision.' %>
+</p>
+</div>
+<div>
+<a class="button" href="/prospects/new">+ Quick-add prospect</a>
+</div>
+</div>
+<form method="get">
+<div class="row">
+<input name="q" value="<%= search %>" placeholder="Search business or contact" aria-label="Search">
+<button>Search</button>
+</div>
+</form>
+<% const groups=today?[{name:'Follow-ups',rows}]:stages.map(s=>({name:s.name,rows:rows.filter(p=>p.stage===s.name)}));for(const group of groups){ %>
+<section class="card">
+<h2>
+<%= group.name %> <span class="pill">
+<%= group.rows.length %>
+</span>
+</h2>
+<% if(!group.rows.length){ %>
+<p class="muted">No opportunities here yet.</p>
+<% }for(const p of group.rows){ %>
+<article class="card">
+<div class="row">
+<div>
+<small>
+<%= opportunity(p.id) %>
+</small>
+<h2>
+<a href="/prospects/<%= p.id %>">
+<%= p.business_name %>
+</a>
+</h2>
+<p>
+<%= p.contact_name %> · <%= p.phone %>
+</p>
+</div>
+<div>
+<span class="pill">
+<%= p.stage %>
+</span>
+<p>Follow-up: <%= p.follow_up||'Not scheduled' %>
+</p>
+<% if(p.hold){ %>
+<strong class="error">On Hold — Pending Josh Review</strong>
+<% } %>
+</div>
+</div>
+</article>
+<% } %>
+</section>
+<% } %>
+<%- include('footer') %>

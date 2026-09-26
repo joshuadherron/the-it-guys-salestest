@@ -1,1 +1,35 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="csrf-token" content="<%= csrf %>"><title>The IT Guys · Sales</title><link rel="stylesheet" href="/app.css"><script src="/app.js" defer></script></head><body><div class="mode"><%= mode === 'live' ? 'LIVE — actions can send requests and email' : 'DRYRUN — requests and emails are stored for review' %></div><header><a class="brand" href="/">THE IT GUYS <span>Sales workspace</span></a><% if(user){ %><nav><a href="/">Today</a><a href="/pipeline">Pipeline</a><a href="/weekly">Weekly</a><a href="/import">Import / Export</a><% if(user.role==='owner'){ %><a href="/admin">Admin</a><% } %><form method="post" action="/auth/logout"><input type="hidden" name="_csrf" value="<%= csrf %>"><button>Sign out</button></form></nav><% } %></header><main>
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="csrf-token" content="<%= csrf %>">
+<title>The IT Guys · Sales</title>
+<link rel="stylesheet" href="/app.css">
+<script src="/app.js" defer>
+</script>
+</head>
+<body>
+<div class="mode">
+<%= mode === 'live' ? 'LIVE — actions can send requests and email' : 'DRYRUN — requests and emails are stored for review' %>
+</div>
+<header>
+<a class="brand" href="/">THE IT GUYS <span>Sales workspace</span>
+</a>
+<% if(user){ %>
+<nav>
+<a href="/">Today</a>
+<a href="/pipeline">Pipeline</a>
+<a href="/weekly">Weekly</a>
+<a href="/import">Import / Export</a>
+<% if(user.role==='owner'){ %>
+<a href="/admin">Admin</a>
+<% } %>
+<form method="post" action="/auth/logout">
+<input type="hidden" name="_csrf" value="<%= csrf %>">
+<button>Sign out</button>
+</form>
+</nav>
+<% } %>
+</header>
+<main>

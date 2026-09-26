@@ -1,1 +1,49 @@
-<section class="card"><h2>Josh's summary</h2><% const sections=[['Company & size',['Q1.1','Q1.2a','Q1.2b','Q1.6','Q2.1','Q2.2','Q2.3','Q2.4']],['Why they’re looking',['Q3.3']],['Biggest problem',['Q3.5']],['Major systems',['Q3.1','Q3.2','Q4.3','Q5.1','Q2.9','Q2.8']],['Timing',['Q7.2','Q7.3','Q7.4']],['Decision & billing',['Q8.1a','Q8.1b']]];for(const [title,ids] of sections){ %><h3><%= title %></h3><% for(const id of ids){const q=schema.find(q=>q.id===id);let cell=d.answers[id];if(id==='Q5.1'&&cell?.value?.entries)cell={...cell,value:{...cell.value,entries:cell.value.entries.slice(0,3)}}; %><p><strong><%= q.label %>:</strong> <%= format(cell) %></p><% }} %><h3>Major flags</h3><% for(const code of majorFlagOrder){if(d.flags.some(f=>f.code===code)){ %><p class="<%= code==='URGENT SECURITY REVIEW'?'hold':'pill' %>"><%= code %><%= code==='URGENT SECURITY REVIEW'?(p.hold?' — On Hold — Pending Josh Review':' — hold released by Josh'):'' %></p><% }} %><h3>Josh's verification list</h3><% for(const q of schema.filter(q=>['Q4.1','Q4.7','Q6.1','Q6.2','Q6.3a','Q6.3b','Q6.4','Q6.5'].includes(q.id))){if(d.answers[q.id]?.state!=='answered'||q.id==='Q4.1'){ %><p><%= q.label %>: <%= format(d.answers[q.id]) %></p><% }} %></section><details class="card"><summary>Full detail, all flags & unanswered inventory</summary><% for(const q of schema){ %><p><strong><%= q.id %> <%= q.label %>:</strong> <%= format(d.answers[q.id]) %></p><% } %><h3>Every flag</h3><% for(const f of d.flags){ %><p><%= f.code %> <%= f.detail||'' %></p><% } %><h3>Not sure / Not discussed inventory</h3><% for(const q of schema){if(d.answers[q.id]?.state!=='answered'){ %><p><%= q.id %> <%= q.label %>: <%= format(d.answers[q.id]) %></p><% }}for(const [row,cell] of Object.entries(d.answers['Q4.1']?.value||{})){if(cell.state!=='answered'){ %><p>Q4.1 <%= row %>: <%= format(cell) %></p><% }} %></details>
+<section class="card">
+<h2>Josh's summary</h2>
+<% const sections=[['Company & size',['Q1.1','Q1.2a','Q1.2b','Q1.6','Q2.1','Q2.2','Q2.3','Q2.4']],['Why they’re looking',['Q3.3']],['Biggest problem',['Q3.5']],['Major systems',['Q3.1','Q3.2','Q4.3','Q5.1','Q2.9','Q2.8']],['Major flags',[]],['Timing',['Q7.2','Q7.3','Q7.4']],['Decision & billing',['Q8.1a','Q8.1b']]];
+for(const [title,ids] of sections){ %>
+<h3>
+<%= title %>
+</h3>
+<% if(title==='Major flags'){for(const code of majorFlagOrder){if(d.flags.some(f=>f.code===code)){ %>
+<p class="<%= code==='URGENT SECURITY REVIEW'?'hold':'pill' %>">
+<%= code %>
+<%= code==='URGENT SECURITY REVIEW'?(p.hold?' — On Hold — Pending Josh Review':' — hold released by Josh'):'' %>
+</p>
+<% }}}for(const id of ids){const q=schema.find(q=>q.id===id);let cell=d.answers[id];if(['Q2.9','Q2.8'].includes(id)&&answer(d.answers,id)!=='Yes')continue;if(id==='Q5.1'&&cell?.value?.entries)cell={...cell,value:{...cell.value,entries:cell.value.entries.slice(0,3)}}; %>
+<p>
+<strong>
+<%= q.label %>:</strong> <%= format(cell) %>
+</p>
+<% }} %>
+<h3>Josh's verification list</h3>
+<% for(const q of schema.filter(q=>['Q4.1','Q4.7','Q6.1','Q6.2','Q6.3a','Q6.3b','Q6.4','Q6.5'].includes(q.id))){if(d.answers[q.id]?.state!=='answered'||q.id==='Q4.1'){ %>
+<p>
+<%= q.label %>: <%= format(d.answers[q.id]) %>
+</p>
+<% }} %>
+</section>
+<details class="card">
+<summary>Full detail, all flags & unanswered inventory</summary>
+<% for(const q of schema){ %>
+<p>
+<strong>
+<%= q.id %> <%= q.label %>:</strong> <%= format(d.answers[q.id]) %>
+</p>
+<% } %>
+<h3>Every flag</h3>
+<% for(const f of d.flags){ %>
+<p>
+<%= f.code %> <%= f.detail||'' %>
+</p>
+<% } %>
+<h3>Not sure / Not discussed inventory</h3>
+<% for(const q of schema){if(d.answers[q.id]?.state!=='answered'){ %>
+<p>
+<%= q.id %> <%= q.label %>: <%= format(d.answers[q.id]) %>
+</p>
+<% }}for(const [row,cell] of Object.entries(d.answers['Q4.1']?.value||{})){if(cell.state!=='answered'){ %>
+<p>Q4.1 <%= row %>: <%= format(cell) %>
+</p>
+<% }} %>
+</details>

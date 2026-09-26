@@ -1,1 +1,26 @@
-<%- include('header') %><h1>Weekly tracker</h1><form><label>Week containing</label><div class="row"><input type="date" name="week" value="<%= week %>"><button>View week</button></div></form><p>Week beginning <%= week %>. Metrics come from activity types and outcomes; imported historical totals are added separately.</p><div class="grid"><% for(const [i,k] of ['calls','conversations','qualified','proposals','recurring','hourly'].entries()){ %><section class="card"><h2><%= weeklyHeaders[i+1] %></h2><div class="metric"><%= Number(metrics[k])+Number(historical?.[k]||0) %></div><small><%= metrics[k] %> logged + <%= historical?.[k]||0 %> historical</small></section><% } %></div><a href="/export/weekly">Export weekly CSV</a><%- include('footer') %>
+<%- include('header') %>
+<h1>Weekly tracker</h1>
+<form>
+<label>Week containing</label>
+<div class="row">
+<input type="date" name="week" value="<%= week %>">
+<button>View week</button>
+</div>
+</form>
+<p>Week beginning <%= week %>. Metrics come from activity types and outcomes; imported historical totals are added separately.</p>
+<div class="grid">
+<% for(const [i,k] of ['calls','conversations','qualified','proposals','recurring','hourly'].entries()){ %>
+<section class="card">
+<h2>
+<%= weeklyHeaders[i+1] %>
+</h2>
+<div class="metric">
+<%= Number(metrics[k])+Number(historical?.[k]||0) %>
+</div>
+<small>
+<%= metrics[k] %> logged + <%= historical?.[k]||0 %> historical</small>
+</section>
+<% } %>
+</div>
+<a href="/export/weekly">Export weekly CSV</a>
+<%- include('footer') %>

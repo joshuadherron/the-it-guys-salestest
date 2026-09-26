@@ -1,1 +1,93 @@
-<%- include('header') %><p><a href="/prospects/<%= p.id %>"><%= p.opp %> · <%= p.business_name %></a></p><h1>BII internal worksheet</h1><p>Josh-approved commercial worksheet. Hardware quoted separately. All personal phones count as zero managed business devices.</p><% if(p.hold){ %><div class="hold">On Hold — Pending Josh Review. Quote actions are blocked.</div><% } %><form method="post" action="/prospects/<%= p.id %>/quotes" class="card"><input type="hidden" name="_csrf" value="<%= csrf %>"><fieldset <%= user.role!=='owner'||p.hold?'disabled':'' %>><legend>Counts — Josh confirms these before approval</legend><p>Discovery computer counts start under platform not yet assigned. Move devices into platform rows without counting them twice. Uncaptured counts start at 0 and require Josh's confirmation.</p><div class="grid"><% for(const [key,label] of [['users','Integration users'],['windows','Windows managed business devices'],['mac','Mac managed business devices'],['ios','Company iPhone/iPad managed devices'],['android','Company Android managed devices'],['unallocated','Managed business devices — platform not yet assigned'],['mailboxes','Straightforward mailbox migrations'],['dell','New Dell deployments (labor)'],['phones','Personal / BYOD phones — counted as 0'],['locations','Locations']]){ %><div><label><%= label %></label><input name="<%= key %>" type="number" min="0" max="100000" required value="<%= input[key] %>"></div><% } %></div><h2>Priced by Josh</h2><p>OWNER ONE-OFF — NOT STANDARD UNIT PRICE. Additional locations are never calculated as a percentage by this app.</p><% for(const [i,label] of oneOffItems.entries()){ %><div class="row"><label><input type="checkbox" name="oneoff_<%= i %>" value="yes" <%= input.oneOff?.[label]?.selected?'checked':'' %>> <%= label %></label><div><label>Priced by Josh — amount</label><input type="number" step="0.01" min="0" name="amount_<%= i %>" value="<%= input.oneOff?.[label]?.amount??'' %>"></div></div><% } %><label><input type="checkbox" name="confirmed" value="yes" <%= input.confirmed?'checked':'' %>> I have confirmed all counts, including zero values and devices counted once.</label></fieldset><button <%= p.hold?'disabled':'' %>><%= user.role==='owner'?'Save new draft':'Create draft from discovery for Josh' %></button></form><section class="card"><h2>Current calculation</h2><%- include('quote-lines',{lines:calculation.lines,total:calculation.total}) %><% if(calculation.pending.length){ %><p>Priced by Josh — amounts still required: <%= calculation.pending.join(', ') %>. Displayed total excludes these unresolved items.</p><% } %></section><% if(selected){ %><section class="card"><h2>Latest quote #<%= selected.id %> · <%= selected.status %></h2><p>Approved by: <%= selected.approved_by||'Not approved' %> <%= selected.approved_at||'' %></p><a href="/quotes/<%= selected.id %>/print">Printable internal worksheet</a><% if(user.role==='owner'&&selected.status==='Draft'){ %><form method="post" action="/quotes/<%= selected.id %>/approve"><input type="hidden" name="_csrf" value="<%= csrf %>"><h3>Pre-quote stop conditions</h3><p>Tick any condition that applies. Any tick blocks approval: targeted assessment first.</p><% for(const stop of stops){ %><label><input type="checkbox" name="stop_<%= stop.id %>" value="yes"> <%= stop.label %> · <%= stop.status %></label><% } %><label><input type="checkbox" name="reviewed" value="yes" required> I reviewed every stop condition.</label><button <%= p.hold?'disabled':'' %>>Approve quote</button></form><% }if(user.role==='owner'&&selected.status==='Approved'){ %><form method="post" action="/quotes/<%= selected.id %>/sent"><input type="hidden" name="_csrf" value="<%= csrf %>"><p>Only after manually sending the Quote/SOW from SharePoint:</p><button <%= p.hold?'disabled':'' %>>Mark Sent</button></form><% } %></section><% } %><details class="card"><summary>Quote history</summary><% for(const q of quotes){ %><p><a href="/quotes/<%= q.id %>/print">#<%= q.id %> · <%= q.status %> · $<%= Number(q.total).toFixed(2) %></a></p><% } %></details><%- include('footer') %>
+<%- include('header') %>
+<p>
+<a href="/prospects/<%= p.id %>">
+<%= p.opp %> · <%= p.business_name %>
+</a>
+</p>
+<h1>BII internal worksheet</h1>
+<p>Josh-approved commercial worksheet. Hardware quoted separately. All personal phones count as zero managed business devices.</p>
+<% if(p.hold){ %>
+<div class="hold">On Hold — Pending Josh Review. Quote actions are blocked.</div>
+<% } %>
+<form method="post" action="/prospects/<%= p.id %>/quotes" class="card">
+<input type="hidden" name="_csrf" value="<%= csrf %>">
+<fieldset <%= user.role!=='owner'||p.hold?'disabled':'' %>>
+<legend>Counts — Josh confirms these before approval</legend>
+<p>Discovery computer counts start under platform not yet assigned. Move devices into platform rows without counting them twice. Uncaptured counts start at 0 and require Josh's confirmation.</p>
+<div class="grid">
+<% for(const [key,label] of [['users','Integration users'],['windows','Windows managed business devices'],['mac','Mac managed business devices'],['ios','Company iPhone/iPad managed devices'],['android','Company Android managed devices'],['unallocated','Managed business devices — platform not yet assigned'],['mailboxes','Straightforward mailbox migrations'],['dell','New Dell deployments (labor)'],['phones','Personal / BYOD phones — counted as 0'],['locations','Locations']]){ %>
+<div>
+<label>
+<%= label %>
+</label>
+<input name="<%= key %>" type="number" min="0" max="100000" required value="<%= input[key] %>">
+</div>
+<% } %>
+</div>
+<h2>Priced by Josh</h2>
+<p>OWNER ONE-OFF — NOT STANDARD UNIT PRICE. Additional locations are never calculated as a percentage by this app.</p>
+<% for(const [i,label] of oneOffItems.entries()){ %>
+<div class="row">
+<label>
+<input type="checkbox" name="oneoff_<%= i %>" value="yes" <%= input.oneOff?.[label]?.selected?'checked':'' %>> <%= label %>
+</label>
+<div>
+<label>Priced by Josh — amount</label>
+<input type="number" step="0.01" min="0" name="amount_<%= i %>" value="<%= input.oneOff?.[label]?.amount??'' %>">
+</div>
+</div>
+<% } %>
+<label>
+<input type="checkbox" name="confirmed" value="yes" <%= input.confirmed?'checked':'' %>> I have confirmed all counts, including zero values and devices counted once.</label>
+</fieldset>
+<button <%= p.hold?'disabled':'' %>>
+<%= user.role==='owner'?'Save new draft':'Create draft from discovery for Josh' %>
+</button>
+</form>
+<section class="card">
+<h2>Current calculation</h2>
+<%- include('quote-lines',{lines:calculation.lines,total:calculation.total}) %>
+<% if(calculation.pending.length){ %>
+<p>Priced by Josh — amounts still required: <%= calculation.pending.join(', ') %>. Displayed total excludes these unresolved items.</p>
+<% } %>
+</section>
+<% if(selected){ %>
+<section class="card">
+<h2>Latest quote #<%= selected.id %> · <%= selected.status %>
+</h2>
+<p>Approved by: <%= selected.approved_by||'Not approved' %> <%= selected.approved_at||'' %>
+</p>
+<a href="/quotes/<%= selected.id %>/print">Printable internal worksheet</a>
+<% if(user.role==='owner'&&selected.status==='Draft'){ %>
+<form method="post" action="/quotes/<%= selected.id %>/approve">
+<input type="hidden" name="_csrf" value="<%= csrf %>">
+<h3>Pre-quote stop conditions</h3>
+<p>Tick any condition that applies. Any tick blocks approval: targeted assessment first.</p>
+<% for(const stop of stops){ %>
+<label>
+<input type="checkbox" name="stop_<%= stop.id %>" value="yes"> <%= stop.label %> · <%= stop.status %>
+</label>
+<% } %>
+<label>
+<input type="checkbox" name="reviewed" value="yes" required> I reviewed every stop condition.</label>
+<button <%= p.hold?'disabled':'' %>>Approve quote</button>
+</form>
+<% }if(user.role==='owner'&&selected.status==='Approved'){ %>
+<form method="post" action="/quotes/<%= selected.id %>/sent">
+<input type="hidden" name="_csrf" value="<%= csrf %>">
+<p>Only after manually sending the Quote/SOW from SharePoint:</p>
+<button <%= p.hold?'disabled':'' %>>Mark Sent</button>
+</form>
+<% } %>
+</section>
+<% } %>
+<details class="card">
+<summary>Quote history</summary>
+<% for(const q of quotes){ %>
+<p>
+<a href="/quotes/<%= q.id %>/print">#<%= q.id %> · <%= q.status %> · $<%= Number(q.total).toFixed(2) %>
+</a>
+</p>
+<% } %>
+</details>
+<%- include('footer') %>

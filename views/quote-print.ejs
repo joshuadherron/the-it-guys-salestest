@@ -1,1 +1,24 @@
-<%- include('header') %><h1>INTERNAL — BII worksheet</h1><p><%= p.opp %> · <%= p.business_name %> · Quote #<%= q.id %> · <%= q.status %></p><p>Approved by <%= q.approved_by||'Not approved' %> · <%= q.approved_at||'' %></p><p>This internal worksheet is not a customer-facing Quote/SOW.</p><section class="card"><h2>Inputs</h2><% for(const [key,value] of Object.entries(inputs)){if(key!=='oneOff'){ %><p><%= key %>: <%= value %></p><% }} %><h3>Owner one-offs</h3><% for(const [label,item] of Object.entries(inputs.oneOff||{})){if(item.selected){ %><p><%= label %>: <%= item.amount===null?'Priced by Josh':item.amount %> — OWNER ONE-OFF — NOT STANDARD UNIT PRICE</p><% }} %></section><%- include('quote-lines',{lines,total:q.total}) %><button class="print-button">Print internal worksheet</button><%- include('footer') %>
+<%- include('header') %>
+<h1>INTERNAL — BII worksheet</h1>
+<p>
+<%= p.opp %> · <%= p.business_name %> · Quote #<%= q.id %> · <%= q.status %>
+</p>
+<p>Approved by <%= q.approved_by||'Not approved' %> · <%= q.approved_at||'' %>
+</p>
+<p>This internal worksheet is not a customer-facing Quote/SOW.</p>
+<section class="card">
+<h2>Inputs</h2>
+<% for(const [key,value] of Object.entries(inputs)){if(key!=='oneOff'){ %>
+<p>
+<%= key %>: <%= value %>
+</p>
+<% }} %>
+<h3>Owner one-offs</h3>
+<% for(const [label,item] of Object.entries(inputs.oneOff||{})){if(item.selected){ %>
+<p>
+<%= label %>: <%= item.amount===null?'Priced by Josh':item.amount %> — OWNER ONE-OFF — NOT STANDARD UNIT PRICE</p>
+<% }} %>
+</section>
+<%- include('quote-lines',{lines,total:q.total}) %>
+<button class="print-button">Print internal worksheet</button>
+<%- include('footer') %>

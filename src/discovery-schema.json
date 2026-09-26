@@ -5,7 +5,8 @@
     "wording": "\"What's the business called?\" · Free text · MVD REQUIRED",
     "section": 1,
     "type": "text",
-    "required": true
+    "required": true,
+    "prompt": "What's the business called?"
   },
   {
     "id": "Q1.2a",
@@ -13,7 +14,8 @@
     "wording": "asked with Q1.2b: \"Who am I speaking with, and what's your role there?\" · free text · MVD REQUIRED",
     "section": 1,
     "type": "text",
-    "required": true
+    "required": true,
+    "prompt": "Who am I speaking with, and what's your role there?"
   },
   {
     "id": "Q1.2b",
@@ -21,7 +23,8 @@
     "wording": "free text · DISCOVERY OPTIONAL",
     "section": 1,
     "type": "text",
-    "required": false
+    "required": false,
+    "prompt": "Contact role"
   },
   {
     "id": "Q1.3",
@@ -29,7 +32,8 @@
     "wording": "\"Best phone number to reach you?\" · Phone · MVD REQUIRED (at least one of Q1.3/Q1.4)",
     "section": 1,
     "type": "tel",
-    "required": true
+    "required": true,
+    "prompt": "Best phone number to reach you?"
   },
   {
     "id": "Q1.4",
@@ -37,7 +41,8 @@
     "wording": "\"Best email for you?\" · Email · MVD REQUIRED (at least one of Q1.3/Q1.4)",
     "section": 1,
     "type": "email",
-    "required": true
+    "required": true,
+    "prompt": "Best email for you?"
   },
   {
     "id": "Q1.5",
@@ -45,7 +50,8 @@
     "wording": "\"Where's your main office located?\" · Free text (city/state) · MVD REQUIRED",
     "section": 1,
     "type": "text",
-    "required": true
+    "required": true,
+    "prompt": "Where's your main office located?"
   },
   {
     "id": "Q1.6",
@@ -66,7 +72,13 @@
       "Financial services",
       "Hospitality",
       "Other"
-    ]
+    ],
+    "follow": {
+      "when": "Other",
+      "type": "text",
+      "label": "Other (+free text)"
+    },
+    "prompt": "What kind of business is this?"
   },
   {
     "id": "Q2.1",
@@ -74,7 +86,8 @@
     "wording": "\"Roughly how many people work there?\" · Number · MVD REQUIRED",
     "section": 2,
     "type": "number",
-    "required": true
+    "required": true,
+    "prompt": "Roughly how many people work there?"
   },
   {
     "id": "Q2.2",
@@ -82,7 +95,8 @@
     "wording": "\"About how many computers does the business use day-to-day?\" · Number · MVD REQUIRED",
     "section": 2,
     "type": "number",
-    "required": true
+    "required": true,
+    "prompt": "About how many computers does the business use day-to-day?"
   },
   {
     "id": "Q2.3",
@@ -91,15 +105,13 @@
     "section": 2,
     "type": "select",
     "required": true,
-    "options": [
-      "Same as employee count",
-      "Different"
-    ],
+    "options": ["Same as employee count", "Different"],
     "follow": {
       "when": "Different",
       "type": "number",
       "label": "Different (number)"
-    }
+    },
+    "prompt": "About how many people need their own company email address or login?"
   },
   {
     "id": "Q2.4",
@@ -108,15 +120,13 @@
     "section": 2,
     "type": "select",
     "required": true,
-    "options": [
-      "Yes",
-      "No"
-    ],
+    "options": ["Yes", "No"],
     "follow": {
       "when": "Yes",
       "type": "number",
       "label": "How many?"
-    }
+    },
+    "prompt": "Do you operate out of more than one location?"
   },
   {
     "id": "Q2.5",
@@ -125,11 +135,8 @@
     "section": 2,
     "type": "select",
     "required": false,
-    "options": [
-      "Everyone on-site",
-      "Some remote",
-      "Fully remote"
-    ]
+    "options": ["Everyone on-site", "Some remote", "Fully remote"],
+    "prompt": "Is everyone on-site, or does some/all of the team work remotely?"
   },
   {
     "id": "Q2.6",
@@ -138,15 +145,13 @@
     "section": 2,
     "type": "select",
     "required": false,
-    "options": [
-      "Yes",
-      "No"
-    ],
+    "options": ["Yes", "No"],
     "follow": {
       "when": "Yes",
       "type": "number",
       "label": "number"
-    }
+    },
+    "prompt": "Any contractors or outside workers who need company email or system access?"
   },
   {
     "id": "Q2.7",
@@ -155,15 +160,13 @@
     "section": 2,
     "type": "select",
     "required": false,
-    "options": [
-      "Yes",
-      "No"
-    ],
+    "options": ["Yes", "No"],
     "follow": {
       "when": "Yes",
       "type": "devices",
       "label": "Is that mostly phones, computers, or both?"
-    }
+    },
+    "prompt": "Does anyone use their own personal phone or computer for company work?"
   },
   {
     "id": "Q2.8",
@@ -172,15 +175,13 @@
     "section": 2,
     "type": "select",
     "required": false,
-    "options": [
-      "Yes",
-      "No"
-    ],
+    "options": ["Yes", "No"],
     "follow": {
       "when": "Yes",
       "type": "number",
       "label": "About how many?"
-    }
+    },
+    "prompt": "Are any of those computers old, unreliable, or likely to be replaced as part of this project?"
   },
   {
     "id": "Q2.9",
@@ -189,10 +190,9 @@
     "section": 2,
     "type": "select",
     "required": false,
-    "options": [
-      "Yes",
-      "No"
-    ]
+    "options": ["Yes", "No"],
+    "prompt": "Do you have any server or dedicated computer that other computers or business software depend on?",
+    "helper": "No worries if you're not sure — a lot of owners aren't, and that's totally fine to tell me."
   },
   {
     "id": "Q3.1",
@@ -208,7 +208,8 @@
       "Nobody in particular",
       "We handle it ourselves",
       "Other"
-    ]
+    ],
+    "prompt": "Who handles IT today"
   },
   {
     "id": "Q3.2",
@@ -217,17 +218,12 @@
     "section": 3,
     "type": "select",
     "required": false,
-    "options": [
-      "Actively managed",
-      "Mostly called when needed"
-    ],
+    "options": ["Actively managed", "Mostly called when needed"],
     "condition": {
       "id": "Q3.1",
-      "values": [
-        "A local IT company/MSP",
-        "A break-fix provider"
-      ]
-    }
+      "values": ["A local IT company/MSP", "A break-fix provider"]
+    },
+    "prompt": "Does your current IT company actively manage and monitor the computers, or do they mostly help when something breaks?"
   },
   {
     "id": "Q3.3",
@@ -235,7 +231,8 @@
     "wording": "\"What's making you look at a change now?\" · Free text · MVD REQUIRED",
     "section": 3,
     "type": "text",
-    "required": true
+    "required": true,
+    "prompt": "What's making you look at a change now?"
   },
   {
     "id": "Q3.4",
@@ -262,7 +259,8 @@
       "Growth outpacing IT",
       "New location coming",
       "Other"
-    ]
+    ],
+    "prompt": "What's been frustrating? Pick everything that applies."
   },
   {
     "id": "Q3.5",
@@ -270,7 +268,8 @@
     "wording": "\"If we could fix one thing first, what would it be?\" · Free text · MVD REQUIRED",
     "section": 3,
     "type": "text",
-    "required": true
+    "required": true,
+    "prompt": "If we could fix one thing first, what would it be?"
   },
   {
     "id": "Q3.6",
@@ -281,11 +280,9 @@
     "required": false,
     "condition": {
       "id": "Q3.1",
-      "values": [
-        "A local IT company/MSP",
-        "A break-fix provider"
-      ]
-    }
+      "values": ["A local IT company/MSP", "A break-fix provider"]
+    },
+    "prompt": "Anything we should know about transitioning away from them — contract, notice period, or access concerns?"
   },
   {
     "id": "Q4.1",
@@ -293,7 +290,8 @@
     "wording": "\"Quick check on two things — who's actually in control of these right now?\" · DISCOVERY OPTIONAL",
     "section": 4,
     "type": "matrix",
-    "required": false
+    "required": false,
+    "prompt": "Quick check on two things — who's actually in control of these right now?"
   },
   {
     "id": "Q4.2",
@@ -306,7 +304,8 @@
       "A former employee or past IT provider might still have access to something",
       "Company email or files are stored in someone's personal Gmail/Microsoft account",
       "Neither that I know of"
-    ]
+    ],
+    "prompt": "Do either of these apply?"
   },
   {
     "id": "Q4.3",
@@ -315,11 +314,8 @@
     "section": 4,
     "type": "select",
     "required": false,
-    "options": [
-      "Microsoft 365",
-      "Google Workspace",
-      "Something else"
-    ]
+    "options": ["Microsoft 365", "Google Workspace", "Something else"],
+    "prompt": "Email platform"
   },
   {
     "id": "Q4.4",
@@ -338,7 +334,8 @@
       "Dropbox",
       "USB/external drives",
       "Other"
-    ]
+    ],
+    "prompt": "Where files live"
   },
   {
     "id": "Q4.5",
@@ -346,7 +343,8 @@
     "wording": "optional number + GB/TB, or Not sure (default) · DISCOVERY OPTIONAL · FLAG-DATA-SIZE-UNKNOWN if Not sure. No size threshold; stated amounts are data only.",
     "section": 4,
     "type": "volume",
-    "required": false
+    "required": false,
+    "prompt": "Approximate data volume"
   },
   {
     "id": "Q4.6",
@@ -354,7 +352,8 @@
     "wording": "\"Is there anything you absolutely could not afford to lose?\" · Free text · DISCOVERY OPTIONAL",
     "section": 4,
     "type": "text",
-    "required": false
+    "required": false,
+    "prompt": "Is there anything you absolutely could not afford to lose?"
   },
   {
     "id": "Q4.7",
@@ -363,15 +362,13 @@
     "section": 4,
     "type": "select",
     "required": false,
-    "options": [
-      "Yes",
-      "No"
-    ],
+    "options": ["Yes", "No"],
     "follow": {
       "when": "Yes",
       "type": "text",
       "label": "What do you think is backed up, and by whom?"
-    }
+    },
+    "prompt": "Do you believe your business data is backed up somewhere?"
   },
   {
     "id": "Q5.1",
@@ -379,7 +376,9 @@
     "wording": "\"What software could your business not operate without tomorrow?\" Helper: \"Think QuickBooks, industry-specific software, scheduling, point-of-sale — anything the business truly depends on.\" · repeatable entries: application name, what it's used for, Cloud-based / Installed on computers or a server / Not sure · at least one entry or an explicit \"None that I can think of\" toggle · MVD REQUIRED · FLAG-LOB-APP per entry",
     "section": 5,
     "type": "apps",
-    "required": true
+    "required": true,
+    "prompt": "What software could your business not operate without tomorrow?",
+    "helper": "Think QuickBooks, industry-specific software, scheduling, point-of-sale — anything the business truly depends on."
   },
   {
     "id": "Q6.1",
@@ -388,10 +387,8 @@
     "section": 6,
     "type": "select",
     "required": false,
-    "options": [
-      "Yes",
-      "No"
-    ]
+    "options": ["Yes", "No"],
+    "prompt": "When employees sign in to email or company accounts, do they ever get a phone prompt or an authenticator app code?"
   },
   {
     "id": "Q6.2",
@@ -400,10 +397,8 @@
     "section": 6,
     "type": "select",
     "required": false,
-    "options": [
-      "Yes",
-      "No"
-    ]
+    "options": ["Yes", "No"],
+    "prompt": "Do employees ever share logins or passwords with each other?"
   },
   {
     "id": "Q6.3a",
@@ -412,15 +407,13 @@
     "section": 6,
     "type": "select",
     "required": false,
-    "options": [
-      "Yes",
-      "No"
-    ],
+    "options": ["Yes", "No"],
     "follow": {
       "when": "Yes",
       "type": "text",
       "label": "Can you tell me briefly what happened?"
-    }
+    },
+    "prompt": "Has the business had a known security incident or compromised account recently?"
   },
   {
     "id": "Q6.3b",
@@ -429,15 +422,13 @@
     "section": 6,
     "type": "select",
     "required": false,
-    "options": [
-      "Yes",
-      "No"
-    ],
+    "options": ["Yes", "No"],
     "follow": {
       "when": "Yes",
       "type": "text",
       "label": "Can you tell me briefly what's concerning you?"
-    }
+    },
+    "prompt": "Is anything happening right now that makes you think an account, computer, or email system may currently be compromised?"
   },
   {
     "id": "Q6.4",
@@ -446,10 +437,8 @@
     "section": 6,
     "type": "select",
     "required": false,
-    "options": [
-      "Yes",
-      "No"
-    ]
+    "options": ["Yes", "No"],
+    "prompt": "Any problems with internet reliability or Wi-Fi coverage — including recurring outages?"
   },
   {
     "id": "Q6.5",
@@ -458,15 +447,13 @@
     "section": 6,
     "type": "select",
     "required": false,
-    "options": [
-      "Yes",
-      "No"
-    ],
+    "options": ["Yes", "No"],
     "follow": {
       "when": "Yes",
       "type": "text",
       "label": "Yes (free text)"
-    }
+    },
+    "prompt": "Do you know who manages your firewall/network equipment, and roughly how old it is?"
   },
   {
     "id": "Q7.1",
@@ -484,7 +471,8 @@
       "We accept credit/debit card payments",
       "None that I know of",
       "Other"
-    ]
+    ],
+    "prompt": "Does your business handle information or contracts with special security, privacy, or compliance requirements?"
   },
   {
     "id": "Q7.2",
@@ -499,7 +487,8 @@
       "1–3 months",
       "No specific deadline",
       "Other"
-    ]
+    ],
+    "prompt": "Desired timeframe"
   },
   {
     "id": "Q7.3",
@@ -508,15 +497,13 @@
     "section": 7,
     "type": "select",
     "required": false,
-    "options": [
-      "Yes",
-      "No"
-    ],
+    "options": ["Yes", "No"],
     "follow": {
       "when": "Yes",
       "type": "text",
       "label": "Yes (free text)"
-    }
+    },
+    "prompt": "Is there a move, opening, or deadline driving the timing?"
   },
   {
     "id": "Q7.4",
@@ -525,11 +512,8 @@
     "section": 7,
     "type": "select",
     "required": false,
-    "options": [
-      "Little to none",
-      "Some is fine",
-      "Evenings/weekends are fine"
-    ]
+    "options": ["Little to none", "Some is fine", "Evenings/weekends are fine"],
+    "prompt": "Downtime tolerance"
   },
   {
     "id": "Q8.1a",
@@ -537,7 +521,8 @@
     "wording": "asked with Q8.1b: \"Who can approve moving forward with a project like this?\" · free text · MVD REQUIRED",
     "section": 8,
     "type": "text",
-    "required": true
+    "required": true,
+    "prompt": "Who can approve moving forward with a project like this?"
   },
   {
     "id": "Q8.1b",
@@ -545,7 +530,8 @@
     "wording": "\"And who handles billing, if that's someone different?\" · free text + \"Billing contact same as approver\" toggle · DISCOVERY OPTIONAL",
     "section": 8,
     "type": "billing",
-    "required": false
+    "required": false,
+    "prompt": "And who handles billing, if that's someone different?"
   },
   {
     "id": "Q8.2",
@@ -563,6 +549,7 @@
       "Security",
       "Microsoft 365 setup/cleanup",
       "Other project work"
-    ]
+    ],
+    "prompt": "Services of interest"
   }
 ]

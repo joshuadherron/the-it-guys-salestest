@@ -1,1 +1,35 @@
-<%- include('header') %><h1><%= p.id?'Edit opportunity':'A new conversation' %></h1><p>Start with a business name. Add the rest as you learn it.</p><form method="post" action="/prospects<%= p.id?'/'+p.id:'' %>" class="card"><input type="hidden" name="_csrf" value="<%= csrf %>"><div class="grid"><% for(const [key,label] of fields){ %><div><label for="<%= key %>"><%= label %><%= key==='likely_tier'?' — signal for Josh, not a decision':'' %></label><% const opts=key==='call_frequency'?frequencies:key==='likely_tier'?tiers:key==='stage'?stages.filter(s=>!s.managed_only||p.service_lane==='Managed IT').map(s=>s.name):key==='owner'?owners.map(o=>o.email):null;if(opts){ %><select id="<%= key %>" name="<%= key %>"><% for(const option of opts){ %><option <%= (p[key]||(key==='stage'?'Prospecting':key==='owner'?'alanna@theitguys.us':'Not sure'))===option?'selected':'' %>><%= option %></option><% } %></select><% }else if(['notes','current_it','key_dependency'].includes(key)){ %><textarea id="<%= key %>" name="<%= key %>"><%= p[key]||'' %></textarea><% }else{ %><input id="<%= key %>" name="<%= key %>" value="<%= p[key]??'' %>" type="<%= ['first_contact','follow_up'].includes(key)?'date':key==='employee_count'?'number':key==='email'?'email':key==='phone'?'tel':'text' %>" <%= key==='business_name'?'required':'' %> min="0"><% } %></div><% } %></div><button>Save prospect</button></form><%- include('footer') %>
+<%- include('header') %>
+<h1>
+<%= p.id?'Edit opportunity':'A new conversation' %>
+</h1>
+<p>Start with a business name. Add the rest as you learn it.</p>
+<form method="post" action="/prospects<%= p.id?'/'+p.id:'' %>" class="card">
+<input type="hidden" name="_csrf" value="<%= csrf %>">
+<div class="grid">
+<% for(const [key,label] of fields){ %>
+<div>
+<label for="<%= key %>">
+<%= label %>
+<%= key==='likely_tier'?' — signal for Josh, not a decision':'' %>
+</label>
+<% const opts=key==='call_frequency'?frequencies:key==='likely_tier'?tiers:key==='stage'?stages.filter(s=>!s.managed_only||p.service_lane==='Managed IT').map(s=>s.name):key==='owner'?owners.map(o=>o.email):null;if(opts){ %>
+<select id="<%= key %>" name="<%= key %>">
+<% for(const option of opts){ %>
+<option <%= (p[key]||(key==='stage'?'Prospecting':key==='owner'?'alanna@theitguys.us':'Not sure'))===option?'selected':'' %>>
+<%= option %>
+</option>
+<% } %>
+</select>
+<% }else if(['notes','current_it','key_dependency'].includes(key)){ %>
+<textarea id="<%= key %>" name="<%= key %>">
+<%= p[key]||'' %>
+</textarea>
+<% }else{ %>
+<input id="<%= key %>" name="<%= key %>" value="<%= p[key]??'' %>" type="<%= ['first_contact','follow_up'].includes(key)?'date':key==='employee_count'?'number':key==='email'?'email':key==='phone'?'tel':'text' %>" <%= key==='business_name'?'required':'' %> min="0">
+<% } %>
+</div>
+<% } %>
+</div>
+<button>Save prospect</button>
+</form>
+<%- include('footer') %>

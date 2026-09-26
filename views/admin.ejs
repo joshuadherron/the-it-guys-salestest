@@ -1,1 +1,126 @@
-<%- include('header') %><h1>Owner administration</h1><section class="card"><h2>SharePoint connection</h2><p>Last checked: <%= schema.checkedAt||'Not checked' %></p><% for(const error of schema.errors){ %><p class="error"><%= error %></p><% }if(!schema.errors.length){ %><p>Required list columns and choices are present.</p><% } %><form method="post" action="/admin/check"><input type="hidden" name="_csrf" value="<%= csrf %>"><button>Check SharePoint connection</button></form><details><summary>Resolved schema and exact choice values</summary><pre><%= JSON.stringify(schema,null,2) %></pre></details></section><section class="card"><h2>Prices & included amounts</h2><p>Changing prices returns approved worksheets to Draft for review.</p><% for(const price of prices){ %><form method="post" action="/admin/prices" class="row"><input type="hidden" name="_csrf" value="<%= csrf %>"><input type="hidden" name="name" value="<%= price.name %>"><label><%= price.name %><input name="amount" type="number" min="0" step="0.01" value="<%= price.amount %>" required></label><button>Save</button></form><% } %></section><section class="card"><h2>Pipeline stage order</h2><% for(const stage of stages){ %><form method="post" action="/admin/stages" class="row"><input type="hidden" name="_csrf" value="<%= csrf %>"><input type="hidden" name="name" value="<%= stage.name %>"><label><%= stage.name %><%= stage.managed_only?' — Managed IT only':'' %><input type="number" min="0" name="sort_order" value="<%= stage.sort_order %>"></label><button>Save order</button></form><% } %></section><section class="card"><h2>Pre-quote stop conditions</h2><% for(const stop of [...stops,{id:'',label:'',status:'Owner confirmed'}]){ %><form method="post" action="/admin/stops"><input type="hidden" name="_csrf" value="<%= csrf %>"><input type="hidden" name="id" value="<%= stop.id %>"><label><%= stop.id?'Condition':'Add condition' %></label><input name="label" value="<%= stop.label %>" required><select name="status"><% for(const state of ['TODO-OWNER','Owner confirmed']){ %><option <%= state===stop.status?'selected':'' %>><%= state %></option><% } %></select><button>Save condition</button></form><% } %></section><section class="card"><h2>Allowlist</h2><% for(const entry of [...allowlist,{email:'',role:'sales',enabled:true}]){ %><form method="post" action="/admin/allowlist"><input type="hidden" name="_csrf" value="<%= csrf %>"><label>Tenant email</label><input name="email" type="email" value="<%= entry.email %>" required><select name="role"><option <%= entry.role==='sales'?'selected':'' %>>sales</option><option <%= entry.role==='owner'?'selected':'' %>>owner</option></select><label><input type="checkbox" name="enabled" value="yes" <%= entry.enabled?'checked':'' %>> Enabled</label><button>Save user</button></form><% } %></section><section class="card"><h2>Audit log — latest 200 events</h2><div class="table-wrap"><table><thead><tr><th>When</th><th>Actor</th><th>Action</th><th>Record</th></tr></thead><tbody><% for(const log of logs){ %><tr><td><%= log.created_at %></td><td><%= log.actor %></td><td><%= log.action %></td><td><%= log.entity %> <%= log.entity_id %></td></tr><% } %></tbody></table></div></section><%- include('footer') %>
+<%- include('header') %>
+<h1>Owner administration</h1>
+<section class="card">
+<h2>SharePoint connection</h2>
+<p>Last checked: <%= schema.checkedAt||'Not checked' %>
+</p>
+<% for(const error of schema.errors){ %>
+<p class="error">
+<%= error %>
+</p>
+<% }if(!schema.errors.length){ %>
+<p>Required list columns and choices are present.</p>
+<% } %>
+<form method="post" action="/admin/check">
+<input type="hidden" name="_csrf" value="<%= csrf %>">
+<button>Check SharePoint connection</button>
+</form>
+<details>
+<summary>Resolved schema and exact choice values</summary>
+<pre>
+<%= JSON.stringify(schema,null,2) %>
+</pre>
+</details>
+</section>
+<section class="card">
+<h2>Prices & included amounts</h2>
+<p>Changing prices returns approved worksheets to Draft for review.</p>
+<% for(const price of prices){ %>
+<form method="post" action="/admin/prices" class="row">
+<input type="hidden" name="_csrf" value="<%= csrf %>">
+<input type="hidden" name="name" value="<%= price.name %>">
+<label>
+<%= price.name %>
+<input name="amount" type="number" min="0" step="0.01" value="<%= price.amount %>" required>
+</label>
+<button>Save</button>
+</form>
+<% } %>
+</section>
+<section class="card">
+<h2>Pipeline stage order</h2>
+<% for(const stage of stages){ %>
+<form method="post" action="/admin/stages" class="row">
+<input type="hidden" name="_csrf" value="<%= csrf %>">
+<input type="hidden" name="name" value="<%= stage.name %>">
+<label>
+<%= stage.name %>
+<%= stage.managed_only?' — Managed IT only':'' %>
+<input type="number" min="0" name="sort_order" value="<%= stage.sort_order %>">
+</label>
+<button>Save order</button>
+</form>
+<% } %>
+</section>
+<section class="card">
+<h2>Pre-quote stop conditions</h2>
+<% for(const stop of [...stops,{id:'',label:'',status:'Owner confirmed'}]){ %>
+<form method="post" action="/admin/stops">
+<input type="hidden" name="_csrf" value="<%= csrf %>">
+<input type="hidden" name="id" value="<%= stop.id %>">
+<label>
+<%= stop.id?'Condition':'Add condition' %>
+</label>
+<input name="label" value="<%= stop.label %>" required>
+<select name="status">
+<% for(const state of ['TODO-OWNER','Owner confirmed']){ %>
+<option <%= state===stop.status?'selected':'' %>>
+<%= state %>
+</option>
+<% } %>
+</select>
+<button>Save condition</button>
+</form>
+<% } %>
+</section>
+<section class="card">
+<h2>Allowlist</h2>
+<% for(const entry of [...allowlist,{email:'',role:'sales',enabled:true}]){ %>
+<form method="post" action="/admin/allowlist">
+<input type="hidden" name="_csrf" value="<%= csrf %>">
+<label>Tenant email</label>
+<input name="email" type="email" value="<%= entry.email %>" required>
+<select name="role">
+<option <%= entry.role==='sales'?'selected':'' %>>sales</option>
+<option <%= entry.role==='owner'?'selected':'' %>>owner</option>
+</select>
+<label>
+<input type="checkbox" name="enabled" value="yes" <%= entry.enabled?'checked':'' %>> Enabled</label>
+<button>Save user</button>
+</form>
+<% } %>
+</section>
+<section class="card">
+<h2>Audit log — latest 200 events</h2>
+<div class="table-wrap">
+<table>
+<thead>
+<tr>
+<th>When</th>
+<th>Actor</th>
+<th>Action</th>
+<th>Record</th>
+</tr>
+</thead>
+<tbody>
+<% for(const log of logs){ %>
+<tr>
+<td>
+<%= log.created_at %>
+</td>
+<td>
+<%= log.actor %>
+</td>
+<td>
+<%= log.action %>
+</td>
+<td>
+<%= log.entity %> <%= log.entity_id %>
+</td>
+</tr>
+<% } %>
+</tbody>
+</table>
+</div>
+</section>
+<%- include('footer') %>
