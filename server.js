@@ -5,6 +5,7 @@ import session from 'express-session';
 import MySQLStoreFactory from 'express-mysql-session';
 import {db,query} from './src/db.js';
 import {csrf,requireUser} from './src/security.js';
+import {pipelineRoutes} from './src/pipeline.js';
 import {authRoutes} from './src/auth.js';
 export const app=express();
 const mode=process.env.SHAREPOINT_WRITE_MODE||'dryrun';
@@ -17,7 +18,7 @@ const MySQLStore=MySQLStoreFactory(session);
 app.use(session({name:'tig.sid',secret:process.env.SESSION_SECRET,resave:false,saveUninitialized:false,store:new MySQLStore({createDatabaseTable:true},db),cookie:{secure:process.env.NODE_ENV==='production',httpOnly:true,sameSite:'lax',maxAge:8*60*60*1000}}));
 app.use(csrf);app.use((req,res,next)=>{res.locals.user=req.session.user;res.locals.mode=mode;next();});authRoutes(app);app.use(requireUser);
 app.use(async(req,res,next)=>{const [user]=await query('SELECT email,role FROM allowlist WHERE email=? AND enabled=TRUE',[req.session.user.email]);if(!user)return req.session.destroy(()=>res.status(403).send('Access revoked.'));req.session.user=user;res.locals.user=user;res.set('Cache-Control','no-store');next();});
-// Feature routes are registered below as milestones are implemented.
+pipelineRoutes(app);
 app.get('/health',(_req,res)=>res.json({ok:true}));
 app.use((err,req,res,_next)=>{const status=err.status||500;res.status(status);const message=status<500?err.message:'The action could not be completed. No sensitive error details are logged. Contact Josh.';if(req.is('application/json'))return res.json({error:message});res.render('error',{message});});
 app.listen(Number(process.env.PORT||3000),()=>console.log('Sales app listening.'));
