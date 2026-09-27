@@ -1,6 +1,7 @@
 <%- include('header') %>
 <h1>Import / Export</h1>
 <p>One committed import per tab. Review every row before committing. Historical weekly totals should cover periods before app activity logging, to avoid double-counting.</p>
+<p>Use separate Pipeline and Weekly Tracker CSV exports. The Legend tab is ignored. The fictional Golden Triangle Orthodontics / Dr. Sarah Lee row is skipped. Imported prospects default to Alanna.</p>
 <div class="row">
 <a href="/export/pipeline">Export pipeline CSV</a>
 <a href="/export/weekly">Export weekly CSV</a>
@@ -17,11 +18,23 @@
 <% if(preview){ %>
 <section class="card">
 <h2>Preview: <%= preview.kind %> — <%= preview.rows.length %> rows</h2>
+<% if(preview.ignored){ %><p>Legend ignored. No records will be imported.</p><% } %>
+<p>Fictional sample rows skipped: <%= preview.skipped||0 %></p>
+<% if(preview.needsLanes){ %>
+<form method="post" action="/import/review">
+<input type="hidden" name="_csrf" value="<%= csrf %>">
+<p>The CSV has no service-lane column. Choose each Technical Assessment row’s lane explicitly; Likely Tier remains a signal and is not used to infer the lane.</p>
+<% for(const [i,row] of preview.data.entries()){if(row.stage==='Technical Assessment'&&!row.service_lane){ %>
+<label for="lane_<%= i %>"><%= row.business_name %> / <%= row.contact_name %></label>
+<select id="lane_<%= i %>" name="lane_<%= i %>" required><option value="">Choose lane…</option><option value="Business IT Integration">BII — map to Discovery</option><option value="Managed IT">Managed IT — keep Technical Assessment</option></select>
+<% }} %><button>Review mapped rows</button></form>
+<% } %>
+<% if(preview.kind==='pipeline'&&!preview.needsLanes){for(const row of preview.data){if(row.service_lane){ %><p><%= row.business_name %>: <%= row.service_lane %> → <%= row.stage %></p><% }}} %>
 <div class="table-wrap">
 <table>
 <thead>
 <tr>
-<% for(const h of headers[preview.kind]){ %>
+<% for(const h of (headers[preview.kind]||[])){ %>
 <th>
 <%= h %>
 </th>
@@ -43,7 +56,7 @@
 </div>
 <form method="post" action="/import/commit">
 <input type="hidden" name="_csrf" value="<%= csrf %>">
-<button>Commit these rows</button>
+<button <%= preview.needsLanes||!preview.rows.length?'disabled':'' %>>Commit these rows</button>
 </form>
 </section>
 <% } %>
@@ -53,6 +66,7 @@
 <select name="kind">
 <option value="pipeline">Pipeline</option>
 <option value="weekly">Weekly Tracker</option>
+<option value="legend">Legend (ignored)</option>
 </select>
 <label>CSV file</label>
 <input id="csv-file" type="file" accept=".csv,text/csv">

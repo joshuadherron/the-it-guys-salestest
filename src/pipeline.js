@@ -1,24 +1,16 @@
 import { query, transaction, audit, json } from "./db.js";
 import { text, integer, choice, date, fail } from "./security.js";
 import { frequencies, tiers, opportunity } from "./config.js";
-import { parse } from "csv-parse/sync";
-export const fields = [
-  ["business_name", "Business Name"],
-  ["contact_name", "Contact Name"],
-  ["phone", "Phone"],
-  ["email", "Email"],
-  ["first_contact", "Date First Contacted"],
-  ["employee_count", "Employee Count"],
-  ["current_it", "Current IT Situation"],
-  ["key_dependency", "Key Dependency"],
-  ["call_frequency", "Call Frequency Signal"],
-  ["likely_tier", "Likely Tier"],
-  ["red_flag", "Red Flag (existing MSP?)"],
-  ["stage", "Stage"],
-  ["follow_up", "Follow-Up Date"],
-  ["notes", "Notes"],
-  ["owner", "Owner"],
-];
+import {
+  pipelineFields,
+  weeklyHeaders,
+  trackerHeaders,
+  parseTracker,
+  resolveLegacyStage,
+} from "./tracker-import.js";
+import { lanes } from "./config.js";
+export { weeklyHeaders };
+export const fields = [...pipelineFields, ["owner", "Owner"]];
 export const outcomes = [
   "No answer",
   "Conversation",
@@ -27,15 +19,6 @@ export const outcomes = [
   "Recurring Contract Signed",
   "Hourly/Project Job Picked Up",
   "Other",
-];
-export const weeklyHeaders = [
-  "Week Start",
-  "Calls Made",
-  "Conversations Had",
-  "Qualified Opportunities",
-  "Proposals Sent",
-  "Recurring Contracts Signed",
-  "Hourly/Project Jobs Picked Up",
 ];
 export function csv(rows) {
   return rows
@@ -110,13 +93,16 @@ async function validate(body, c) {
   result.stage = stage.name;
   if (result.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(result.email))
     fail("Enter a valid email address.");
+  result.service_lane = body.service_lane
+    ? choice(body.service_lane, lanes)
+    : null;
   return result;
 }
 async function insert(body, user, c) {
   const p = await validate(body, c);
   if (p.stage === "Closed Lost" && user.role !== "owner")
     fail("Owner access required.", 403);
-  const keys = fields.map((x) => x[0]);
+  const keys = [...fields.map((x) => x[0]), "service_lane"];
   const r = await query(
     `INSERT INTO prospects (${keys.join(",")}) VALUES (${keys.map(() => "?").join(",")})`,
     keys.map((k) => p[k]),
@@ -253,8 +239,8 @@ export function pipelineRoutes(app) {
     if (kind === "pipeline") {
       const p = await query("SELECT * FROM prospects ORDER BY id");
       rows = [
-        fields.map((x) => x[1]),
-        ...p.map((r) => fields.map(([k]) => r[k])),
+        trackerHeaders.pipeline,
+        ...p.map((r) => pipelineFields.map(([k]) => r[k])),
       ];
     } else {
       const weeks = await query(
@@ -277,6 +263,7 @@ export function pipelineRoutes(app) {
             "recurring",
             "hourly",
           ].map((k) => Number(metrics[k]) + Number(h?.[k] || 0)),
+          h?.notes || "",
         ]);
       }
     }
@@ -285,47 +272,67 @@ export function pipelineRoutes(app) {
       .attachment(kind + ".csv")
       .send(csv(rows));
   });
-  app.get("/import", (req, res) =>
+  const showPreview = (res, preview) =>
     res.render("import", {
-      preview: null,
-      headers: { pipeline: fields.map((x) => x[1]), weekly: weeklyHeaders },
-    }),
-  );
+      headers: trackerHeaders,
+      preview: preview
+        ? {
+            ...preview,
+            needsLanes:
+              preview.kind === "pipeline" &&
+              preview.data.some(
+                (r) => r.stage === "Technical Assessment" && !r.service_lane,
+              ),
+            rows:
+              preview.kind === "pipeline"
+                ? preview.data.map((r) => pipelineFields.map(([k]) => r[k]))
+                : preview.data,
+          }
+        : null,
+    });
+  app.get("/import", (_req, res) => showPreview(res, null));
   app.post("/import/preview", async (req, res) => {
-    const kind = choice(req.body.kind, ["pipeline", "weekly"]);
-    const rows = parse(text(req.body.csv, 1500000), {
-      bom: true,
-      skip_empty_lines: true,
-    });
-    const expected =
-      kind === "pipeline" ? fields.map((x) => x[1]) : weeklyHeaders;
-    if (JSON.stringify(rows[0]) !== JSON.stringify(expected))
-      fail("CSV headers must exactly match the displayed template.");
-    if (rows.length > 2001) fail("Import at most 2,000 rows.");
-    const data = [];
-    for (const row of rows.slice(1)) {
-      if (row.length !== expected.length)
-        fail("CSV row width does not match the template.");
-      if (kind === "pipeline") {
-        data.push(
-          await validate(
-            Object.fromEntries(fields.map(([k], i) => [k, row[i]])),
-          ),
-        );
-      } else {
-        if (monday(row[0]) !== row[0]) fail("Week Start must be a Monday.");
-        data.push([date(row[0]), ...row.slice(1).map((v) => integer(v))]);
+    delete req.session.importPreview;
+    const preview = parseTracker(req.body.kind, req.body.csv);
+    if (preview.kind === "pipeline")
+      for (const row of preview.data) {
+        // Validate all source values; unresolved lane mapping is reviewed separately.
+        await validate({
+          ...row,
+          stage: row.stage === "Technical Assessment" ? "Discovery" : row.stage,
+        });
       }
+    if (!preview.ignored && preview.data.length)
+      req.session.importPreview = preview;
+    showPreview(res, preview);
+  });
+  app.post("/import/review", async (req, res) => {
+    const preview = req.session.importPreview;
+    if (!preview || preview.kind !== "pipeline")
+      fail("Preview the Pipeline CSV first.");
+    const mapped = [];
+    for (const [i, row] of preview.data.entries()) {
+      const resolved =
+        row.stage === "Technical Assessment" && !row.service_lane
+          ? resolveLegacyStage(row, req.body["lane_" + i])
+          : row;
+      mapped.push(await validate(resolved));
     }
-    req.session.importPreview = { kind, data };
-    res.render("import", {
-      preview: { kind, rows: rows.slice(1) },
-      headers: { pipeline: fields.map((x) => x[1]), weekly: weeklyHeaders },
-    });
+    req.session.importPreview = { ...preview, data: mapped };
+    showPreview(res, req.session.importPreview);
   });
   app.post("/import/commit", async (req, res) => {
     const preview = req.session.importPreview;
-    if (!preview) fail("Preview the CSV first.");
+    if (!preview || !preview.data.length) fail("Preview a nonempty CSV first.");
+    if (
+      preview.kind === "pipeline" &&
+      preview.data.some(
+        (r) => r.stage === "Technical Assessment" && !r.service_lane,
+      )
+    )
+      fail(
+        "Choose BII or Managed IT for each Technical Assessment row and review the mapping first.",
+      );
     await transaction(async (c) => {
       await query(
         "INSERT INTO imports (kind,actor) VALUES (?,?)",
@@ -336,7 +343,7 @@ export function pipelineRoutes(app) {
         if (preview.kind === "pipeline") await insert(row, req.session.user, c);
         else
           await query(
-            "INSERT INTO weekly_imports (week_start,calls,conversations,qualified,proposals,recurring,hourly) VALUES (?,?,?,?,?,?,?)",
+            "INSERT INTO weekly_imports (week_start,calls,conversations,qualified,proposals,recurring,hourly,notes) VALUES (?,?,?,?,?,?,?,?)",
             row,
             c,
           );

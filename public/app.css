@@ -265,3 +265,7 @@ footer {
     border: 1px solid #aaa;
   }
 }
+
+.preserve-lines {
+  white-space: pre-wrap;
+}

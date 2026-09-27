@@ -22,5 +22,6 @@
 </section>
 <% } %>
 </div>
+<% if(historical?.notes){ %><section class="card"><h2>Weekly notes</h2><p class="preserve-lines"><%= historical.notes %></p></section><% } %>
 <a href="/export/weekly">Export weekly CSV</a>
 <%- include('footer') %>

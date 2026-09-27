@@ -18,7 +18,7 @@ The six implementation milestones are complete in local source, with separate M1
 
 ## Disabled and open
 
-Mark Lost is intentionally disabled until its exact request payload is confirmed. Stop conditions remain TODO-OWNER until Josh finalizes them. Missing Source=Sales App, unsupported/missing column types, or absent verified person lookup IDs block handoff. Historical CSV mapping needs the actual tracker for final verification. See OPEN_QUESTIONS.md.
+Mark Lost is intentionally disabled until its exact request payload is confirmed. Stop conditions remain TODO-OWNER until Josh finalizes them. Missing Source=Sales App, unsupported/missing column types, or absent verified person lookup IDs block handoff. Call Tracker v2 headers and legacy stage mapping are implemented; Technical Assessment rows need an explicit lane choice during preview. Weekly Notes are preserved, Legend is ignored, and the named fictional sample is skipped. Apply migration 003 before using the updated weekly importer. See OPEN_QUESTIONS.md.
 
 No authentication or Graph adapter is stubbed in the production application. The test Graph is a fake and the temporary visual preview used only synthetic data. No real emails or SharePoint writes were performed.
 
@@ -28,7 +28,7 @@ Use Node 22.13+ within 22.x and MySQL 8. Configure `.env` from `.env.example`, t
 
 ## Verification and remaining integration checks
 
-- 76 offline Node tests cover every flag and negatives, all eight MVD groups, Q1.5 correction, urgent holds, price example ($4,585) and edges, exact payloads, active-request refusal, role guards, CSRF, dryrun writes, and all EJS page templates.
+- Offline Node tests cover every flag and negatives, all eight MVD groups, Q1.5 correction, urgent holds, price example ($4,585) and edges, exact payloads, active-request refusal, role guards, CSRF, dryrun writes, and all EJS page templates.
 - Test and lint commands were verified under Node 22.23.3; dependency audit reported zero vulnerabilities after patched dependency resolution.
 - Desktop pipeline and 390-pixel discovery layout were visually reviewed with synthetic records. This was a rendering review, not an authenticated database end-to-end test.
 - No MySQL service, Entra credentials, Hostinger account or SharePoint tenant access was available. Migrations, real authentication, person lookup mappings, mail policy enforcement and live Power Automate round trips remain **unverified**.
