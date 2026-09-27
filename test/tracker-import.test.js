@@ -7,6 +7,7 @@ import {
   pipelineFields,
   trackerHeaders,
 } from "../src/tracker-import.js";
+import { importNames, needsLane } from "../src/sales-import.js";
 import { csv, pipelineRoutes } from "../src/pipeline.js";
 const record = (overrides = {}) => {
   const values = {
@@ -174,9 +175,12 @@ test("lane-review preview renders choices and disables commit", async () => {
     mode: "dryrun",
     csrf: "token",
     headers: trackerHeaders,
+    importNames,
+    needsLane,
     preview: {
       ...parsed,
       needsLanes: true,
+      displayHeaders: trackerHeaders.pipeline,
       rows: [record({ stage: "Technical Assessment" })],
     },
   });

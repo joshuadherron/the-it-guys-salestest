@@ -31,7 +31,7 @@ Use Node 22.13+ within 22.x and MySQL 8. Configure `.env` from `.env.example`, t
 - Offline Node tests cover every flag and negatives, all eight MVD groups, Q1.5 correction, urgent holds, price example ($4,585) and edges, exact payloads, active-request refusal, role guards, CSRF, dryrun writes, and all EJS page templates.
 - Test and lint commands were verified under Node 22.23.3; dependency audit reported zero vulnerabilities after patched dependency resolution.
 - Desktop pipeline and 390-pixel discovery layout were visually reviewed with synthetic records. This was a rendering review, not an authenticated database end-to-end test.
-- No MySQL service, Entra credentials, Hostinger account or SharePoint tenant access was available. Migrations, real authentication, person lookup mappings, mail policy enforcement and live Power Automate round trips remain **unverified**.
+- The owner subsequently confirmed staging migrations 001–003, database connectivity and Entra sign-in. Migration 004, the real import, person lookup mappings, mail policy enforcement and live Power Automate round trips remain **unverified by this update**.
 
 Before operational use, Josh should:
 
@@ -41,3 +41,9 @@ Before operational use, Josh should:
 4. Exercise Q6.3b=Yes, failed-mail visibility, hold-release note, Send to Josh locking and owner reopen. Test pricing/stop checklist with Josh's finalized rules.
 5. Confirm the Exchange restriction grants Josh and denies Alanna. Submit one owner-authorized live test request only after Josh switches mode; confirm Power Automate completion, Client ID linking and client-stage reads.
 6. Complete a backup/restore drill and verify production proxy/cookie behavior before real prospect data entry.
+
+## Current Sales App migration update — 2026-09-27
+
+Implemented nullable Likely Service with exactly five current commercial offerings, additive migration 004, exact-header Current Sales App Export detection, preserved source/status/scheduling/meeting fields, conservative stage mapping and explicit technical-lane review. Legacy Call Tracker import remains supported; full staging export includes the additional data. Duplicate import reservations and rollback are covered by offline transactional-fake tests.
+
+No real records were imported, no migrations were executed, no deployment occurred, and local SharePoint mode remained dryrun. Existing staging setup edits in .env.example, migrations/001_initial.sql, src/auth.js and src/quotes.js were preserved. Full field list, source mapping, safety behavior and next staging steps: docs/05-current-sales-migration.md.

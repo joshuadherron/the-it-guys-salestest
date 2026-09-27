@@ -16,6 +16,7 @@
 <form method="get">
 <div class="row">
 <input name="q" value="<%= search %>" placeholder="Search business or contact" aria-label="Search">
+<select name="status" aria-label="Filter by status"><option value="">All statuses</option><% for(const option of statusChoices){ %><option value="<%= option %>" <%= selectedStatus===option?'selected':'' %>><%= option %></option><% } %></select>
 <button>Search</button>
 </div>
 </form>
@@ -48,6 +49,10 @@
 <span class="pill">
 <%= p.stage %>
 </span>
+<% if(p.status){ %><p class="pill">Status: <%= p.status %></p><% } %>
+<% if(p.legacy_stage){ %><p class="muted">Source stage: <%= p.legacy_stage %></p><% } %>
+<% if(p.next_action){ %><p><%= p.next_action %> · <%= p.next_action_date||'' %> <%= p.next_action_time||'' %> <%= p.next_action_method||'' %></p><% } %>
+<p>Likely Service: <%= p.likely_service||'Unset' %></p>
 <p>Follow-up: <%= p.follow_up||'Not scheduled' %>
 </p>
 <% if(p.hold){ %>

@@ -10,12 +10,13 @@
 <div>
 <label for="<%= key %>">
 <%= label %>
-<%= key==='likely_tier'?' — signal for Josh, not a decision':'' %>
+<%= key==='likely_service'?' — signal for Josh, not a decision':'' %>
 </label>
-<% const opts=key==='call_frequency'?frequencies:key==='likely_tier'?tiers:key==='stage'?stages.filter(s=>!s.managed_only||p.service_lane==='Managed IT').map(s=>s.name):key==='owner'?owners.map(o=>o.email):null;if(opts){ %>
+<% const opts=key==='call_frequency'?frequencies:key==='likely_service'?services:key==='stage'?stages.filter(s=>!s.managed_only||p.service_lane==='Managed IT').map(s=>s.name):key==='owner'?owners.map(o=>o.email):null;if(opts){ %>
 <select id="<%= key %>" name="<%= key %>">
+<% if(key==='likely_service'||key==='call_frequency'){ %><option value="" <%= !p[key]?'selected':'' %>>Unset</option><% } %>
 <% for(const option of opts){ %>
-<option <%= (p[key]||(key==='stage'?'Prospecting':key==='owner'?'alanna@theitguys.us':'Not sure'))===option?'selected':'' %>>
+<option <%= (p[key]||(key==='stage'?'Prospecting':key==='owner'?'alanna@theitguys.us':''))===option?'selected':'' %>>
 <%= option %>
 </option>
 <% } %>
@@ -30,6 +31,12 @@
 </div>
 <% } %>
 </div>
+<fieldset><legend>Next action, meeting & source status</legend><div class="grid">
+<% for(const [key,label] of structuredFields){ %><div><label for="<%= key %>"><%= label %></label>
+<% if(['teams_scheduled','josh_needed'].includes(key)){ %><select name="<%= key %>" id="<%= key %>"><option value="">Unset</option><option value="true" <%= p[key]===true||p[key]===1?'selected':'' %>>Yes</option><option value="false" <%= p[key]===false||p[key]===0?'selected':'' %>>No</option></select>
+<% }else if(key==='status'){ %><select name="status" id="status"><option value="">Unset</option><% for(const v of ['Active','Nurture','Lost']){ %><option <%= p.status===v?'selected':'' %>><%= v %></option><% } %></select>
+<% }else{ %><input name="<%= key %>" id="<%= key %>" value="<%= p[key]??'' %>" type="<%= key.endsWith('_date')?'date':key.endsWith('_time')?'time':['meeting_duration','est_monthly_revenue'].includes(key)?'number':'text' %>" min="0" step="<%= key==='est_monthly_revenue'?'0.01':key.endsWith('_time')?'1':'1' %>">
+<% } %></div><% } %></div></fieldset>
 <button>Save prospect</button>
 </form>
 <%- include('footer') %>

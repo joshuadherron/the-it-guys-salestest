@@ -1,16 +1,43 @@
 import { query, transaction, audit, json } from "./db.js";
 import { text, integer, choice, date, fail } from "./security.js";
-import { frequencies, tiers, opportunity } from "./config.js";
+import { frequencies, services, opportunity } from "./config.js";
 import {
   pipelineFields,
   weeklyHeaders,
   trackerHeaders,
-  parseTracker,
-  resolveLegacyStage,
 } from "./tracker-import.js";
 import { lanes } from "./config.js";
 export { weeklyHeaders };
-export const fields = [...pipelineFields, ["owner", "Owner"]];
+import {
+  structuredFields,
+  validateStructured,
+  service,
+  sourceText,
+  statusChoices,
+} from "./prospect-data.js";
+import {
+  parseImport,
+  importNames,
+  liveHeaders,
+  needsLane,
+  reviewLane,
+} from "./sales-import.js";
+import { commitImport } from "./import-commit.js";
+export const fields = [
+  ...pipelineFields.map(([key, label]) =>
+    key === "likely_tier" ? ["likely_service", "Likely Service"] : [key, label],
+  ),
+  ["owner", "Owner"],
+];
+export const pipelineExportFields = [
+  ["opp", "Opportunity ID"],
+  ...fields,
+  ...structuredFields,
+  ["service_lane", "Workflow lane"],
+  ["legacy_stage", "Source stage"],
+  ["import_source", "Import source"],
+  ["likely_tier", "Historical tier (source only)"],
+];
 export const outcomes = [
   "No answer",
   "Conversation",
@@ -29,7 +56,7 @@ export function csv(rows) {
             '"' +
             String(v ?? "")
               .replaceAll('"', '""')
-              .replace(/^[=+@\-\t\r]/, "'$&") +
+              .replace(/^(?=[\s]*[=+@-]|[\t\r\n])/, "'") +
             '"',
         )
         .join(","),
@@ -51,7 +78,7 @@ export async function prospect(id, c) {
   p.opp = opportunity(p.id);
   return p;
 }
-async function validate(body, c) {
+export async function validateProspect(body, c, runQuery = query) {
   const result = {};
   for (const [key] of fields)
     result[key] = text(
@@ -69,15 +96,13 @@ async function validate(body, c) {
   result.follow_up = date(result.follow_up);
   result.employee_count =
     result.employee_count === "" ? null : integer(result.employee_count);
-  result.call_frequency = choice(
-    result.call_frequency || "Not sure",
-    frequencies,
-  );
-  result.likely_tier = choice(result.likely_tier || "Not sure", tiers);
+  result.call_frequency = choice(result.call_frequency, ["", ...frequencies]);
+  result.likely_service = service(result.likely_service);
+  result.notes = sourceText(body.notes || "");
   result.owner = result.owner || "alanna@theitguys.us";
   if (
     !(
-      await query(
+      await runQuery(
         "SELECT email FROM allowlist WHERE email=? AND enabled=TRUE",
         [result.owner],
         c,
@@ -85,7 +110,7 @@ async function validate(body, c) {
     ).length
   )
     fail("Owner must be an enabled user.");
-  const stages = await query("SELECT * FROM config_stages", [], c);
+  const stages = await runQuery("SELECT * FROM config_stages", [], c);
   const stage = stages.find((x) => x.name === (result.stage || "Prospecting"));
   if (!stage) fail("Unknown pipeline stage.");
   if (stage.managed_only && body.service_lane !== "Managed IT")
@@ -96,19 +121,36 @@ async function validate(body, c) {
   result.service_lane = body.service_lane
     ? choice(body.service_lane, lanes)
     : null;
-  return result;
+  result.legacy_stage = body.legacy_stage ? text(body.legacy_stage, 80) : null;
+  result.import_source = body.import_source
+    ? choice(body.import_source, ["pipeline", "current_sales"])
+    : null;
+  result.likely_tier = body.likely_tier ? sourceText(body.likely_tier, 80) : "";
+  return { ...result, ...validateStructured(body) };
 }
-async function insert(body, user, c) {
-  const p = await validate(body, c);
+export async function insertProspect(
+  body,
+  user,
+  c,
+  storage = { query, audit },
+) {
+  const p = await validateProspect(body, c, storage.query);
   if (p.stage === "Closed Lost" && user.role !== "owner")
     fail("Owner access required.", 403);
-  const keys = [...fields.map((x) => x[0]), "service_lane"];
-  const r = await query(
+  const keys = [
+    ...fields.map((x) => x[0]),
+    ...structuredFields.map(([key]) => key),
+    "service_lane",
+    "legacy_stage",
+    "import_source",
+    "likely_tier",
+  ];
+  const r = await storage.query(
     `INSERT INTO prospects (${keys.join(",")}) VALUES (${keys.map(() => "?").join(",")})`,
     keys.map((k) => p[k]),
     c,
   );
-  await audit(c, user, "create", "prospect", r.insertId);
+  await storage.audit(c, user, "create", "prospect", r.insertId);
   return r.insertId;
 }
 export async function weekly(week) {
@@ -122,9 +164,12 @@ export async function weekly(week) {
 export function pipelineRoutes(app) {
   app.get(["/", "/pipeline"], async (req, res) => {
     const search = text(String(req.query.q || ""), 200);
+    const selectedStatus = req.query.status
+      ? choice(req.query.status, statusChoices)
+      : "";
     const rows = await query(
-      `SELECT * FROM prospects WHERE business_name LIKE ? OR contact_name LIKE ? ORDER BY ${req.path === "/" ? "follow_up IS NULL,follow_up ASC,id DESC" : "stage,id DESC"}`,
-      ["%" + search + "%", "%" + search + "%"],
+      `SELECT * FROM prospects WHERE (business_name LIKE ? OR contact_name LIKE ?) AND (?='' OR status=?) ORDER BY ${req.path === "/" ? "follow_up IS NULL,follow_up ASC,id DESC" : "stage,id DESC"}`,
+      ["%" + search + "%", "%" + search + "%", selectedStatus, selectedStatus],
     );
     const stages = await query(
       "SELECT * FROM config_stages ORDER BY sort_order",
@@ -135,6 +180,8 @@ export function pipelineRoutes(app) {
       search,
       opportunity,
       today: req.path === "/",
+      selectedStatus,
+      statusChoices,
     });
   });
   app.get("/prospects/new", async (req, res) =>
@@ -142,13 +189,25 @@ export function pipelineRoutes(app) {
       p: {},
       fields,
       frequencies,
-      tiers,
+      services,
+      structuredFields,
       stages: await query("SELECT * FROM config_stages ORDER BY sort_order"),
       owners: await query("SELECT email FROM allowlist WHERE enabled=TRUE"),
     }),
   );
   app.post("/prospects", async (req, res) => {
-    const id = await transaction((c) => insert(req.body, req.session.user, c));
+    const id = await transaction((c) =>
+      insertProspect(
+        {
+          ...req.body,
+          legacy_stage: null,
+          import_source: null,
+          likely_tier: "",
+        },
+        req.session.user,
+        c,
+      ),
+    );
     res.redirect(`/prospects/${id}`);
   });
   app.get("/prospects/:id", async (req, res) => {
@@ -169,6 +228,7 @@ export function pipelineRoutes(app) {
       p,
       activities,
       outcomes,
+      structuredFields,
       requests,
       notifications,
       json,
@@ -179,7 +239,8 @@ export function pipelineRoutes(app) {
       p: await prospect(req.params.id),
       fields,
       frequencies,
-      tiers,
+      services,
+      structuredFields,
       stages: await query("SELECT * FROM config_stages ORDER BY sort_order"),
       owners: await query("SELECT email FROM allowlist WHERE enabled=TRUE"),
     }),
@@ -187,15 +248,25 @@ export function pipelineRoutes(app) {
   app.post("/prospects/:id", async (req, res) => {
     await transaction(async (c) => {
       const p = await prospect(req.params.id, c);
-      const body = { ...req.body, service_lane: p.service_lane };
-      const data = await validate(body, c);
+      const body = {
+        ...p,
+        ...req.body,
+        service_lane: p.service_lane,
+        legacy_stage: p.legacy_stage,
+        import_source: p.import_source,
+        likely_tier: p.likely_tier,
+      };
+      const data = await validateProspect(body, c);
       if (p.client_id && data.business_name !== p.business_name)
         fail("Client name is locked after SharePoint creation.");
       if (p.hold && data.stage !== p.stage)
         fail("Release the urgent hold before changing stage.");
       if (data.stage === "Closed Lost" && req.session.user.role !== "owner")
         fail("Owner access required.", 403);
-      const keys = fields.map((x) => x[0]);
+      const keys = [
+        ...fields.map((x) => x[0]),
+        ...structuredFields.map(([key]) => key),
+      ];
       await query(
         `UPDATE prospects SET ${keys.map((k) => k + "=?").join(",")} WHERE id=?`,
         [...keys.map((k) => data[k]), p.id],
@@ -239,8 +310,12 @@ export function pipelineRoutes(app) {
     if (kind === "pipeline") {
       const p = await query("SELECT * FROM prospects ORDER BY id");
       rows = [
-        trackerHeaders.pipeline,
-        ...p.map((r) => pipelineFields.map(([k]) => r[k])),
+        pipelineExportFields.map(([, label]) => label),
+        ...p.map((r) =>
+          pipelineExportFields.map(([k]) =>
+            k === "opp" ? opportunity(r.id) : r[k],
+          ),
+        ),
       ];
     } else {
       const weeks = await query(
@@ -272,34 +347,56 @@ export function pipelineRoutes(app) {
       .attachment(kind + ".csv")
       .send(csv(rows));
   });
+  const previewColumns = [
+    ["business_name", "Business"],
+    ["contact_name", "Contact"],
+    ["legacy_stage", "Source stage"],
+    ["stage", "Proposed operational stage"],
+    ["status", "Status"],
+    ["next_action", "Next action"],
+    ["next_action_date", "Next action date"],
+    ["next_action_time", "Next action time"],
+    ["next_action_method", "Next action method"],
+    ["likely_service", "Likely Service"],
+    ["service_lane", "Workflow lane"],
+  ];
   const showPreview = (res, preview) =>
     res.render("import", {
-      headers: trackerHeaders,
+      headers: { ...trackerHeaders, current_sales: liveHeaders },
+      importNames,
       preview: preview
         ? {
             ...preview,
             needsLanes:
-              preview.kind === "pipeline" &&
-              preview.data.some(
-                (r) => r.stage === "Technical Assessment" && !r.service_lane,
-              ),
+              preview.kind !== "weekly" && preview.data.some(needsLane),
+            displayHeaders:
+              preview.kind === "weekly"
+                ? trackerHeaders.weekly
+                : previewColumns.map(([, label]) => label),
             rows:
-              preview.kind === "pipeline"
-                ? preview.data.map((r) => pipelineFields.map(([k]) => r[k]))
-                : preview.data,
+              preview.kind === "weekly"
+                ? preview.data
+                : preview.data.map((r) =>
+                    previewColumns.map(([key]) =>
+                      needsLane(r) && key === "stage"
+                        ? "Review required"
+                        : (r[key] ?? ""),
+                    ),
+                  ),
           }
         : null,
+      needsLane,
+      structuredFields,
     });
   app.get("/import", (_req, res) => showPreview(res, null));
   app.post("/import/preview", async (req, res) => {
     delete req.session.importPreview;
-    const preview = parseTracker(req.body.kind, req.body.csv);
-    if (preview.kind === "pipeline")
+    const preview = parseImport(req.body.kind, req.body.csv);
+    if (preview.kind !== "weekly" && !preview.ignored)
       for (const row of preview.data) {
-        // Validate all source values; unresolved lane mapping is reviewed separately.
-        await validate({
+        await validateProspect({
           ...row,
-          stage: row.stage === "Technical Assessment" ? "Discovery" : row.stage,
+          stage: needsLane(row) ? "Discovery" : row.stage,
         });
       }
     if (!preview.ignored && preview.data.length)
@@ -308,55 +405,27 @@ export function pipelineRoutes(app) {
   });
   app.post("/import/review", async (req, res) => {
     const preview = req.session.importPreview;
-    if (!preview || preview.kind !== "pipeline")
-      fail("Preview the Pipeline CSV first.");
+    if (!preview || !["pipeline", "current_sales"].includes(preview.kind))
+      fail("Preview a prospect CSV first.");
     const mapped = [];
-    for (const [i, row] of preview.data.entries()) {
-      const resolved =
-        row.stage === "Technical Assessment" && !row.service_lane
-          ? resolveLegacyStage(row, req.body["lane_" + i])
-          : row;
-      mapped.push(await validate(resolved));
-    }
+    for (const [i, row] of preview.data.entries())
+      mapped.push(
+        await validateProspect(
+          needsLane(row) ? reviewLane(row, req.body["lane_" + i]) : row,
+        ),
+      );
     req.session.importPreview = { ...preview, data: mapped };
     showPreview(res, req.session.importPreview);
   });
   app.post("/import/commit", async (req, res) => {
     const preview = req.session.importPreview;
-    if (!preview || !preview.data.length) fail("Preview a nonempty CSV first.");
-    if (
-      preview.kind === "pipeline" &&
-      preview.data.some(
-        (r) => r.stage === "Technical Assessment" && !r.service_lane,
-      )
-    )
-      fail(
-        "Choose BII or Managed IT for each Technical Assessment row and review the mapping first.",
-      );
-    await transaction(async (c) => {
-      await query(
-        "INSERT INTO imports (kind,actor) VALUES (?,?)",
-        [preview.kind, req.session.user.email],
-        c,
-      );
-      for (const row of preview.data) {
-        if (preview.kind === "pipeline") await insert(row, req.session.user, c);
-        else
-          await query(
-            "INSERT INTO weekly_imports (week_start,calls,conversations,qualified,proposals,recurring,hourly,notes) VALUES (?,?,?,?,?,?,?,?)",
-            row,
-            c,
-          );
-      }
-      await audit(
-        c,
-        req.session.user,
-        "commit import",
-        preview.kind,
-        preview.data.length,
-      );
+    await commitImport(preview, req.session.user, {
+      transaction,
+      query,
+      insert: insertProspect,
+      audit,
     });
     delete req.session.importPreview;
-    res.redirect(preview.kind === "pipeline" ? "/pipeline" : "/weekly");
+    res.redirect(preview.kind === "weekly" ? "/weekly" : "/pipeline");
   });
 }

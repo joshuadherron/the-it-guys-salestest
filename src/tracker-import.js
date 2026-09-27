@@ -73,7 +73,11 @@ export function parseTracker(kind, content) {
       );
       prospect.stage = prospect.stage.trim() || "Prospecting";
       choice(prospect.stage, stages);
-      data.push({ ...prospect, owner: "alanna@theitguys.us" });
+      data.push({
+        ...prospect,
+        likely_service: null,
+        owner: "alanna@theitguys.us",
+      });
     } else {
       const week = date(row[0]);
       if (!week || new Date(week + "T12:00:00Z").getUTCDay() !== 1)

@@ -12,7 +12,7 @@ import {
 } from "../src/discovery-rules.js";
 import { fields, outcomes, weeklyHeaders } from "../src/pipeline.js";
 import {
-  tiers,
+  services,
   frequencies,
   prices,
   stages,
@@ -32,7 +32,14 @@ const p = {
   hold: false,
 };
 const d = { answers: emptyAnswers(), flags: [], revision: 0, status: "Draft" };
+import { structuredFields, statusChoices } from "../src/prospect-data.js";
+import { importNames, needsLane } from "../src/sales-import.js";
 const common = {
+  structuredFields,
+  importNames,
+  needsLane,
+  statusChoices,
+  selectedStatus: "",
   user: { email: "josh@theitguys.us", role: "owner" },
   mode: "dryrun",
   csrf: "token",
@@ -71,7 +78,7 @@ const fixtures = {
   "prospect-form": {
     fields,
     frequencies,
-    tiers,
+    services,
     stages: stages.map((name) => ({ name })),
     owners: [{ email: "alanna@theitguys.us" }],
   },

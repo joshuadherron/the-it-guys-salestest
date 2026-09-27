@@ -26,13 +26,20 @@
 <h2>Next step</h2>
 <p>Follow-up: <%= p.follow_up||'Not scheduled' %> · Owner: <%= p.owner %>
 </p>
-<p>Likely tier: <%= p.likely_tier %> — signal for Josh, not a decision.</p>
+<p>Likely Service: <%= p.likely_service||'Unset' %> — commercial interest; workflow lane is separate.</p>
+<p>Workflow lane: <%= p.service_lane||'Unset' %></p>
 <p>
 <%= p.notes %>
 </p>
 <div data-client-status="<%= p.id %>">
 <% if(p.client_id){ %>SharePoint client: <%= p.client_id %> — loading current stage…<% } %>
 </div>
+</section>
+<section class="card"><h2>Next action, meeting & migration details</h2>
+<% for(const [key,label] of structuredFields){if(p[key]!==null&&p[key]!==undefined&&p[key]!==''){ %><p class="preserve-lines"><strong><%= label %>:</strong> <%= ['teams_scheduled','josh_needed'].includes(key)?(p[key]?'Yes':'No'):p[key] %></p><% }} %>
+<% if(p.legacy_stage){ %><p>Original source stage: <%= p.legacy_stage %></p><% } %>
+<% if(p.import_source){ %><p>Import source: <%= p.import_source %></p><% } %>
+<% if(p.likely_tier&&p.likely_tier!=='Not sure'){ %><p>Historical tier (source only): <%= p.likely_tier %>. Not a current service offering.</p><% } %>
 </section>
 <% for(const n of notifications){ %>
 <p class="pill">

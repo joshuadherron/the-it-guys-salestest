@@ -31,12 +31,12 @@ export const stops = [
   "non-Microsoft email platform",
 ];
 export const frequencies = ["Often", "Sometimes", "Rarely", "Not sure"];
-export const tiers = [
-  "Monitoring & Maintenance",
-  "Essentials",
-  "Standard",
-  "BII only",
-  "Not sure",
+export const services = [
+  "Managed IT",
+  "Managed IT + Security",
+  "BII",
+  "Project",
+  "Other",
 ];
 export const lanes = ["Business IT Integration", "Managed IT"];
 export const opportunity = (id) => `OPP-${String(id).padStart(4, "0")}`;

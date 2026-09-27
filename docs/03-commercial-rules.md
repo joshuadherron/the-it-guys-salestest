@@ -20,7 +20,7 @@
 **Worked example (for tests):** 7 users, 8 managed devices (6 PCs, 1 Mac, 1 company iPad), 6 mailboxes, 2 personal phones, 1 location → $3,750 + 2×$75 + 3×$185 + 1×$130 = **$4,585**. The phones are not counted.
 
 ## Managed IT: recurring (v1 shows a *signal*, not a price)
-Tiers: Monitoring & Maintenance · Essentials · Standard. The Call Tracker "Likely Tier" and "Call Frequency Signal" fields are *signals for Josh, not decisions*. **Do not build a Managed IT price calculator in v1.** The public website calculator (V3/V4 spec) is a separate project.
+Owner update, 2026-09-27: the previous tiers are obsolete. **Likely Service** now offers exactly Managed IT · Managed IT + Security · BII · Project · Other, with unset allowed. This is commercial interest, not a workflow lane or a pricing decision. The separate SharePoint lanes remain Business IT Integration and Managed IT, chosen explicitly where required. Do not infer a lane from a commercial service. Do not build a Managed IT price calculator in v1. The BII unit prices above are unchanged.
 
 ## Language rules
 - Client-facing text uses full names, no nicknames.

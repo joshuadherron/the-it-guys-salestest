@@ -1,78 +1,29 @@
 <%- include('header') %>
 <h1>Import / Export</h1>
-<p>One committed import per tab. Review every row before committing. Historical weekly totals should cover periods before app activity logging, to avoid double-counting.</p>
-<p>Use separate Pipeline and Weekly Tracker CSV exports. The Legend tab is ignored. The fictional Golden Triangle Orthodontics / Dr. Sarah Lee row is skipped. Imported prospects default to Alanna.</p>
-<div class="row">
-<a href="/export/pipeline">Export pipeline CSV</a>
-<a href="/export/weekly">Export weekly CSV</a>
-</div>
-<% for(const [kind,columns] of Object.entries(headers)){ %>
-<details>
-<summary>
-<%= kind %> CSV header template</summary>
-<pre>
-<%= columns.map(x=>'"'+x+'"').join(',') %>
-</pre>
-</details>
-<% } %>
+<p>Upload/paste → preview → resolve lane choices → review → explicit commit. Each source can be committed once. Preview never imports to SharePoint.</p>
+<p>Current Sales App Export and legacy Call Tracker v2 use separate import sources. The legacy Legend tab is ignored and its named fictional sample is skipped. Prospects default to Alanna; commercial service remains unset when absent from the source.</p>
+<div class="row"><a href="/export/pipeline">Export full staging pipeline CSV</a><a href="/export/weekly">Export weekly CSV</a></div>
+<p>The full staging export includes current services, structured migration fields and source history. It is not a legacy Call Tracker file.</p>
+<% for(const [kind,columns] of Object.entries(headers)){ %><details><summary><%= importNames[kind] %> — exact header</summary><pre><%= columns.map(x=>'"'+x+'"').join(',') %></pre></details><% } %>
 <% if(preview){ %>
-<section class="card">
-<h2>Preview: <%= preview.kind %> — <%= preview.rows.length %> rows</h2>
+<section class="card"><h2><%= preview.kind==='current_sales'?'Current Sales App export detected':importNames[preview.kind] %> — <%= preview.rows.length %> <%= preview.kind==='weekly'?'weeks':'prospects' %></h2>
 <% if(preview.ignored){ %><p>Legend ignored. No records will be imported.</p><% } %>
-<p>Fictional sample rows skipped: <%= preview.skipped||0 %></p>
+<% if(preview.skipped){ %><p>Fictional sample rows skipped: <%= preview.skipped %></p><% } %>
+<% if(preview.kind==='current_sales'){ %><p>Contacted, Follow-Up and Nurture map conservatively to Prospecting. Source stage, status and scheduling fields are preserved. Technical Discovery requires a lane decision below. No Likely Service is inferred.</p><% } %>
 <% if(preview.needsLanes){ %>
-<form method="post" action="/import/review">
-<input type="hidden" name="_csrf" value="<%= csrf %>">
-<p>The CSV has no service-lane column. Choose each Technical Assessment row’s lane explicitly; Likely Tier remains a signal and is not used to infer the lane.</p>
-<% for(const [i,row] of preview.data.entries()){if(row.stage==='Technical Assessment'&&!row.service_lane){ %>
-<label for="lane_<%= i %>"><%= row.business_name %> / <%= row.contact_name %></label>
+<form method="post" action="/import/review"><input type="hidden" name="_csrf" value="<%= csrf %>">
+<p>Choose each technical row’s workflow lane explicitly. No lane is inferred from notes, old tier, or commercial service.</p>
+<% for(const [i,row] of preview.data.entries()){if(needsLane(row)){ %>
+<label for="lane_<%= i %>"><%= row.business_name %> / <%= row.contact_name %> — <%= row.legacy_stage||row.stage %></label>
 <select id="lane_<%= i %>" name="lane_<%= i %>" required><option value="">Choose lane…</option><option value="Business IT Integration">BII — map to Discovery</option><option value="Managed IT">Managed IT — keep Technical Assessment</option></select>
-<% }} %><button>Review mapped rows</button></form>
-<% } %>
-<% if(preview.kind==='pipeline'&&!preview.needsLanes){for(const row of preview.data){if(row.service_lane){ %><p><%= row.business_name %>: <%= row.service_lane %> → <%= row.stage %></p><% }}} %>
-<div class="table-wrap">
-<table>
-<thead>
-<tr>
-<% for(const h of (headers[preview.kind]||[])){ %>
-<th>
-<%= h %>
-</th>
-<% } %>
-</tr>
-</thead>
-<tbody>
-<% for(const row of preview.rows){ %>
-<tr>
-<% for(const v of row){ %>
-<td>
-<%= v %>
-</td>
-<% } %>
-</tr>
-<% } %>
-</tbody>
-</table>
-</div>
-<form method="post" action="/import/commit">
-<input type="hidden" name="_csrf" value="<%= csrf %>">
-<button <%= preview.needsLanes||!preview.rows.length?'disabled':'' %>>Commit these rows</button>
-</form>
-</section>
-<% } %>
-<form method="post" action="/import/preview" class="card">
-<input type="hidden" name="_csrf" value="<%= csrf %>">
-<label>Tab</label>
-<select name="kind">
-<option value="pipeline">Pipeline</option>
-<option value="weekly">Weekly Tracker</option>
-<option value="legend">Legend (ignored)</option>
-</select>
-<label>CSV file</label>
-<input id="csv-file" type="file" accept=".csv,text/csv">
-<label>CSV contents</label>
-<textarea id="csv-content" name="csv" rows="12" required>
-</textarea>
-<button>Preview import</button>
-</form>
+<% }} %><button>Review mapped rows</button></form><% } %>
+<div class="table-wrap"><table><thead><tr><% for(const h of preview.displayHeaders){ %><th><%= h %></th><% } %></tr></thead><tbody>
+<% for(const row of preview.rows){ %><tr><% for(const value of row){ %><td><%= value %></td><% } %></tr><% } %>
+</tbody></table></div>
+<% if(['pipeline','current_sales'].includes(preview.kind)){ %><details><summary>Full preserved details for review</summary><% for(const row of preview.data){ %><article class="card"><h3><%= row.business_name %></h3><% for(const [key,value] of Object.entries(row)){ %><p class="preserve-lines"><strong><%= key %>:</strong> <%= value===null?'Unset':value %></p><% } %></article><% } %></details><% } %>
+<form method="post" action="/import/commit"><input type="hidden" name="_csrf" value="<%= csrf %>"><button <%= preview.needsLanes||!preview.rows.length?'disabled':'' %>>Commit these rows</button></form>
+</section><% } %>
+<form method="post" action="/import/preview" class="card"><input type="hidden" name="_csrf" value="<%= csrf %>">
+<label for="import-kind">Format</label><select name="kind" id="import-kind"><option value="auto">Detect exact header automatically</option><% for(const [kind,label] of Object.entries(importNames)){ %><option value="<%= kind %>"><%= label %></option><% } %></select>
+<label for="csv-file">CSV file</label><input id="csv-file" type="file" accept=".csv,text/csv"><label for="csv-content">CSV contents</label><textarea id="csv-content" name="csv" rows="12" required></textarea><button>Preview import</button></form>
 <%- include('footer') %>

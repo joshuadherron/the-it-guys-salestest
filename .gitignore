@@ -4,3 +4,6 @@ node_modules/
 coverage/
 *.zip
 .tmp/
+
+# Real prospect/customer exports must never be committed.
+*.csv
