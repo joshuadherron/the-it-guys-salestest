@@ -53,7 +53,7 @@ test("every registered owner-only route enforces role before handler", () => {
       r.path.startsWith("/admin") ||
       /approve|sent|reopen|release|mark-lost|reconcile/.test(r.path),
   );
-  assert.equal(protectedRoutes.length, 12);
+  assert.equal(protectedRoutes.length, 13);
   for (const r of protectedRoutes) {
     assert.equal(r.handlers[0], ownerOnly, r.path);
     const res = response();
@@ -80,9 +80,21 @@ test("POST requires CSRF; GET establishes token; Unicode token cannot bypass", (
   assert.doesNotThrow(() => csrf(req, response(), () => assert.fail()));
 });
 
-
-test("sales cannot call owner handoff actions through the shared route", async()=>{
-  const routes=[];const app={get:()=>{},post:(path,...handlers)=>routes.push({path,handlers})};handoffRoutes(app);
-  const handler=routes.find(r=>r.path==='/prospects/:id/handoff').handlers[0];
-  for(const action of ['Quoting','TechnicalAssessment'])await assert.rejects(handler({body:{action},session:{user:{role:'sales'}}},response()),e=>e.status===403);
+test("sales cannot call owner handoff actions through the shared route", async () => {
+  const routes = [];
+  const app = {
+    get: () => {},
+    post: (path, ...handlers) => routes.push({ path, handlers }),
+  };
+  handoffRoutes(app);
+  const handler = routes.find((r) => r.path === "/prospects/:id/handoff")
+    .handlers[0];
+  for (const action of ["Quoting", "TechnicalAssessment"])
+    await assert.rejects(
+      handler(
+        { body: { action }, session: { user: { role: "sales" } } },
+        response(),
+      ),
+      (e) => e.status === 403,
+    );
 });

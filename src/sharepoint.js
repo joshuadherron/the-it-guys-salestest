@@ -1,3 +1,8 @@
+import {
+  validateBusinessName,
+  lostPayload,
+  serializePayload,
+} from "./workflow-contract.js";
 import { lanes } from "./config.js";
 export const sitePath =
   "/sites/theitguys713.sharepoint.com:/sites/TheITGuysOperations";
@@ -25,7 +30,7 @@ export const required = {
 };
 export const requiredChoices = {
   requests: {
-    "Request Type": ["Create Client", "Start Stage"],
+    "Request Type": ["Create Client", "Start Stage", "Mark Lost"],
     "Processing Status": [
       "Pending",
       "Processing",
@@ -49,6 +54,7 @@ const requiredInternalNames = {
 export function validateSchema(requestColumns, clientColumns) {
   const errors = [];
   const maps = {};
+  const actionErrors = { MarkLost: [] };
   for (const [kind, columns] of [
     ["requests", requestColumns],
     ["clients", clientColumns],
@@ -67,8 +73,25 @@ export function validateSchema(requestColumns, clientColumns) {
     }
     for (const [name, choices] of Object.entries(requiredChoices[kind]))
       for (const choice of choices)
-        if (!maps[kind][name]?.choice?.choices?.includes(choice))
-          errors.push(`${kind}: ${name} is missing choice "${choice}".`);
+        if (!maps[kind][name]?.choice?.choices?.includes(choice)) {
+          if (
+            kind === "requests" &&
+            name === "Request Type" &&
+            choice === "Mark Lost"
+          )
+            actionErrors.MarkLost.push(
+              'Workflow Requests Request Type is missing choice "Mark Lost".',
+            );
+          else if (
+            kind === "requests" &&
+            name === "Source" &&
+            maps[kind][name]?.choice?.choices?.includes("Sales app")
+          )
+            errors.push(
+              'Source has "Sales app"; rename it to "Sales App" in the Workflow Requests list settings.',
+            );
+          else errors.push(`${kind}: ${name} is missing choice "${choice}".`);
+        }
   }
   const by = maps.requests["Requested By"];
   if (by && !by.text && !by.personOrGroup)
@@ -77,17 +100,32 @@ export function validateSchema(requestColumns, clientColumns) {
     errors.push("Requested By must allow one person only.");
   if (maps.requests.Client && !maps.requests.Client.lookup)
     errors.push("Workflow Requests Client must be a lookup column.");
-  return { errors, maps };
+  return { errors, maps, actionErrors };
 }
-export function payload(action, p, lane) {
+export function payload(action, p, lane, options = {}) {
+  const body = payloadData(action, p, lane, options);
+  serializePayload(body);
+  return body;
+}
+function payloadData(action, p, lane, options) {
   if (!lanes.includes(lane)) throw new Error("Choose a service lane.");
-  if (action === "CreateClient")
+  if (action === "CreateClient") {
+    validateBusinessName(p.business_name);
+    if (
+      !options.discovery ||
+      typeof options.discovery !== "object" ||
+      Array.isArray(options.discovery)
+    )
+      throw new Error("A discovery snapshot is required to create the client.");
     return {
       opportunityId: p.opp,
       client: p.business_name,
       stage: "Sales Discovery",
       serviceLane: lane,
+      discovery: options.discovery,
     };
+  }
+  if (action === "MarkLost") return lostPayload(p, options);
   if (!p.client_id) throw new Error("Create the SharePoint client first.");
   if (action === "Quoting" && lane === "Business IT Integration")
     return { clientId: p.client_id, stage: "Quoting", serviceLane: lane };
@@ -97,9 +135,7 @@ export function payload(action, p, lane) {
       stage: "Technical Assessment",
       serviceLane: lane,
     };
-  throw new Error(
-    "Action is not enabled. Mark Lost awaits owner-confirmed payload.",
-  );
+  throw new Error("Action is not enabled.");
 }
 export function buildFields(
   schema,
@@ -109,8 +145,11 @@ export function buildFields(
   email,
   at = new Date(),
   userLookupId,
+  options = {},
 ) {
-  const body = payload(action, p, lane);
+  if (action === "MarkLost" && schema.actionErrors?.MarkLost?.length)
+    throw new Error(schema.actionErrors.MarkLost.join(" "));
+  const body = payload(action, p, lane, options);
   const f = {};
   const map = schema.maps.requests;
   const put = (name, value) => {
@@ -123,12 +162,16 @@ export function buildFields(
   );
   put(
     "Request Type",
-    action === "CreateClient" ? "Create Client" : "Start Stage",
+    action === "CreateClient"
+      ? "Create Client"
+      : action === "MarkLost"
+        ? "Mark Lost"
+        : "Start Stage",
   );
   put("Processing Status", "Pending");
   put("Source", "Sales App");
   put("Service Lane", lane);
-  put("Payload", JSON.stringify(body));
+  put("Payload", serializePayload(body));
   if (map["Requested By"].personOrGroup) {
     if (!/^\d+$/.test(String(userLookupId)))
       throw new Error(

@@ -1,3 +1,4 @@
+import { guardPipelineEdit } from "./workflow-contract.js";
 import { query, transaction, audit, json } from "./db.js";
 import { text, integer, choice, date, fail } from "./security.js";
 import { frequencies, services, opportunity } from "./config.js";
@@ -168,23 +169,23 @@ export function pipelineRoutes(app) {
       ? choice(req.query.status, statusChoices)
       : "";
     const where = ["(business_name LIKE ? OR contact_name LIKE ?)"];
-const params = ["%" + search + "%", "%" + search + "%"];
+    const params = ["%" + search + "%", "%" + search + "%"];
 
-if (selectedStatus) {
-  where.push("status=?");
-  params.push(selectedStatus);
-}
+    if (selectedStatus) {
+      where.push("status=?");
+      params.push(selectedStatus);
+    }
 
-const rows = await query(
-  `SELECT * FROM prospects
+    const rows = await query(
+      `SELECT * FROM prospects
    WHERE ${where.join(" AND ")}
    ORDER BY ${
      req.path === "/"
        ? "follow_up IS NULL,follow_up ASC,id DESC"
        : "stage,id DESC"
    }`,
-  params,
-);
+      params,
+    );
     const stages = await query(
       "SELECT * FROM config_stages ORDER BY sort_order",
     );
@@ -273,6 +274,7 @@ const rows = await query(
       const data = await validateProspect(body, c);
       if (p.client_id && data.business_name !== p.business_name)
         fail("Client name is locked after SharePoint creation.");
+      guardPipelineEdit(p, data);
       if (p.hold && data.stage !== p.stage)
         fail("Release the urgent hold before changing stage.");
       if (data.stage === "Closed Lost" && req.session.user.role !== "owner")

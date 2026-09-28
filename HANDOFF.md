@@ -18,7 +18,7 @@ The six implementation milestones are complete in local source, with separate M1
 
 ## Disabled and open
 
-Mark Lost is intentionally disabled until its exact request payload is confirmed. Stop conditions remain TODO-OWNER until Josh finalizes them. Missing Source=Sales App, unsupported/missing column types, or absent verified person lookup IDs block handoff. Call Tracker v2 headers and legacy stage mapping are implemented; Technical Assessment rows need an explicit lane choice during preview. Weekly Notes are preserved, Legend is ignored, and the named fictional sample is skipped. Apply migration 003 before using the updated weekly importer. See OPEN_QUESTIONS.md.
+Mark Lost now follows the owner-approved v1.1 contract; migration 005 adds its seven configurable reasons. Create Client includes an internal discovery snapshot. Stop conditions remain TODO-OWNER until Josh finalizes them. Missing Source=Sales App, unsupported/missing column types, or absent verified person lookup IDs block handoff. Call Tracker v2 headers and legacy stage mapping are implemented; Technical Assessment rows need an explicit lane choice during preview. Weekly Notes are preserved, Legend is ignored, and the named fictional sample is skipped. Apply migration 003 before using the updated weekly importer. See OPEN_QUESTIONS.md.
 
 No authentication or Graph adapter is stubbed in the production application. The test Graph is a fake and the temporary visual preview used only synthetic data. No real emails or SharePoint writes were performed.
 
@@ -47,3 +47,7 @@ Before operational use, Josh should:
 Implemented nullable Likely Service with exactly five current commercial offerings, additive migration 004, exact-header Current Sales App Export detection, preserved source/status/scheduling/meeting fields, conservative stage mapping and explicit technical-lane review. Legacy Call Tracker import remains supported; full staging export includes the additional data. Duplicate import reservations and rollback are covered by offline transactional-fake tests.
 
 No real records were imported, no migrations were executed, no deployment occurred, and local SharePoint mode remained dryrun. Existing staging setup edits in .env.example, migrations/001_initial.sql, src/auth.js and src/quotes.js were preserved. Full field list, source mapping, safety behavior and next staging steps: docs/05-current-sales-migration.md.
+
+## v1.1 alignment — 2026-09-28
+
+Migration 005 is created but not applied. No SharePoint schema, flows, production data or write mode changed. Apply it in staging before using Admin/handoff. Source must be Sales App; Josh performs the SharePoint choice rename. The supplied owner contract is documented in docs/02-sharepoint-workflow-contract.md. Stop conditions remain TODO-OWNER.

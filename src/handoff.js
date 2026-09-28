@@ -1,3 +1,9 @@
+import { discoverySnapshot } from "./discovery-export.js";
+import {
+  businessNameError,
+  canMarkLost,
+  lostReasons,
+} from "./workflow-contract.js";
 import { graph } from "./graph.js";
 import {
   SharePoint,
@@ -19,7 +25,11 @@ const lookupId = (email) =>
     : email === "josh@theitguys.us"
       ? process.env.SP_JOSH_USER_LOOKUP_ID
       : undefined;
-export async function refresh(p) {
+export async function refresh(
+  p,
+  dependencies = { sp, query, transaction, audit },
+) {
+  const { sp, query, transaction, audit } = dependencies;
   const s = sp.ready();
   const rows = await query(
     "SELECT * FROM sp_requests WHERE prospect_id=? AND item_id IS NOT NULL",
@@ -29,18 +39,37 @@ export async function refresh(p) {
     const remote = await sp.request(r.item_id);
     const status = remote.fields[s.maps.requests["Processing Status"].name];
     const message = remote.fields[s.maps.requests["Result Message"].name] || "";
-    if(status!==r.status||message!==(r.result_message||'')) await transaction(async c=>{
-      await query("UPDATE sp_requests SET status=?,result_message=? WHERE id=?", [status,message,r.id],c);
-      await audit(c,{email:'system'},'SharePoint status '+status,'sp_request',r.id);
-    });
+    if (
+      status !== r.status ||
+      message !== (r.result_message || "") ||
+      (status === "Done" && r.action === "MarkLost")
+    )
+      await applyRequestStatus(p, r, status, message, {
+        query,
+        transaction,
+        audit,
+      });
     if (status === "Done" && r.action === "CreateClient") {
       const client = await sp.client(p);
       if (client) {
         const id = client.fields[s.maps.clients["Client ID"].name];
-        if (id && (p.client_id!==id || String(p.client_item_id)!==String(client.id))) {
-          await transaction(async c=>{
-            await query("UPDATE prospects SET client_id=?,client_item_id=? WHERE id=?",[id,client.id,p.id],c);
-            await audit(c,{email:'system'},'link SharePoint client','prospect',p.id);
+        if (
+          id &&
+          (p.client_id !== id || String(p.client_item_id) !== String(client.id))
+        ) {
+          await transaction(async (c) => {
+            await query(
+              "UPDATE prospects SET client_id=?,client_item_id=? WHERE id=?",
+              [id, client.id, p.id],
+              c,
+            );
+            await audit(
+              c,
+              { email: "system" },
+              "link SharePoint client",
+              "prospect",
+              p.id,
+            );
           });
           p.client_id = id;
           p.client_item_id = client.id;
@@ -57,7 +86,69 @@ export async function refresh(p) {
     ]),
   );
 }
-export function handoffRoutes(app) {
+export async function applyRequestStatus(
+  p,
+  r,
+  status,
+  message,
+  dependencies = { query, transaction, audit },
+) {
+  const { query, transaction, audit } = dependencies;
+  await transaction(async (c) => {
+    await query("SELECT id FROM prospects WHERE id=? FOR UPDATE", [p.id], c);
+    await query(
+      "UPDATE sp_requests SET status=?,result_message=? WHERE id=?",
+      [status, message, r.id],
+      c,
+    );
+    if (status !== r.status || message !== (r.result_message || ""))
+      await audit(
+        c,
+        { email: "system" },
+        "SharePoint status " + status,
+        "sp_request",
+        r.id,
+      );
+    if (status === "Done" && r.action === "MarkLost") {
+      const applied = await query(
+        "SELECT id FROM audit_log WHERE action='apply Mark Lost' AND entity='sp_request' AND entity_id=?",
+        [String(r.id)],
+        c,
+      );
+      if (!applied.length) {
+        await query(
+          "UPDATE prospects SET stage='Closed Lost' WHERE id=?",
+          [p.id],
+          c,
+        );
+        await audit(
+          c,
+          { email: "system" },
+          "apply Mark Lost",
+          "sp_request",
+          r.id,
+        );
+        p.stage = "Closed Lost";
+      }
+    }
+  });
+}
+export function handoffRoutes(
+  app,
+  dependencies = {
+    query,
+    transaction,
+    audit,
+    prospect,
+    discovery,
+    sp,
+    graph,
+    refresh,
+  },
+) {
+  const { query, transaction, audit, prospect, discovery, sp, graph, refresh } =
+    dependencies;
+
   app.get("/prospects/:id/handoff", async (req, res) => {
     const p = await prospect(req.params.id);
     let client = null,
@@ -79,36 +170,41 @@ export function handoffRoutes(app) {
         )
       ).length > 0;
     const ready = !schema.errors.length && !p.hold;
-console.log("HANDOFF RENDER LOCALS", {
-  resLocalsInclude: res.locals.include,
-  resLocalsIncludeType: typeof res.locals.include,
-  appLocalsInclude: req.app.locals.include,
-  appLocalsIncludeType: typeof req.app.locals.include,
-  resLocalKeys: Object.keys(res.locals),
-  appLocalKeys: Object.keys(req.app.locals),
-});
+    const expectedStage = client?.["Current Stage"];
+    req.session.lostReviews ||= {};
+    req.session.lostReviews[p.id] = expectedStage || null;
+    const configuredReasons = await query(
+      "SELECT reason FROM config_lost_reasons WHERE enabled=TRUE ORDER BY sort_order",
+    );
     res.render("handoff", {
-  p,
-  clientRecord: client,
-  error,
-  schema,
-  missing,
-  approved,
-  ready,
-  requests: await query(
-    "SELECT * FROM sp_requests WHERE prospect_id=? ORDER BY id DESC",
-    [p.id],
-  ),
-  json,
-  plainResult,
-  lanes,
-});
+      p,
+      clientRecord: client,
+      nameError: businessNameError(p.business_name),
+      expectedStage,
+      canMarkLost: canMarkLost(expectedStage),
+      lostReasons: configuredReasons.filter((r) =>
+        lostReasons.includes(r.reason),
+      ),
+      error,
+      schema,
+      missing,
+      approved,
+      ready,
+      requests: await query(
+        "SELECT * FROM sp_requests WHERE prospect_id=? ORDER BY id DESC",
+        [p.id],
+      ),
+      json,
+      plainResult,
+      lanes,
+    });
   });
-  app.post("/prospects/:id/handoff", async (req, res) => {
+  const handoff = async (req, res) => {
     const action = choice(req.body.action, [
       "CreateClient",
       "Quoting",
       "TechnicalAssessment",
+      "MarkLost",
     ]);
     if (action !== "CreateClient" && req.session.user.role !== "owner")
       fail("Owner access required.", 403);
@@ -138,6 +234,7 @@ console.log("HANDOFF RENDER LOCALS", {
         lanes,
       );
       const d = await discovery(p.id, c);
+      const options = {};
       if (action === "CreateClient") {
         if (p.client_id)
           fail("This opportunity already has a SharePoint client.");
@@ -156,6 +253,59 @@ console.log("HANDOFF RENDER LOCALS", {
           fail(
             "A SharePoint client already exists for this opportunity; Josh must reconcile it before resubmission.",
           );
+      }
+      if (action === "CreateClient") {
+        const [capture] = await query(
+          "SELECT actor FROM discovery_versions WHERE prospect_id=? AND revision=?",
+          [p.id, d.revision],
+          c,
+        );
+        const [release] = p.hold
+          ? []
+          : await query(
+              "SELECT actor,notes FROM activities WHERE prospect_id=? AND type='note' AND notes LIKE 'Release hold: %' ORDER BY id DESC LIMIT 1",
+              [p.id],
+              c,
+            );
+        options.discovery = discoverySnapshot(p, d, {
+          capturedBy: capture?.actor || null,
+          releasedBy: release?.actor || null,
+          releaseNote: release?.notes?.slice("Release hold: ".length) || null,
+        });
+      }
+      if (action === "MarkLost") {
+        if (!p.client_id) fail("Create the SharePoint client first.");
+        if (schema.actionErrors?.MarkLost?.length)
+          fail(schema.actionErrors.MarkLost.join(" "));
+        const expectedStage = req.session.lostReviews?.[p.id];
+        if (!expectedStage || req.body.expectedStage !== expectedStage)
+          fail(
+            "Reload the handoff page to review the current client stage.",
+            409,
+          );
+        const client = await sp.client(p);
+        const currentStage =
+          client?.fields[schema.maps.clients["Current Stage"].name];
+        if (currentStage !== expectedStage)
+          fail("The client stage changed. Reload before marking lost.", 409);
+        if (!canMarkLost(currentStage))
+          fail("Signed clients must use Start Offboarding in SharePoint.");
+        const reason = choice(req.body.reason, lostReasons);
+        if (
+          !(
+            await query(
+              "SELECT reason FROM config_lost_reasons WHERE reason=? AND enabled=TRUE",
+              [reason],
+              c,
+            )
+          ).length
+        )
+          fail("This lost reason is disabled. Choose an enabled reason.");
+        Object.assign(options, {
+          reason,
+          notes: req.body.notes || "",
+          expectedStage,
+        });
       }
       if (
         action === "Quoting" &&
@@ -178,6 +328,7 @@ console.log("HANDOFF RENDER LOCALS", {
           req.session.user.email,
           new Date(),
           lookupId(req.session.user.email),
+          options,
         );
       } catch (e) {
         fail(e.message);
@@ -243,6 +394,11 @@ console.log("HANDOFF RENDER LOCALS", {
       }
     });
     res.redirect(`/prospects/${req.params.id}/handoff`);
+  };
+  app.post("/prospects/:id/handoff", handoff);
+  app.post("/prospects/:id/mark-lost", ownerOnly, (req, res) => {
+    req.body.action = "MarkLost";
+    return handoff(req, res);
   });
   app.get("/prospects/:id/sharepoint-status", async (req, res) => {
     const p = await prospect(req.params.id);
@@ -257,12 +413,10 @@ console.log("HANDOFF RENDER LOCALS", {
         requests: requests.map((r) => ({ ...r, plain: plainResult(r.status) })),
       });
     } catch {
-      res
-        .status(503)
-        .json({
-          error:
-            "SharePoint status unavailable. Josh can check the connection in Admin.",
-        });
+      res.status(503).json({
+        error:
+          "SharePoint status unavailable. Josh can check the connection in Admin.",
+      });
     }
   });
   app.post("/requests/:id/reconcile", ownerOnly, async (req, res) => {
@@ -318,9 +472,4 @@ console.log("HANDOFF RENDER LOCALS", {
     });
     res.redirect(`/prospects/${pid}/handoff`);
   });
-  app.post("/prospects/:id/mark-lost", ownerOnly, (_req, _res) =>
-    fail(
-      "Mark Lost is disabled pending owner confirmation of the exact payload.",
-    ),
-  );
 }

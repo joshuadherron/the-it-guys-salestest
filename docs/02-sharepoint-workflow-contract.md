@@ -1,5 +1,7 @@
 # SharePoint Operations: Workflow Contract for the Sales App
 
+**v1.1 alignment (2026-09-28):** The owner-supplied live-flow contract takes precedence over the frozen blueprint below. No live flows or SharePoint schema were changed by the app.
+
 **Source:** The IT Guys SharePoint Operations Blueprint v1 (frozen 2026-09-22) and the flow readmes (Create Client, Start Stage, Stage Gate, eSignature, BII price-first rows). Condensed for app builders. Where this conflicts with a live SharePoint list, **the live list wins**. The app must read column names and choice values at runtime and stop with a clear error if something it needs is missing. Never guess.
 
 ## Site and lists
@@ -25,12 +27,13 @@ The app creates a Workflow Request item with **Processing Status = Pending**, **
 ### Request types the app may create
 | Request Type | Payload | Who may trigger it in the app |
 |---|---|---|
-| **Create Client** | `{"opportunityId":"OPP-xxxx","client":"<Business Name>","stage":"Sales Discovery","serviceLane":"Business IT Integration" \| "Managed IT"}` | Alanna or Josh, once the opportunity is qualified |
+| **Create Client** | `{"opportunityId":"OPP-xxxx","client":"<Business Name>","stage":"Sales Discovery","serviceLane":"Business IT Integration" \| "Managed IT","discovery":{...}}` | Alanna or Josh, once the opportunity is qualified |
 | **Start Stage** | `{"clientId":"CL-xxxx","stage":"Quoting","serviceLane":"Business IT Integration"}`. Optional `dueDate` (yyyy-MM-dd). | **Josh only** (owner role) |
-| **Advance Stage** | `{"clientId":"CL-xxxx","serviceLane":"...","expectedStage":"<current>"}` | Josh only |
-| **Mark Lost** | `{"clientId":"CL-xxxx"}` or `{"opportunityId":"OPP-xxxx"}` | Josh, or Alanna for clients she owns (confirm payload with Josh; see open questions) |
+| **Start Stage** | `{"clientId":"CL-xxxx","stage":"Technical Assessment","serviceLane":"Managed IT"}` | **Josh only** (owner role) |
+| **Mark Lost** | `{"clientId":"CL-0007","reason":"Chose another provider","notes":"optional","expectedStage":"Quoting"}` | **Josh only**, linked clients before Client Activation |
 
 **Not in v1:**
+- Advance Stage is not built in v1; Josh advances stages in SharePoint.
 - Item Completed, Create Working Copy and Request Exception: technical and document steps Josh does in SharePoint.
 - eSignature: the send click is always by hand in Microsoft 365.
 
@@ -53,3 +56,24 @@ Sales Discovery → Technical Assessment (MIT-02, started by Josh with Start Sta
 - Rename safety: the client folder name = Clients Title. The app must never rename a client once it's created in SharePoint.
 - One request at a time per client. Don't submit a new stage request while one for that client is Pending or Processing (read the list first).
 - Idempotency: the app stores the Workflow Request ID it created and never resubmits automatically. The user must explicitly retry.
+
+
+## Discovery snapshot on Create Client
+
+Create Client retains opportunityId, client, stage and serviceLane and adds a JSON object named discovery. It contains form (`BII Business Discovery Form v0.3 + v0.4 corrections`), opportunityId, status, revision, capturedBy (actor for the saved revision), exportedAt (UTC ISO timestamp), mvdComplete, flag codes, hold metadata, and every question in schema order. State keys remain answered / not_sure / not_discussed. Non-answer values remain null. Answered values use the summary's format(); repeatable app entries are full arrays of objects, not the summary's three-entry excerpt. Explicit None retains the summary text. Stored discovery answers are unchanged.
+
+The flow writes the snapshot once to `Client Operations/<Client>/Assessments/<Client> - Discovery Handoff - <yyyy-MM-dd>.json`. It is internal, including flags; the app does not send these to any other destination. Later app edits do not resync. The complete JSON payload must be at most 60,000 characters; larger payloads are refused, never truncated. Dryrun stores the full request body locally without Graph writes.
+
+## Mark Lost
+
+Only these exact reasons are accepted: Price; Chose another provider; Staying with current IT; No decision / went dark; Not a fit (disqualified); Timing (revisit later); Other. Migration 005 seeds config_lost_reasons. Admin lets the owner enable/disable and reorder these values; it cannot introduce unsupported free text. Notes are optional, up to 500 characters.
+
+expectedStage is the Clients Current Stage shown when the handoff page was loaded, retained in the authenticated session. The app checks the live stage before submitting and sends the reviewed stage to the flow for its own stale-stage check. Allowed pre-activation stages are Sales Discovery, Technical Assessment, Risk Review, Quoting and Contracting. Client Activation and later (including Project Delivery, Acceptance and Operations), closed states and unknown stages are blocked; signed clients require Start Offboarding in SharePoint.
+
+Mark Lost uses Request Type Mark Lost, the prospect's lane, known Client lookup and the normal SALESAPP-<OPP>-MarkLost-<stamp> title. Local active/uncertain requests and remote Pending/Processing requests block another submission. Done closes the local pipeline and records an audit marker in one transaction; repeated polling or reconciliation cannot apply it twice. Rejected retains the local stage and shows the flow's Result Message. Linked prospects cannot be newly set to Closed Lost through plain pipeline editing; unlinked prospects retain the local owner-only action.
+
+## Schema and name checks
+
+Source must be exactly `Sales App`. `Sales app` is not accepted; the checker tells Josh to rename it in Workflow Requests settings. A missing Mark Lost Request Type disables only Mark Lost; missing shared columns or choices still block all handoffs. Title resolves by internal name Title on both lists, and the Clients opportunity column by TIG_SalesOpportunityID regardless of display labels.
+
+Create Client and prospect edits reject business names containing `" * : < > ? / \ | # %` or a leading/trailing period. Existing data is not rewritten. The client-name rename lock remains in force after SharePoint creation. Create Client still requires Qualified-or-later plus complete MVD; Quoting remains owner-only with an Approved quote and BII lane; Technical Assessment remains owner-only and Managed IT only. Stop conditions remain TODO-OWNER pending Josh's list.

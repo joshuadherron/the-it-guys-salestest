@@ -69,7 +69,7 @@
     <% } %>
 
     <button
-      <%= !ready ||
+      <%= !ready || nameError ||
           missing.length ||
           p.client_id ||
           ![
@@ -84,6 +84,8 @@
     >
       Create client in SharePoint
     </button>
+    <p>The discovery is copied to SharePoint when the client is created. Later edits stay in the app.</p>
+    <% if(nameError){ %><p class="error"><%= nameError %></p><% } %>
   </form>
 </section>
 
@@ -114,10 +116,25 @@
 
     <% } %>
 
-    <p>
-      <button disabled>Mark Lost</button>
-      Disabled pending exact payload confirmation.
-    </p>
+    <% if(p.client_id){ %>
+      <h2>Mark Lost</h2>
+      <% if(!canMarkLost){ %>
+        <p>Mark Lost is unavailable at this client stage. Clients at Client Activation or later must use Start Offboarding in SharePoint. If the stage is unavailable, refresh the connection first.</p>
+      <% }else{ %>
+        <form method="post" action="/prospects/<%= p.id %>/mark-lost">
+          <input type="hidden" name="_csrf" value="<%= csrf %>">
+          <input type="hidden" name="expectedStage" value="<%= expectedStage %>">
+          <label>Reason
+            <select name="reason" required><option value="">Choose…</option>
+              <% for(const r of lostReasons){ %><option><%= r.reason %></option><% } %>
+            </select>
+          </label>
+          <label>Notes (optional, up to 500 characters)<textarea name="notes" maxlength="500"></textarea></label>
+          <button <%= !ready || !lostReasons.length || schema.actionErrors?.MarkLost?.length ? 'disabled' : '' %>>Mark Lost</button>
+        </form>
+      <% } %>
+      <% for(const issue of schema.actionErrors?.MarkLost || []){ %><p class="error"><%= issue %></p><% } %>
+    <% } %>
   </section>
 <% } %>
 

@@ -8,7 +8,7 @@
 <p class="error">
 <%= error %>
 </p>
-<% }if(!schema.errors.length){ %>
+<% } for(const issue of schema.actionErrors?.MarkLost || []){ %><p class="error"><%= issue %> Other handoff actions remain available.</p><% }if(!schema.errors.length){ %>
 <p>Required list columns and choices are present.</p>
 <% } %>
 <form method="post" action="/admin/check">
@@ -49,6 +49,20 @@
 <input type="number" min="0" name="sort_order" value="<%= stage.sort_order %>">
 </label>
 <button>Save order</button>
+</form>
+<% } %>
+</section>
+<section class="card">
+<h2>Mark Lost reasons</h2>
+<p>Flow-approved text is fixed. Enable reasons and set their display order.</p>
+<% for(const reason of lostReasons){ %>
+<form method="post" action="/admin/lost-reasons">
+<input type="hidden" name="_csrf" value="<%= csrf %>">
+<input type="hidden" name="reason" value="<%= reason.reason %>">
+<strong><%= reason.reason %></strong>
+<label>Order <input type="number" name="sort_order" min="0" value="<%= reason.sort_order %>" required></label>
+<label><input type="checkbox" name="enabled" value="yes" <%= reason.enabled?'checked':'' %>> Enabled</label>
+<button>Save reason</button>
 </form>
 <% } %>
 </section>

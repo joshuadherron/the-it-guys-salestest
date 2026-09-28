@@ -136,6 +136,10 @@ const fixtures = {
     lines: calculation.lines,
   },
   handoff: {
+    nameError: null,
+    expectedStage: null,
+    canMarkLost: false,
+    lostReasons: [],
     clientRecord: null,
     client: null,
     error: null,
@@ -149,6 +153,7 @@ const fixtures = {
     lanes,
   },
   admin: {
+    lostReasons: [],
     prices: [],
     stages: [],
     stops: [],

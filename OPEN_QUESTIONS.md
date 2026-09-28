@@ -2,9 +2,7 @@
 
 1. Josh must finalize pre-quote stop conditions; initial rows are TODO-OWNER.
 
-2. Confirm Workflow Requests Source includes Sales App. Missing values block handoff.
-
-3. Confirm Mark Lost payload. Action remains disabled; owner only in v1.
+2. RESOLVED BY OWNER (2026-09-28): Source must be Sales App. Josh will rename Sales app in SharePoint; the app keeps exact spelling and diagnoses the mismatch.
 
 4. Confirm long-term client-creation permissions; both roles allowed in v1.
 
@@ -23,3 +21,11 @@
 11. RESOLVED BY OWNER (2026-09-27): current commercial choices are Managed IT, Managed IT + Security, BII, Project and Other. Missing choices stay unset. Workflow lanes remain unchanged and separate.
 
 12. RESOLVED BY OWNER: Current Sales App Export uses its exact 25-column header and separate `current_sales` import source. Contacted/Follow-Up/Nurture default to Prospecting with source stage and status retained. Technical Discovery requires explicit lane review. The actual technical prospect's lane remains a per-record owner choice at preview; no global mapping decision is outstanding.
+
+## v1.1 owner resolutions — 2026-09-28
+
+- Mark Lost payload confirmed: clientId, one of seven exact reasons, optional notes (500 characters), and expectedStage. Owner only, linked clients before activation; Done closes locally. Former open item 3 is removed.
+- Create Client includes a one-time internal discovery snapshot, all questions/states and flags, with a 60,000-character payload limit. Later edits stay local.
+- Business names must satisfy the live folder-name restrictions before handoff and when edited; no existing names are rewritten and the rename lock remains.
+- Advance Stage is not built in v1. Josh performs it in SharePoint.
+- Source spelling is resolved above; Josh's SharePoint rename remains an operational step, not an app schema change.

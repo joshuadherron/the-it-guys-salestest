@@ -1,9 +1,13 @@
+import { lostReasons } from "./workflow-contract.js";
 import { query, transaction, audit } from "./db.js";
 import { ownerOnly, choice, text, integer, fail } from "./security.js";
 import { sp } from "./handoff.js";
 export function adminRoutes(app) {
   app.get("/admin", ownerOnly, async (req, res) =>
     res.render("admin", {
+      lostReasons: await query(
+        "SELECT * FROM config_lost_reasons ORDER BY sort_order",
+      ),
       prices: await query("SELECT * FROM config_prices ORDER BY name"),
       stages: await query("SELECT * FROM config_stages ORDER BY sort_order"),
       stops: await query("SELECT * FROM config_stop_conditions ORDER BY id"),
@@ -12,6 +16,24 @@ export function adminRoutes(app) {
       schema: sp.cache,
     }),
   );
+  app.post("/admin/lost-reasons", ownerOnly, async (req, res) => {
+    const reason = choice(req.body.reason, lostReasons);
+    await transaction(async (c) => {
+      await query(
+        "UPDATE config_lost_reasons SET sort_order=?,enabled=? WHERE reason=?",
+        [integer(req.body.sort_order), req.body.enabled === "yes", reason],
+        c,
+      );
+      await audit(
+        c,
+        req.session.user,
+        "configure lost reason",
+        "config_lost_reasons",
+        reason,
+      );
+    });
+    res.redirect("/admin");
+  });
   app.post("/admin/check", ownerOnly, async (req, res) => {
     await sp.check();
     await audit(
