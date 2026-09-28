@@ -1,0 +1,43 @@
+<section class="card" id="next-step"><h2>Next step</h2><h3><%= step.title %></h3><p><%= step.detail %></p>
+<% if(step.waitingOn){ %><p>Waiting on <%= step.waitingOn %></p><% } %>
+<% if(step.action?.href){ %><a class="button" href="<%= step.action.href %>"><%= step.action.label %></a><% } %>
+<% if(step.action?.form){ %><form method="post" action="/prospects/<%= p.id %>/work-items"><input type="hidden" name="_csrf" value="<%= csrf %>"><input type="hidden" name="action" value="AdvanceStage"><input type="hidden" name="expectedStage" value="<%= currentStage %>"><button <%= error||pending.length||schema.workErrors?.length||actionErrors.AdvanceStage?.length?'disabled':'' %>>Advance stage</button></form><% } %>
+</section>
+<section class="card"><h2>Discovery</h2><p><%= p.hold?'On Hold':d.status %> · <%= completedGroups %> of 8 groups complete</p>
+<% const summary=p.hold||d.status==='Ready for Review'; const review=!summary&&completedGroups===8; %>
+<a class="button" href="/prospects/<%= p.id %>/discovery/<%= summary?'summary':review?'3':'1' %>"><%= summary?'View discovery summary':d.exists===false?'Start discovery':review?'Review & send to Josh':'Continue discovery' %></a>
+<% if(hasAnswers&&!summary){ %><a href="/prospects/<%= p.id %>/discovery/summary">View discovery summary</a><% } %>
+</section>
+<% if(p.client_id){ const disabled=Boolean(error||pending.length||p.hold||schema.errors.length||schema.workErrors?.length); %>
+<section class="card" id="work-items"><h2>Client work items</h2>
+<p><%= p.client_id %> · <%= currentStage||'Stage unavailable' %> · <%= client?.['Stage Status']||'' %></p>
+<% if(error){ %><p class="error"><%= error %></p><% } %>
+<% for(const issue of [...schema.workErrors||[],...schema.definitionErrors||[],...Object.values(actionErrors).flat()]){ %><p class="error"><%= issue %></p><% } %>
+<% if(stageGateNotice){ %><p class="notice">Confirm Stage Gate v1.1 is imported before using outcome flags</p><% } %>
+<% for(const group of itemGroups){ %>
+<% if(group.label==='Completed/closed'){ %><details><summary>Completed/closed (<%= group.items.length %>)</summary><% }else{ %><h3><%= group.label %></h3><% } %>
+<% for(const item of group.items){ %><article class="card" id="item-<%= item.id %>"><h4><%= item.document %> · <%= item.workflowId %></h4>
+<p><%= item.stage %> · <%= item.status||'Open' %> · <%= item.assignee %></p>
+<p class="<%= openItem(item)&&item.dueDate&&item.dueDate.slice(0,10)<new Date().toISOString().slice(0,10)?'error':'' %>">Due: <%= item.dueDate?.slice(0,10)||'Not set' %></p>
+<% if(item.blocking){ %><span class="pill">Blocking</span><% } %>
+<% if(item.signatureRequired){ %><span class="pill">Signature · <%= item.signatureStatus %></span><% if(item.signatureStatus==='Signed'&&item.signedAt){ %><p>Signed <%= item.signedAt %></p><% } %><% if(item.signatureStatus==='Sent - awaiting signature'){ %><p>Out for signature<%= item.sentAt?' since '+item.sentAt:'' %></p><% } %><% } %>
+<% if(item.exceptionStatus&&item.exceptionStatus!=='None'){ %><span class="pill">Exception · <%= item.exceptionStatus %></span><% } %>
+<% if(item.ticket){ %><span class="pill">Ticket · <%= item.ticket %></span><% } %>
+<% if(item.url){ %><p><a href="<%= item.url %>" target="_blank" rel="noopener noreferrer">Open document</a></p><% } %>
+<% if(item.signingPdf){ %><a href="<%= item.signingPdf %>" target="_blank" rel="noopener noreferrer">Signing PDF</a><% } %>
+<% if(item.signedCopy){ %><a href="<%= item.signedCopy %>" target="_blank" rel="noopener noreferrer">Signed Copy</a><% } %>
+<% if(openItem(item)&&item.signatureRequired&&item.signatureStatus!=='Signed'){ %><p>Completes automatically when signed</p><% if(user.role==='owner'){ %><p>Set Internal Notes Removed = Yes and Signature Status = Ready to send on the document in SharePoint.</p><% }} %>
+<% if(mayComplete(item,user)){ %><form method="post" action="/prospects/<%= p.id %>/work-items"><input type="hidden" name="_csrf" value="<%= csrf %>"><input type="hidden" name="action" value="ItemCompleted"><input type="hidden" name="itemId" value="<%= item.id %>">
+<% for(const flag of flags){ const supported=schema.workChoices?.TIG_OutcomeFlags?.includes(flag.triggerFlag); %><label><input type="checkbox" name="outcomeFlags" value="<%= flag.triggerFlag %>" <%= supported?'':'disabled' %>><%= flag.triggerFlag %> → <%= flag.document %> (<%= flag.id %>) <%= supported?'':'— missing Outcome Flags choice' %></label><% } %>
+<button <%= disabled||schema.definitionErrors?.length||actionErrors.ItemCompleted?.length?'disabled':'' %>>Mark complete</button></form><% } %>
+<% if(user.role==='owner'&&openItem(item)){ %>
+<form method="post" action="/prospects/<%= p.id %>/work-items" data-confirm="Mark this document Not Required?"><input type="hidden" name="_csrf" value="<%= csrf %>"><input type="hidden" name="action" value="NotRequired"><input type="hidden" name="confirm" value="yes"><input type="hidden" name="itemId" value="<%= item.id %>"><button class="secondary" <%= disabled||actionErrors.NotRequired?.length?'disabled':'' %>>Not required</button></form>
+<% if(item.blocking&&['None','Rejected'].includes(item.exceptionStatus)){ %><details><summary>Request exception</summary><form method="post" action="/prospects/<%= p.id %>/work-items"><input type="hidden" name="_csrf" value="<%= csrf %>"><input type="hidden" name="action" value="RequestException"><input type="hidden" name="itemId" value="<%= item.id %>"><label>Reason<textarea name="reason" minlength="10" maxlength="5000" required></textarea></label><label>Risk Acknowledgment file name or approval note<input name="reference" maxlength="1000" required></label><button <%= disabled||actionErrors.RequestException?.length?'disabled':'' %>>Request exception</button></form></details><% } %>
+<% } %></article><% } %>
+<% if(group.label==='Completed/closed'){ %></details><% } %><% } %>
+<% if(user.role==='owner'){ %><details><summary>Add item</summary><form method="post" action="/prospects/<%= p.id %>/work-items"><input type="hidden" name="_csrf" value="<%= csrf %>"><input type="hidden" name="action" value="CreateWorkingCopy"><label>Working copy<select name="workflowId" required><option value="">Choose…</option><% for(const definition of definitions){ %><option value="<%= definition.id %>"><%= definition.document %> (<%= definition.id %>)</option><% } %></select></label><label>Instance reference (optional)<input name="instanceRef" maxlength="40"></label><label>Due date (optional)<input name="dueDate" type="date"></label><button <%= disabled||schema.definitionErrors?.length||!definitions.length||actionErrors.CreateWorkingCopy?.length?'disabled':'' %>>Add item</button></form></details>
+<details><summary>More</summary>
+<form method="post" action="/prospects/<%= p.id %>/work-items"><input type="hidden" name="_csrf" value="<%= csrf %>"><input type="hidden" name="action" value="AdvanceStage"><input type="hidden" name="expectedStage" value="<%= currentStage %>"><button <%= disabled||!currentStage||actionErrors.AdvanceStage?.length?'disabled':'' %>>Advance stage</button></form>
+<form method="post" action="/prospects/<%= p.id %>/work-items"><input type="hidden" name="_csrf" value="<%= csrf %>"><input type="hidden" name="action" value="StartStage"><label>Stage<select name="stage" required><% for(const stage of stageChoices){ %><option><%= stage %></option><% } %></select></label><button <%= disabled||!stageChoices.length||actionErrors.StartStage?.length?'disabled':'' %>>Start stage</button></form></details><% } %>
+</section><% } %>
+<% for(const r of requests.filter((r)=>['Rejected','Failed','Unknown','Pending','Processing','Preparing'].includes(r.status))){ %><article class="card <%= r.status==='Rejected'?'error':'' %>"><h3><%= r.action %> · <%= r.status %></h3><% if(r.target_item_id){ %><p>Document item <%= r.target_item_id %> · <%= (items||[]).find(i=>i.id===String(r.target_item_id))?.document||'See request history' %></p><% } %><p class="preserve-lines"><%= r.result_message||'' %></p><a href="/prospects/<%= p.id %>/handoff">SharePoint actions &amp; history</a></article><% } %>

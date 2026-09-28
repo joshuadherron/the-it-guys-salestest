@@ -1,0 +1,12 @@
+<%- include('header') %>
+<a href="/prospects/<%= p.id %>">Back to prospect</a>
+<h1>Discovery review · <%= p.business_name %></h1>
+<p><%= p.hold?'On Hold':d.status %> · <%= completedGroups %> of 8 groups complete</p>
+<% if(user.role==='owner'){ %>
+<% if(d.status==='Ready for Review'){ %><form method="post" action="/prospects/<%= p.id %>/discovery/reopen"><input type="hidden" name="_csrf" value="<%= csrf %>"><button>Reopen for Alanna</button></form><% } %>
+<% if(p.hold){ %><form method="post" action="/prospects/<%= p.id %>/discovery/release"><input type="hidden" name="_csrf" value="<%= csrf %>"><label>Release note<textarea name="note" required></textarea></label><button>Release hold</button></form><% } %>
+<% if(!p.client_id && d.status==='Ready for Review' && !p.hold && completedGroups===8){ %><a class="button" href="/prospects/<%= p.id %>/handoff">Create client in SharePoint</a><% } %>
+<% }else if(d.status==='Ready for Review'){ %><p>Read-only. Josh can reopen discovery for edits.</p><% } %>
+<a href="/prospects/<%= p.id %>/discovery/1">Back to discovery</a>
+<%- include('summary', {expandFull:user.role==='owner'}) %>
+<%- include('footer') %>

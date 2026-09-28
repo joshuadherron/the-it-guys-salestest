@@ -32,9 +32,9 @@ The app creates a Workflow Request item with **Processing Status = Pending**, **
 | **Start Stage** | `{"clientId":"CL-xxxx","stage":"Technical Assessment","serviceLane":"Managed IT"}` | **Josh only** (owner role) |
 | **Mark Lost** | `{"clientId":"CL-0007","reason":"Chose another provider","notes":"optional","expectedStage":"Quoting"}` | **Josh only**, linked clients before Client Activation |
 
-**Not in v1:**
-- Advance Stage is not built in v1; Josh advances stages in SharePoint.
-- Item Completed, Create Working Copy and Request Exception: technical and document steps Josh does in SharePoint.
+**v1.2:** Advance Stage, Item Completed, Create Working Copy and Request Exception are available through Workflow Requests. No library fields are written by the app.
+
+**Still outside the app:**
 - eSignature: the send click is always by hand in Microsoft 365.
 
 ### Stage values (Clients → Current Stage choice, lifecycle order)
@@ -77,3 +77,29 @@ Mark Lost uses Request Type Mark Lost, the prospect's lane, known Client lookup 
 Source must be exactly `Sales App`. `Sales app` is not accepted; the checker tells Josh to rename it in Workflow Requests settings. A missing Mark Lost Request Type disables only Mark Lost; missing shared columns or choices still block all handoffs. Title resolves by internal name Title on both lists, and the Clients opportunity column by TIG_SalesOpportunityID regardless of display labels.
 
 Create Client and prospect edits reject business names containing `" * : < > ? / \ | # %` or a leading/trailing period. Existing data is not rewritten. The client-name rename lock remains in force after SharePoint creation. Create Client still requires Qualified-or-later plus complete MVD; Quoting remains owner-only with an Approved quote and BII lane; Technical Assessment remains owner-only and Managed IT only. Stop conditions remain TODO-OWNER pending Josh's list.
+
+
+## Guided workflow v1.2 — 2026-09-28
+
+The prospect page is the primary workflow surface. Its next-step function follows the ordered discovery, pending-request, sales-stage, blocking-item, exception and advance-stage rules. The dedicated `/prospects/:id/discovery/summary` page exposes the full Josh summary. Today shows the owner a review queue; sales sees its count. Acknowledging an unsuccessful request updates local review metadata only and never clears an uncertain delivery or enables a retry.
+
+| Request Type | Exact payload | Permission |
+|---|---|---|
+| Item Completed | `{"itemId":41,"completionStatus":"Complete","outcomeFlags":[]}` | Owner, or Alanna when resolved as the assignee; never unsigned signature items |
+| Item Completed | `{"itemId":41,"completionStatus":"Not Required"}` | Owner, explicit confirmation |
+| Request Exception | `{"itemId":41,"reason":"At least ten characters","reference":"Risk Acknowledgment file or approval note"}` | Owner; open blocking item with Exception Status None or Rejected |
+| Create Working Copy | `{"clientId":"CL-0001","workflowId":"BII-05","instanceRef":"Branch 2","dueDate":"2026-10-01"}` | Owner; instanceRef and dueDate are optional |
+| Advance Stage | `{"clientId":"CL-0001","serviceLane":"Business IT Integration","expectedStage":"Quoting"}` | Owner; includes the stage reviewed on the page |
+| Start Stage | `{"clientId":"CL-0001","stage":"Project Delivery","serviceLane":"Business IT Integration"}` | Owner; stage choices come from Clients, excluding Closed stages |
+
+Existing BII Quoting approval and Managed IT Technical Assessment rules also apply in the More menu. Pending/Processing requests, including flow-created follow-ups, block every action. Item-level requests are matched through their client lookup or their item's membership in the client library records. Local Preparing/Unknown records block retry until reconciliation. Each request is stored and audited before dispatch; target_item_id identifies item actions. Dryrun stores the complete body and calls no Graph write method.
+
+Stage Gate v1.1 makes the explicit outcomeFlags array authoritative, including `[]`. The exact allowed values are Material findings; Risk Acknowledgment required; Data Migration Preflight required; Network Integration referral; Advanced Technology Assessment required; Quote-ready; Not quote-ready; Separate project required; Client Service Schedule required. Only flags backed by an active Outcome flag definition in the client's lanes and present in the live library choices can be selected. Their labels identify the working copies they will issue. Connection checks look for a Done Item Completed request containing outcomeFlags as deployment evidence. Without evidence the owner sees a one-time session notice; this does not block the action.
+
+Connection checks resolve Client Operations and Client Workflow Definitions by exact display name and verify their confirmed internal column names. Missing new request choices disable only their actions. Missing required Client Operations columns disable the work-item panel and identify the column. Missing definitions disable definition-dependent actions, while file-name fallback still permits reading items. Definitions refresh on connection check. Items cache for 30 seconds per client and invalidate on dispatch and observed Done/Rejected transitions. Every POST rereads current items before authorization.
+
+Library item reads filter by TIG_ClientID and pending request reads filter by the resolved Processing Status column, both with `Prefer: HonorNonIndexedQueriesWarningMayFailRandomly`. If Graph rejects the filter, the reader pages the full result and filters locally with a sanitized warning. Permission failures are not treated as filter failures.
+
+Assignees resolve from TIG_AssignedToLookupId via the site's User Information List fields.EMail, cached for the process lifetime. Only configured verified environment mappings are used as fallback. Unresolved or conflicting fallback mappings display Assigned (unknown), with completion restricted to the owner.
+
+Signature metadata is read-only. Signature-required unsigned items complete through the signing flow. The owner is directed to set Internal Notes Removed and Ready to send on the document in SharePoint; no library-edit API exists in the app. Per owner clarification on 2026-09-28, the sent-date column is optional and resolved only when exactly one column has displayName Signature Sent Date. Missing, ambiguous or blank values produce Out for signature without a date or an error. TIG_SignedDate is the confirmed signed-date field.

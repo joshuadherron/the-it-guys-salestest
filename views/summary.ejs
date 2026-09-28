@@ -23,7 +23,7 @@ for(const [title,ids] of sections){ %>
 </p>
 <% }} %>
 </section>
-<details class="card">
+<details class="card" <%= typeof expandFull!=='undefined'&&expandFull?'open':'' %>>
 <summary>Full detail, all flags & unanswered inventory</summary>
 <% for(const q of schema){ %>
 <p>

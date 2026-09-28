@@ -25,15 +25,7 @@
 <strong>On Hold — Pending Josh Review</strong>
 <p>No diagnosing, no reassurance about severity, no speculation. Record what was said, thank the customer, tell them “someone will follow up on that specifically and quickly”, and keep gathering MVD fields only if the customer is comfortable.</p>
 <p>No scheduling, pricing or timeline talk until Josh releases it.</p>
-<% if(user.role==='owner'){ %>
-<form method="post" action="/prospects/<%= p.id %>/discovery/release">
-<input type="hidden" name="_csrf" value="<%= csrf %>">
-<label>Release note</label>
-<textarea name="note" required>
-</textarea>
-<button>Release hold</button>
-</form>
-<% } %>
+<a href="/prospects/<%= p.id %>/discovery/summary">View discovery summary and hold controls</a>
 </div>
 <% for(const n of notifications){ %>
 <p class="pill">
@@ -182,12 +174,7 @@
 <input type="hidden" name="_csrf" value="<%= csrf %>">
 <button id="send-discovery" data-locked="<%= d.status==='Ready for Review' %>" <%= missing.length||p.hold||d.status==='Ready for Review'?'disabled':'' %>>Send to Josh</button>
 </form>
-<% if(user.role==='owner'&&d.status==='Ready for Review'){ %>
-<form method="post" action="/prospects/<%= p.id %>/discovery/reopen">
-<input type="hidden" name="_csrf" value="<%= csrf %>">
-<button class="secondary">Reopen discovery</button>
-</form>
-<% } %>
+<a href="/prospects/<%= p.id %>/discovery/summary">View discovery summary</a>
 </section>
 <% } %>
 </div>

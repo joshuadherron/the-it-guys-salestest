@@ -19,7 +19,7 @@ import { mvd } from "./discovery-rules.js";
 import { ownerOnly, integer, choice, text, fail } from "./security.js";
 import { lanes } from "./config.js";
 export const sp = new SharePoint(graph);
-const lookupId = (email) =>
+export const lookupId = (email) =>
   email === "alanna@theitguys.us"
     ? process.env.SP_ALANNA_USER_LOOKUP_ID
     : email === "josh@theitguys.us"
@@ -39,6 +39,8 @@ export async function refresh(
     const remote = await sp.request(r.item_id);
     const status = remote.fields[s.maps.requests["Processing Status"].name];
     const message = remote.fields[s.maps.requests["Result Message"].name] || "";
+    if (["Done", "Rejected"].includes(status) && status !== r.status)
+      sp.invalidateWorkItems?.(p.client_id);
     if (
       status !== r.status ||
       message !== (r.result_message || "") ||
@@ -362,6 +364,7 @@ export function handoffRoutes(
         return;
       }
       try {
+        sp.invalidateWorkItems?.(current.client_id);
         const result = await submitRequest(graph, mode, schema, body);
         await query(
           "UPDATE sp_requests SET status=?,item_id=? WHERE id=?",
@@ -440,7 +443,7 @@ export function handoffRoutes(
       const title = json(r.request_json).fields[
         schema.maps.requests.Title.name
       ];
-      const matches = (await sp.requests()).filter(
+      const matches = (await sp.requests(false)).filter(
         (item) => item.fields[schema.maps.requests.Title.name] === title,
       );
       if (matches.length > 1)

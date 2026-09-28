@@ -10,20 +10,15 @@
 <%= p.phone %>
 </a> · <%= p.email %>
 </p>
-<% if(p.hold){ %>
-<div class="hold">
-<h2>On Hold — Pending Josh Review</h2>
-<p>No scheduling, pricing or timeline talk until Josh releases this hold.</p>
-</div>
-<% } %>
+<div data-workflow-panel="<%= p.id %>"><%- include('workflow-panel') %></div>
 <div class="row no-print">
 <a class="button" href="/prospects/<%= p.id %>/discovery/1">Business discovery</a>
 <a class="button secondary" href="/prospects/<%= p.id %>/quotes">BII worksheet</a>
-<a class="button secondary" href="/prospects/<%= p.id %>/handoff">SharePoint handoff</a>
+<a class="button secondary" href="/prospects/<%= p.id %>/handoff">SharePoint actions &amp; history</a>
 <a href="/prospects/<%= p.id %>/edit">Edit prospect</a>
 </div>
 <section class="card">
-<h2>Next step</h2>
+<h2>Prospect notes</h2>
 <p>Follow-up: <%= p.follow_up||'Not scheduled' %> · Owner: <%= p.owner %>
 </p>
 <p>Likely Service: <%= p.likely_service||'Unset' %> — commercial interest; workflow lane is separate.</p>
@@ -31,9 +26,7 @@
 <p>
 <%= p.notes %>
 </p>
-<div data-client-status="<%= p.id %>">
-<% if(p.client_id){ %>SharePoint client: <%= p.client_id %> — loading current stage…<% } %>
-</div>
+
 </section>
 <section class="card"><h2>Next action, meeting & migration details</h2>
 <% for(const [key,label] of structuredFields){if(p[key]!==null&&p[key]!==undefined&&p[key]!==''){ %><p class="preserve-lines"><strong><%= label %>:</strong> <%= ['teams_scheduled','josh_needed'].includes(key)?(p[key]?'Yes':'No'):p[key] %></p><% }} %>

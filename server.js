@@ -1,3 +1,4 @@
+import { guidedRoutes } from "./src/guided-workflow.js";
 import "dotenv/config";
 import express from "express";
 import helmet from "helmet";
@@ -79,6 +80,7 @@ app.use(async (req, res, next) => {
   next();
 });
 pipelineRoutes(app);
+guidedRoutes(app);
 discoveryRoutes(app);
 quotesRoutes(app);
 handoffRoutes(app);
@@ -89,12 +91,10 @@ app.use((err, req, res, _next) => {
   if (status >= 500) {
     console.error("Unhandled application error:", {
       method: req.method,
-      path: req.originalUrl,
+      route: req.route?.path,
       name: err?.name,
-      message: err?.message,
       code: err?.code,
       sqlState: err?.sqlState,
-      stack: err?.stack,
     });
   }
 
@@ -128,6 +128,9 @@ app.listen(port, () => {
       }
     })
     .catch((err) => {
-      console.error("SharePoint startup check failed:", err.message);
+      console.error("SharePoint startup check failed:", {
+        name: err.name,
+        code: err.code,
+      });
     });
 });

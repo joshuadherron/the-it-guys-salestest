@@ -53,7 +53,7 @@
 </section>
 <% if(selected){ %>
 <section class="card">
-<h2>Latest quote #<%= selected.id %> · <%= selected.status %>
+<h2>Quote #<%= selected.id %> · <%= selected.status %>
 </h2>
 <p>Approved by: <%= selected.approved_by||'Not approved' %> <%= selected.approved_at||'' %>
 </p>

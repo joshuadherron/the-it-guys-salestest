@@ -297,3 +297,35 @@ if (clientStatus) {
     if (!document.hidden) refresh();
   }, 30000);
 }
+
+const workflowPanel = document.querySelector("[data-workflow-panel]");
+if (workflowPanel) {
+  let dirty = false;
+  workflowPanel.addEventListener("input", () => {
+    dirty = true;
+  });
+  workflowPanel.addEventListener("change", () => {
+    dirty = true;
+  });
+  document.addEventListener("submit", (event) => {
+    const message = event.target.dataset.confirm;
+    if (message && !window.confirm(message)) event.preventDefault();
+  });
+  setInterval(async () => {
+    if (
+      document.hidden ||
+      dirty ||
+      workflowPanel.contains(document.activeElement)
+    )
+      return;
+    try {
+      const response = await fetch(
+        `/prospects/${workflowPanel.dataset.workflowPanel}/workflow-panel`,
+      );
+      if (response.ok && !response.redirected)
+        workflowPanel.innerHTML = await response.text();
+    } catch {
+      /* Keep the last visible state; POST revalidates every action. */
+    }
+  }, 30000);
+}

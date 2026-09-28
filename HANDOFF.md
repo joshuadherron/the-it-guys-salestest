@@ -51,3 +51,10 @@ No real records were imported, no migrations were executed, no deployment occurr
 ## v1.1 alignment — 2026-09-28
 
 Migration 005 is created but not applied. No SharePoint schema, flows, production data or write mode changed. Apply it in staging before using Admin/handoff. Source must be Sales App; Josh performs the SharePoint choice rename. The supplied owner contract is documented in docs/02-sharepoint-workflow-contract.md. Stop conditions remain TODO-OWNER.
+
+
+## v1.2 guided workflow — 2026-09-28
+
+Added a full discovery review page, prospect discovery card, Today review queue with owner acknowledgement, ordered next-step guidance and Client Operations work items. New actions are exact Workflow Request payloads only. Requests retain local preparation/uncertain-delivery guards, role checks, CSRF and audits; signed items cannot be manually completed while unsigned. Optional capability checks isolate missing features. No discovery gate or commercial pricing changed.
+
+Migration 006 is created, not applied. Apply it in staging before running the new pages. No live request, deployment or SharePoint schema change was performed. Stage Gate v1.1 remains a separate owner import. Verify new list/column choices with Admin connection check before leaving dryrun. User Information List reads and verified environment lookup IDs support assignment checks. Signature dates follow the owner's optional display-name resolution and confirmed TIG_SignedDate instructions.

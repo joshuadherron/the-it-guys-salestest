@@ -13,6 +13,14 @@
 <a class="button" href="/prospects/new">+ Quick-add prospect</a>
 </div>
 </div>
+<% if(today){ if(user.role==='owner'){ %>
+<section class="card"><h2>Waiting for Josh <span class="pill"><%= waiting.length %></span></h2>
+<% if(!waiting.length){ %><p>Nothing waiting for review.</p><% } %>
+<% for(const item of waiting){ %><article class="card"><a href="<%= item.href %>"><%= item.business_name %> — <%= item.label %></a>
+<% if(item.result_message){ %><p class="error preserve-lines"><%= item.result_message %></p><% } %>
+<% if(item.request_id){ %><form method="post" action="/requests/<%= item.request_id %>/acknowledge"><input type="hidden" name="_csrf" value="<%= csrf %>"><button>Acknowledge</button></form><% } %>
+</article><% } %></section>
+<% }else{ %><p><%= waiting.length %> items waiting on Josh</p><% }} %>
 <form method="get">
 <div class="row">
 <input name="q" value="<%= search %>" placeholder="Search business or contact" aria-label="Search">

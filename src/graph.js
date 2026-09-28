@@ -1,6 +1,6 @@
 import { msalClient } from "./auth.js";
 export class Graph {
-  async request(path, method = "GET", body) {
+  async request(path, method = "GET", body, headers = {}) {
     const token = await msalClient().acquireTokenByClientCredential({
       scopes: ["https://graph.microsoft.com/.default"],
     });
@@ -9,22 +9,26 @@ export class Graph {
       headers: {
         Authorization: `Bearer ${token.accessToken}`,
         "Content-Type": "application/json",
+        ...headers,
       },
       ...(body ? { body: JSON.stringify(body) } : {}),
       signal: AbortSignal.timeout(20000),
     });
     if (!response.ok)
-      throw new Error(`Microsoft Graph returned HTTP ${response.status}.`);
+      throw Object.assign(
+        new Error(`Microsoft Graph returned HTTP ${response.status}.`),
+        { status: response.status },
+      );
     const content = await response.text();
     return content ? JSON.parse(content) : null;
   }
-  async read(path) {
-    return this.request(path);
+  async read(path, headers) {
+    return this.request(path, "GET", undefined, headers);
   }
-  async all(path) {
+  async all(path, headers) {
     const rows = [];
     while (path) {
-      const data = await this.read(path);
+      const data = await this.read(path, headers);
       rows.push(...(data.value || []));
       const next = data["@odata.nextLink"];
       if (next && !next.startsWith("https://graph.microsoft.com/v1.0/"))

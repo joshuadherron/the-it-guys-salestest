@@ -1,3 +1,5 @@
+import { actionTypes, workPayload } from "./work-items.js";
+import { WorkReader, filteredRead } from "./sharepoint-work.js";
 import {
   validateBusinessName,
   lostPayload,
@@ -30,7 +32,15 @@ export const required = {
 };
 export const requiredChoices = {
   requests: {
-    "Request Type": ["Create Client", "Start Stage", "Mark Lost"],
+    "Request Type": [
+      "Create Client",
+      "Start Stage",
+      "Mark Lost",
+      "Item Completed",
+      "Request Exception",
+      "Create Working Copy",
+      "Advance Stage",
+    ],
     "Processing Status": [
       "Pending",
       "Processing",
@@ -54,7 +64,9 @@ const requiredInternalNames = {
 export function validateSchema(requestColumns, clientColumns) {
   const errors = [];
   const maps = {};
-  const actionErrors = { MarkLost: [] };
+  const actionErrors = Object.fromEntries(
+    ["MarkLost", ...Object.keys(actionTypes)].map((key) => [key, []]),
+  );
   for (const [kind, columns] of [
     ["requests", requestColumns],
     ["clients", clientColumns],
@@ -77,12 +89,23 @@ export function validateSchema(requestColumns, clientColumns) {
           if (
             kind === "requests" &&
             name === "Request Type" &&
-            choice === "Mark Lost"
-          )
-            actionErrors.MarkLost.push(
-              'Workflow Requests Request Type is missing choice "Mark Lost".',
-            );
-          else if (
+            [
+              "Mark Lost",
+              "Item Completed",
+              "Request Exception",
+              "Create Working Copy",
+              "Advance Stage",
+            ].includes(choice)
+          ) {
+            for (const [key, type] of Object.entries({
+              MarkLost: "Mark Lost",
+              ...actionTypes,
+            }))
+              if (type === choice)
+                actionErrors[key].push(
+                  `Workflow Requests Request Type is missing choice "${choice}".`,
+                );
+          } else if (
             kind === "requests" &&
             name === "Source" &&
             maps[kind][name]?.choice?.choices?.includes("Sales app")
@@ -126,6 +149,7 @@ function payloadData(action, p, lane, options) {
     };
   }
   if (action === "MarkLost") return lostPayload(p, options);
+  if (actionTypes[action]) return workPayload(action, p, lane, options);
   if (!p.client_id) throw new Error("Create the SharePoint client first.");
   if (action === "Quoting" && lane === "Business IT Integration")
     return { clientId: p.client_id, stage: "Quoting", serviceLane: lane };
@@ -147,8 +171,8 @@ export function buildFields(
   userLookupId,
   options = {},
 ) {
-  if (action === "MarkLost" && schema.actionErrors?.MarkLost?.length)
-    throw new Error(schema.actionErrors.MarkLost.join(" "));
+  if (schema.actionErrors?.[action]?.length)
+    throw new Error(schema.actionErrors[action].join(" "));
   const body = payload(action, p, lane, options);
   const f = {};
   const map = schema.maps.requests;
@@ -162,11 +186,12 @@ export function buildFields(
   );
   put(
     "Request Type",
-    action === "CreateClient"
-      ? "Create Client"
-      : action === "MarkLost"
-        ? "Mark Lost"
-        : "Start Stage",
+    actionTypes[action] ||
+      (action === "CreateClient"
+        ? "Create Client"
+        : action === "MarkLost"
+          ? "Mark Lost"
+          : "Start Stage"),
   );
   put("Processing Status", "Pending");
   put("Source", "Sales App");
@@ -198,6 +223,8 @@ export function assertNoPending(items, schema, p) {
       );
     }
     if (
+      (body.itemId &&
+        (!p.work_item_ids || p.work_item_ids.includes(String(body.itemId)))) ||
       body.opportunityId === p.opp ||
       (p.client_id && body.clientId === p.client_id) ||
       (p.client_item_id &&
@@ -237,13 +264,14 @@ export function plainResult(status) {
 export class SharePoint {
   constructor(graph) {
     this.graph = graph;
+    this.work = new WorkReader(this);
     this.cache = { errors: ["SharePoint connection has not been checked."] };
   }
   async check() {
     try {
       const site = await this.graph.read(sitePath);
       const lists = await this.graph.all(
-        `/sites/${site.id}/lists?$select=id,displayName`,
+        `/sites/${site.id}/lists?$select=id,displayName,system`,
       );
       const find = (name) => {
         const found = lists.filter((x) => x.displayName === name);
@@ -275,6 +303,7 @@ export class SharePoint {
         clientListId,
         checkedAt: new Date().toISOString(),
       };
+      await this.work.check(lists);
     } catch (e) {
       console.error("SharePoint schema check failed:", {
         name: e?.name,
@@ -296,11 +325,23 @@ export class SharePoint {
     if (this.cache.errors.length) throw new Error(this.cache.errors.join(" "));
     return this.cache;
   }
-  async requests() {
+  async requests(pendingOnly = true) {
     const s = this.ready();
-    return this.graph.all(
-      `/sites/${s.siteId}/lists/${s.requestListId}/items?$expand=fields`,
+    const path = `/sites/${s.siteId}/lists/${s.requestListId}/items?$expand=fields`;
+    if (!pendingOnly) return this.graph.all(path);
+    const status = s.maps.requests["Processing Status"].name;
+    return filteredRead(
+      this.graph,
+      path,
+      `fields/${status} eq 'Pending' or fields/${status} eq 'Processing'`,
+      (r) => ["Pending", "Processing"].includes(r.fields?.[status]),
     );
+  }
+  async workItems(clientId, fresh = false) {
+    return this.work.items(clientId, fresh);
+  }
+  invalidateWorkItems(clientId) {
+    this.work.itemsCache.delete(clientId);
   }
   async request(id) {
     const s = this.ready();

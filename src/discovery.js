@@ -22,8 +22,9 @@ export async function discovery(id, c) {
     c,
   );
   return d
-    ? { ...d, answers: json(d.answers), flags: json(d.flags) }
+    ? { ...d, exists: true, answers: json(d.answers), flags: json(d.flags) }
     : {
+        exists: false,
         prospect_id: id,
         answers: emptyAnswers(),
         status: "Draft",
@@ -31,7 +32,27 @@ export async function discovery(id, c) {
         flags: [],
       };
 }
+export async function renderDiscoverySummary(
+  req,
+  res,
+  loaders = { prospect, discovery },
+) {
+  const p = await loaders.prospect(req.params.id),
+    d = await loaders.discovery(p.id);
+  res.render("discovery-summary", {
+    p,
+    d,
+    schema,
+    format,
+    answer,
+    majorFlagOrder,
+    completedGroups: 8 - mvd(d.answers).length,
+  });
+}
 export function discoveryRoutes(app) {
+  app.get("/prospects/:id/discovery/summary", (req, res) =>
+    renderDiscoverySummary(req, res),
+  );
   app.get("/prospects/:id/discovery/:screen", async (req, res) => {
     const p = await prospect(req.params.id);
     const d = await discovery(p.id);
@@ -143,7 +164,7 @@ export function discoveryRoutes(app) {
       notice = await queueNotice(c, p, "Ready for Review");
     });
     await deliverNotice(notice);
-    res.redirect(`/prospects/${req.params.id}/discovery/3`);
+    res.redirect(`/prospects/${req.params.id}/discovery/summary`);
   });
   app.post("/prospects/:id/discovery/reopen", ownerOnly, async (req, res) => {
     await transaction(async (c) => {
@@ -154,7 +175,7 @@ export function discoveryRoutes(app) {
       );
       await audit(c, req.session.user, "reopen", "discovery", req.params.id);
     });
-    res.redirect(`/prospects/${req.params.id}/discovery/3`);
+    res.redirect(`/prospects/${req.params.id}/discovery/summary`);
   });
   app.post("/prospects/:id/discovery/release", ownerOnly, async (req, res) => {
     const note = text(req.body.note || "");
@@ -182,6 +203,6 @@ export function discoveryRoutes(app) {
         req.params.id,
       );
     });
-    res.redirect(`/prospects/${req.params.id}/discovery/3`);
+    res.redirect(`/prospects/${req.params.id}/discovery/summary`);
   });
 }

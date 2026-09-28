@@ -7,10 +7,13 @@ import { platforms, oneOffItems, priceQuote } from "./pricing.js";
 
 export async function priceConfig(c) {
   return Object.fromEntries(
-    (await query("SELECT * FROM config_prices" + (c ? " FOR UPDATE" : ""), [], c)).map((p) => [
-      p.name,
-      Number(p.amount),
-    ]),
+    (
+      await query(
+        "SELECT * FROM config_prices" + (c ? " FOR UPDATE" : ""),
+        [],
+        c,
+      )
+    ).map((p) => [p.name, Number(p.amount)]),
   );
 }
 
@@ -86,7 +89,11 @@ export function quotesRoutes(app) {
       [p.id],
     );
 
-    const selected = quotes[0];
+    const selected = req.query.quote
+      ? quotes.find((q) => Number(q.id) === integer(req.query.quote))
+      : quotes[0];
+    if (req.query.quote && !selected)
+      fail("Quote not found for this prospect.", 404);
     const input = selected ? json(selected.inputs) : prefill(d.answers);
 
     res.render("quotes", {
@@ -111,8 +118,7 @@ export function quotesRoutes(app) {
 
       const p = await prospect(req.params.id, c);
 
-      if (p.hold)
-        fail("On Hold — Pending Josh Review. Pricing is blocked.");
+      if (p.hold) fail("On Hold — Pending Josh Review. Pricing is blocked.");
 
       const d = await discovery(p.id, c);
 
@@ -160,11 +166,7 @@ export function quotesRoutes(app) {
 
       pid = q.prospect_id;
 
-      await query(
-        "SELECT id FROM prospects WHERE id=? FOR UPDATE",
-        [pid],
-        c,
-      );
+      await query("SELECT id FROM prospects WHERE id=? FOR UPDATE", [pid], c);
 
       [q] = await query(
         "SELECT * FROM quotes WHERE id=? FOR UPDATE",
@@ -174,11 +176,9 @@ export function quotesRoutes(app) {
 
       const p = await prospect(pid, c);
 
-      if (p.hold)
-        fail("On Hold — Pending Josh Review");
+      if (p.hold) fail("On Hold — Pending Josh Review");
 
-      if (q.status !== "Draft")
-        fail("Only a draft can be approved.");
+      if (q.status !== "Draft") fail("Only a draft can be approved.");
 
       const input = json(q.inputs);
 
@@ -243,11 +243,7 @@ export function quotesRoutes(app) {
 
       pid = q.prospect_id;
 
-      await query(
-        "SELECT id FROM prospects WHERE id=? FOR UPDATE",
-        [pid],
-        c,
-      );
+      await query("SELECT id FROM prospects WHERE id=? FOR UPDATE", [pid], c);
 
       [q] = await query(
         "SELECT * FROM quotes WHERE id=? FOR UPDATE",
@@ -255,17 +251,11 @@ export function quotesRoutes(app) {
         c,
       );
 
-      if ((await prospect(pid, c)).hold)
-        fail("On Hold — Pending Josh Review");
+      if ((await prospect(pid, c)).hold) fail("On Hold — Pending Josh Review");
 
-      if (q.status !== "Approved")
-        fail("Approve the quote first.");
+      if (q.status !== "Approved") fail("Approve the quote first.");
 
-      await query(
-        "UPDATE quotes SET status='Sent' WHERE id=?",
-        [q.id],
-        c,
-      );
+      await query("UPDATE quotes SET status='Sent' WHERE id=?", [q.id], c);
 
       await audit(c, req.session.user, "mark sent", "quote", q.id);
     });
@@ -274,13 +264,11 @@ export function quotesRoutes(app) {
   });
 
   app.get("/quotes/:id/print", async (req, res) => {
-    let [q] = await query(
-      "SELECT * FROM quotes WHERE id=?",
-      [integer(req.params.id)],
-    );
+    let [q] = await query("SELECT * FROM quotes WHERE id=?", [
+      integer(req.params.id),
+    ]);
 
-    if (!q)
-      fail("Quote not found.", 404);
+    if (!q) fail("Quote not found.", 404);
 
     res.render("quote-print", {
       q,

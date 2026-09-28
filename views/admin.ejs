@@ -8,8 +8,8 @@
 <p class="error">
 <%= error %>
 </p>
-<% } for(const issue of schema.actionErrors?.MarkLost || []){ %><p class="error"><%= issue %> Other handoff actions remain available.</p><% }if(!schema.errors.length){ %>
-<p>Required list columns and choices are present.</p>
+<% } for(const issue of [...new Set([...Object.values(schema.actionErrors||{}).flat(),...schema.workErrors||[],...schema.definitionErrors||[]])]){ %><p class="error"><%= issue %> Other handoff actions remain available.</p><% }if(!schema.errors.length){ %>
+<p>Core handoff columns and choices are present.</p>
 <% } %>
 <form method="post" action="/admin/check">
 <input type="hidden" name="_csrf" value="<%= csrf %>">

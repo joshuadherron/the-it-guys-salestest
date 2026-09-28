@@ -1,3 +1,4 @@
+import { waitingForJosh, guidedData } from "./guided-workflow.js";
 import { guardPipelineEdit } from "./workflow-contract.js";
 import { query, transaction, audit, json } from "./db.js";
 import { text, integer, choice, date, fail } from "./security.js";
@@ -195,6 +196,7 @@ export function pipelineRoutes(app) {
       search,
       opportunity,
       today: req.path === "/",
+      waiting: req.path === "/" ? await waitingForJosh() : [],
       selectedStatus,
       statusChoices,
     });
@@ -231,20 +233,16 @@ export function pipelineRoutes(app) {
       "SELECT * FROM activities WHERE prospect_id=? ORDER BY occurred_on DESC,id DESC",
       [p.id],
     );
-    const requests = await query(
-      "SELECT * FROM sp_requests WHERE prospect_id=? ORDER BY id DESC",
-      [p.id],
-    );
     const notifications = await query(
       "SELECT kind,status FROM notifications WHERE prospect_id=? ORDER BY id DESC LIMIT 10",
       [p.id],
     );
     res.render("prospect", {
+      ...(await guidedData(p, req.session.user, req.session)),
       p,
       activities,
       outcomes,
       structuredFields,
-      requests,
       notifications,
       json,
     });

@@ -153,3 +153,18 @@ Use Import / Export → Detect exact header automatically (or Current Sales App 
 The real export is private data. `.gitignore` excludes CSV files; tests use generated synthetic CSV strings only. Import notes are escaped as text in HTML. Full CSV export prefixes potentially executable formula cells with an apostrophe. No Graph call or document operation occurs in the import path.
 
 **Staging only:** inspect migration 004 before running `npm run migrate` against the verified staging environment. Keep SHAREPOINT_WRITE_MODE=dryrun. No deployment, schema application or real import was performed in this update. See the detailed field/type and mapping contract in [docs/05-current-sales-migration.md](docs/05-current-sales-migration.md).
+
+
+## Daily use
+
+Alanna starts from Today, opens a prospect and follows Next step through discovery. Review & send submits complete discovery to Josh; after submission her discovery view is read-only. Once the SharePoint client exists, she opens assigned working documents in Word and marks her completed non-signature items complete in the app. The Today count shows how many reviews are waiting on Josh.
+
+Josh starts with Waiting for Josh, reviews the discovery summary, releases holds or reopens discovery when needed, and creates qualified clients from SharePoint actions & history. On the prospect page he reviews or builds the BII quote, starts the appropriate stage, opens documents, completes items, records outcome flags, requests exceptions and advances stages. Rejected flow messages stay visible. Signed documents complete through the signing flow; signature preparation still requires the document's SharePoint properties. Acknowledging an error removes it from the review queue without authorizing a retry.
+
+## v1.2 connection and staging setup
+
+Apply migration 006 (acknowledged_at, acknowledged_by and target_item_id on sp_requests), then run Admin → Check SharePoint connection. The new UI requires no additional Graph permission: the existing Sites.Selected site grant covers the listed reads. Work items and definitions resolve from Client Operations and Client Workflow Definitions; missing features show named errors without disabling unrelated handoff buttons. SharePoint writes remain Workflow Requests only; dryrun is still the default.
+
+To verify fallback user lookup IDs, Josh can open a Clients row's Client Owner and inspect the lookup ID in the URL, or use PnP `Get-PnPUser` and match the returned ID to the email. Set SP_JOSH_USER_LOOKUP_ID and SP_ALANNA_USER_LOOKUP_ID only after verification. The app first attempts the hidden User Information List; unresolved assignment never grants Alanna completion permission.
+
+Import Stage Gate v1.1 separately before using authoritative outcome flags. The app detects a successful Item Completed request containing outcomeFlags as evidence and otherwise displays an advisory notice. Signature Sent Date is optional and discovered by its display name; TIG_SignedDate supplies the signed date. No signature fields are written.

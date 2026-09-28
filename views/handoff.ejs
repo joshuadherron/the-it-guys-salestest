@@ -6,7 +6,8 @@
   </a>
 </p>
 
-<h1>SharePoint handoff</h1>
+<h1>SharePoint actions &amp; history</h1>
+<a href="/prospects/<%= p.id %>">Back to prospect</a>
 
 <p>
   Requests go only to Workflow Requests.
@@ -164,6 +165,8 @@
         <%= r.item_id || 'Not created' %>
       </p>
 
+      <% if(r.status==='Rejected'){ %><p class="error preserve-lines"><%= r.result_message %></p><% } %>
+      <% if(r.target_item_id){ %><p>Document item <%= r.target_item_id %></p><% } %>
       <details>
         <summary>Raw result</summary>
         <pre class="request-raw"><%= r.result_message || '' %></pre>
