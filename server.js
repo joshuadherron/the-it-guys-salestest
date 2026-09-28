@@ -85,12 +85,30 @@ adminRoutes(app);
 app.get("/health", (_req, res) => res.json({ ok: true }));
 app.use((err, req, res, _next) => {
   const status = err.status || 500;
+
+  if (status >= 500) {
+    console.error("Unhandled application error:", {
+      method: req.method,
+      path: req.originalUrl,
+      name: err?.name,
+      message: err?.message,
+      code: err?.code,
+      sqlState: err?.sqlState,
+      stack: err?.stack,
+    });
+  }
+
   res.status(status);
+
   const message =
     status < 500
       ? err.message
-      : "The action could not be completed. No sensitive error details are logged. Contact Josh.";
-  if (req.is("application/json")) return res.json({ error: message });
+      : "The action could not be completed. Check the server console for details.";
+
+  if (req.is("application/json")) {
+    return res.json({ error: message });
+  }
+
   res.render("error", { message });
 });
 await sp.check();

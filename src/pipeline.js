@@ -167,10 +167,24 @@ export function pipelineRoutes(app) {
     const selectedStatus = req.query.status
       ? choice(req.query.status, statusChoices)
       : "";
-    const rows = await query(
-      `SELECT * FROM prospects WHERE (business_name LIKE ? OR contact_name LIKE ?) AND (?='' OR status=?) ORDER BY ${req.path === "/" ? "follow_up IS NULL,follow_up ASC,id DESC" : "stage,id DESC"}`,
-      ["%" + search + "%", "%" + search + "%", selectedStatus, selectedStatus],
-    );
+    const where = ["(business_name LIKE ? OR contact_name LIKE ?)"];
+const params = ["%" + search + "%", "%" + search + "%"];
+
+if (selectedStatus) {
+  where.push("status=?");
+  params.push(selectedStatus);
+}
+
+const rows = await query(
+  `SELECT * FROM prospects
+   WHERE ${where.join(" AND ")}
+   ORDER BY ${
+     req.path === "/"
+       ? "follow_up IS NULL,follow_up ASC,id DESC"
+       : "stage,id DESC"
+   }`,
+  params,
+);
     const stages = await query(
       "SELECT * FROM config_stages ORDER BY sort_order",
     );
