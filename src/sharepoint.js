@@ -41,6 +41,11 @@ export const requiredChoices = {
     "Current Stage": ["Sales Discovery", "Quoting", "Technical Assessment"],
   },
 };
+// These internal names are the contract; SharePoint display names can be renamed.
+const requiredInternalNames = {
+  requests: { Title: "Title" },
+  clients: { Title: "Title", "Opportunity ID": "TIG_SalesOpportunityID" },
+};
 export function validateSchema(requestColumns, clientColumns) {
   const errors = [];
   const maps = {};
@@ -50,10 +55,13 @@ export function validateSchema(requestColumns, clientColumns) {
   ]) {
     maps[kind] = {};
     for (const name of required[kind]) {
-      const matches = columns.filter((c) => c.displayName === name);
+      const internalName = requiredInternalNames[kind][name];
+      const matches = columns.filter((c) =>
+        internalName ? c.name === internalName : c.displayName === name,
+      );
       if (matches.length !== 1)
         errors.push(
-          `${kind}: required column ${name} is missing or ambiguous.`,
+          `${kind}: required column ${internalName || name} is missing or ambiguous.`,
         );
       else maps[kind][name] = matches[0];
     }

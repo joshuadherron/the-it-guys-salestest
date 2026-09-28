@@ -6,7 +6,7 @@ export async function queueNotice(c, p, kind) {
       subject: `${kind}: ${p.opp}`,
       body: {
         contentType: "Text",
-        content: `Review this internal opportunity: ${process.env.APP_URL}/prospects/${p.id}/discovery/9`,
+        content: `Review this internal opportunity: ${process.env.APP_URL}/prospects/${p.id}/discovery/3`,
       },
       toRecipients: [{ emailAddress: { address: "josh@theitguys.us" } }],
     },

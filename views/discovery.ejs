@@ -7,9 +7,8 @@
 <h1>
 <%= screens[screen-1] %>
 </h1>
-<p>Screen <%= screen %> of 9 · <%= d.status %> · Internal only</p>
-<details class="no-print">
-<summary>Jump to a section</summary>
+<p>Section <%= screen %> of 3 · <%= d.status %> · Internal only</p>
+<div class="no-print">
 <nav class="screen-nav">
 <% for(const [i,name] of screens.entries()){ %>
 <a class="<%= i+1===screen?'active':'' %>" href="/prospects/<%= p.id %>/discovery/<%= i+1 %>">
@@ -17,7 +16,10 @@
 </a>
 <% } %>
 </nav>
-</details>
+</div>
+<p id="required-progress"><%= progress.complete %> of <%= progress.total %> required items complete</p>
+<p>Missing required groups:</p>
+<ul id="missing-groups"><% for(const group of missing){ %><li><%= group %></li><% } %></ul>
 <div id="urgent-guidance" class="hold" <%= p.hold?'':'hidden' %>>
 <h2>URGENT SECURITY REVIEW</h2>
 <strong>On Hold — Pending Josh Review</strong>
@@ -42,7 +44,7 @@
 <%= readonly?'Read-only. Josh can reopen this discovery.':'Changes save automatically. Not discussed means the question was not reached.' %>
 </p>
 <div id="discovery" data-id="<%= p.id %>" data-revision="<%= d.revision %>">
-<% if(screen<9){for(const q of schema.filter(q=>q.section===screen)){const cell=d.answers[q.id];const v=cell?.value;const state=cell?.state||'not_discussed';const selected=q.follow?v?.answer:v;const visible=!q.condition||q.condition.values.includes(answer(d.answers,q.condition.id)); %>
+<% for(const q of schema.filter(q=>sectionFor(q)===screen)){const cell=d.answers[q.id];const v=cell?.value;const state=cell?.state||'not_discussed';const selected=q.follow?v?.answer:v;const visible=!q.condition||q.condition.values.includes(answer(d.answers,q.condition.id)); %>
 <fieldset class="question" data-question="<%= q.id %>" data-type="<%= q.type %>" data-follow="<%= q.follow?.when||'' %>" <%= readonly?'disabled':'' %> <%= visible?'':'hidden' %>>
 <legend>
 <%= q.id %> <%= q.label %>
@@ -64,13 +66,16 @@
 <%= q.wording %>
 </p>
 </details>
+<details class="answer-status-control">
+<summary>Change status</summary>
 <label>Answer state</label>
 <select class="answer-state">
 <option value="not_discussed" <%= state==='not_discussed'?'selected':'' %>>Not discussed</option>
 <option value="not_sure" <%= state==='not_sure'?'selected':'' %>>Not sure</option>
-<option value="answered" <%= state==='answered'?'selected':'' %>>Answer</option>
+<option value="answered" <%= state==='answered'?'selected':'' %>>Answered</option>
 </select>
-<div class="answer-fields" <%= state==='answered'?'':'hidden' %>>
+</details>
+<div class="answer-fields">
 <% if(q.type==='select'){ %>
 <label>
 <%= q.label %>
@@ -164,26 +169,18 @@
 <% } %>
 </div>
 <p class="question-status" role="status">
+<%= state==='answered'?'Answered':state==='not_sure'?'Not sure':'Not discussed' %>
 </p>
 </fieldset>
-<% }}else{ %>
+<% } if(screen===3){ %>
+<details><summary>Review saved discovery</summary>
 <%- include('summary',{p,d,schema,format,majorFlagOrder}) %>
+</details>
 <section class="card">
 <h2>Minimum viable discovery</h2>
-<p>Missing groups:</p>
-<ul id="missing-groups">
-<% for(const group of missing){ %>
-<li>
-<%= group %>
-</li>
-<% } %>
-</ul>
-<% if(!missing.length){ %>
-<p>All eight groups complete.</p>
-<% } %>
 <form method="post" action="/prospects/<%= p.id %>/discovery/send">
 <input type="hidden" name="_csrf" value="<%= csrf %>">
-<button <%= missing.length||p.hold||d.status==='Ready for Review'?'disabled':'' %>>Send to Josh</button>
+<button id="send-discovery" data-locked="<%= d.status==='Ready for Review' %>" <%= missing.length||p.hold||d.status==='Ready for Review'?'disabled':'' %>>Send to Josh</button>
 </form>
 <% if(user.role==='owner'&&d.status==='Ready for Review'){ %>
 <form method="post" action="/prospects/<%= p.id %>/discovery/reopen">
@@ -197,7 +194,7 @@
 <div class="row no-print">
 <% if(screen>1){ %>
 <a class="button secondary" href="/prospects/<%= p.id %>/discovery/<%= screen-1 %>">Back</a>
-<% }if(screen<9){ %>
+<% }if(screen<3){ %>
 <a class="button" href="/prospects/<%= p.id %>/discovery/<%= screen+1 %>">Continue</a>
 <% } %>
 </div>

@@ -1,8 +1,8 @@
+import { screens, sectionFor, requiredProgress } from "./discovery-ui.js";
 import { query, transaction, audit, json } from "./db.js";
 import { prospect } from "./pipeline.js";
 import {
   schema,
-  screens,
   ownership,
   emptyAnswers,
   flags,
@@ -37,12 +37,15 @@ export function discoveryRoutes(app) {
     const d = await discovery(p.id);
     const screen = integer(req.params.screen, 9);
     if (screen < 1) fail("Unknown screen.");
+    if (screen > 3) return res.redirect(`/prospects/${p.id}/discovery/3`);
     res.render("discovery", {
       p,
       d,
       screen,
       schema,
       screens,
+      sectionFor,
+      progress: requiredProgress(d.answers),
       ownership,
       format,
       answer,
@@ -108,7 +111,12 @@ export function discoveryRoutes(app) {
       await audit(c, req.session.user, "save discovery", "prospect", p.id);
       if (state.notify)
         notice = await queueNotice(c, p, "URGENT SECURITY REVIEW");
-      return { revision, hold: state.hold, missing: mvd(a) };
+      return {
+        revision,
+        hold: state.hold,
+        missing: mvd(a),
+        progress: requiredProgress(a),
+      };
     });
     const notification = await deliverNotice(notice);
     res.json({ ...result, notification });
@@ -135,7 +143,7 @@ export function discoveryRoutes(app) {
       notice = await queueNotice(c, p, "Ready for Review");
     });
     await deliverNotice(notice);
-    res.redirect(`/prospects/${req.params.id}/discovery/9`);
+    res.redirect(`/prospects/${req.params.id}/discovery/3`);
   });
   app.post("/prospects/:id/discovery/reopen", ownerOnly, async (req, res) => {
     await transaction(async (c) => {
@@ -146,7 +154,7 @@ export function discoveryRoutes(app) {
       );
       await audit(c, req.session.user, "reopen", "discovery", req.params.id);
     });
-    res.redirect(`/prospects/${req.params.id}/discovery/9`);
+    res.redirect(`/prospects/${req.params.id}/discovery/3`);
   });
   app.post("/prospects/:id/discovery/release", ownerOnly, async (req, res) => {
     const note = text(req.body.note || "");
@@ -174,6 +182,6 @@ export function discoveryRoutes(app) {
         req.params.id,
       );
     });
-    res.redirect(`/prospects/${req.params.id}/discovery/9`);
+    res.redirect(`/prospects/${req.params.id}/discovery/3`);
   });
 }

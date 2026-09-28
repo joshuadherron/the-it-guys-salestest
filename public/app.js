@@ -1,3 +1,4 @@
+import { inferredState } from "./discovery-state.js";
 const file = document.querySelector("#csv-file");
 if (file)
   file.addEventListener("change", async () => {
@@ -11,11 +12,13 @@ if (discovery) {
     failed = false,
     queue = Promise.resolve();
   const failures = new Set();
+  const timers = new Map();
+  let conflicted = false;
   const status = document.querySelector("#save-status");
   const csrf = document.querySelector('meta[name="csrf-token"]').content;
-  const read = (q) => {
+  const read = (q, raw = false) => {
     const state = q.querySelector(".answer-state").value;
-    if (state !== "answered") return { state, value: null };
+    if (!raw && state !== "answered") return { state, value: null };
     const type = q.dataset.type;
     const val = () => q.querySelector(".answer-value")?.value;
     let value;
@@ -54,8 +57,6 @@ if (discovery) {
     return { state, value };
   };
   const update = (q) => {
-    q.querySelector(".answer-fields").hidden =
-      q.querySelector(".answer-state").value !== "answered";
     if (q.dataset.follow)
       q.querySelector(".follow-fields").hidden =
         q.querySelector(".answer-value").value !== q.dataset.follow;
@@ -81,6 +82,10 @@ if (discovery) {
     status.textContent = "Saving…";
     queue = queue
       .then(async () => {
+        if (conflicted)
+          throw new Error(
+            "This discovery changed in another tab. Reload before continuing.",
+          );
         const response = await fetch(
           `/prospects/${discovery.dataset.id}/discovery/save`,
           {
@@ -97,15 +102,36 @@ if (discovery) {
           },
         );
         const data = await response.json();
+        if (response.status === 409) conflicted = true;
         if (!response.ok) throw new Error(data.error || "Save failed.");
         revision = data.revision;
+        document.querySelector("#required-progress").textContent =
+          `${data.progress.complete} of ${data.progress.total} required items complete`;
+        const missing = document.querySelector("#missing-groups");
+        missing.replaceChildren();
+        for (const group of data.missing) {
+          const li = document.createElement("li");
+          li.textContent = group;
+          missing.append(li);
+        }
+        const send = document.querySelector("#send-discovery");
+        if (send)
+          send.disabled =
+            data.missing.length > 0 ||
+            data.hold ||
+            send.dataset.locked === "true";
         if (data.notification) {
           const notice = document.createElement("p");
           notice.className = "pill";
           notice.textContent = "URGENT SECURITY REVIEW: " + data.notification;
           document.querySelector("#urgent-guidance").append(notice);
         }
-        q.querySelector(".question-status").textContent = "Saved";
+        q.querySelector(".question-status").textContent =
+          cell.state === "answered"
+            ? "Saved"
+            : cell.state === "not_sure"
+              ? "Not sure · Saved"
+              : "Not discussed · Saved";
         q.querySelector(".question-status").className = "question-status saved";
         document.querySelector("#urgent-guidance").hidden = !data.hold;
         failures.delete(q.dataset.question);
@@ -126,9 +152,69 @@ if (discovery) {
             : "All changes saved.";
       });
   };
+  const changed = (q, explicit = false) => {
+    clearTimeout(timers.get(q));
+    timers.delete(q);
+    const state = q.querySelector(".answer-state");
+    if (explicit) {
+      q.dataset.explicitState =
+        state.value === "answered" ? "not_discussed" : state.value;
+      if (state.value !== "answered") {
+        for (const field of q.querySelectorAll(
+          ".answer-fields input, .answer-fields select",
+        )) {
+          if (field.type === "checkbox" || field.type === "radio")
+            field.checked = false;
+          else if (field.matches(".matrix-value, .app-hosting"))
+            field.value = field.matches(".matrix-value")
+              ? "not_discussed"
+              : "Not discussed";
+          else if (!field.matches(".volume-unit")) field.value = "";
+        }
+      }
+    } else if (
+      [...q.querySelectorAll("input")].some((field) => field.validity?.badInput)
+    ) {
+      failures.add(q.dataset.question);
+      failed = true;
+      q.querySelector(".question-status").textContent =
+        "Enter a valid value before continuing.";
+      status.textContent = "Some changes are not saved.";
+      return;
+    } else
+      state.value = inferredState(
+        q.dataset.type,
+        read(q, true).value,
+        q.dataset.explicitState || "not_discussed",
+      );
+    update(q);
+    save(q);
+  };
+  const flush = () => {
+    for (const q of [...timers.keys()]) changed(q);
+  };
   for (const q of discovery.querySelectorAll(".question")) {
     update(q);
-    q.addEventListener("change", () => save(q));
+    const initialState = q.querySelector(".answer-state").value;
+    q.dataset.explicitState =
+      initialState === "answered" ? "not_discussed" : initialState;
+    q.addEventListener("change", (e) =>
+      changed(q, e.target.matches(".answer-state")),
+    );
+    q.addEventListener("input", (e) => {
+      if (
+        !e.target.matches(
+          "input:not([type=checkbox]):not([type=radio]), textarea",
+        )
+      )
+        return;
+      clearTimeout(timers.get(q));
+      timers.set(
+        q,
+        setTimeout(() => changed(q), 500),
+      );
+      status.textContent = "Unsaved changes…";
+    });
     q.querySelector(".add-app")?.addEventListener("click", () => {
       const first = q.querySelector(".app-entry");
       const entry = first.cloneNode(true);
@@ -140,21 +226,30 @@ if (discovery) {
       if (e.target.matches(".remove-app")) {
         if (q.querySelectorAll(".app-entry").length > 1) {
           e.target.closest(".app-entry").remove();
-          save(q);
+          changed(q);
         }
       }
     });
   }
   document.addEventListener("click", async (e) => {
     const a = e.target.closest("a");
-    if (a && (pending || failed)) {
+    if (a && (pending || failed || timers.size)) {
       e.preventDefault();
+      flush();
       await queue;
       if (!failed) location.href = a.href;
     }
   });
+  document.addEventListener("submit", async (e) => {
+    if (pending || failed || timers.size) {
+      e.preventDefault();
+      flush();
+      await queue;
+      if (!failed) e.target.requestSubmit();
+    }
+  });
   window.addEventListener("beforeunload", (e) => {
-    if (pending || failed) {
+    if (pending || failed || timers.size) {
       e.preventDefault();
       e.returnValue = "";
     }

@@ -1,9 +1,9 @@
+import { screens, sectionFor, requiredProgress } from "../src/discovery-ui.js";
 import test from "node:test";
 import assert from "node:assert/strict";
 import ejs from "ejs";
 import {
   schema,
-  screens,
   ownership,
   emptyAnswers,
   format,
@@ -46,13 +46,15 @@ const common = {
   p,
   d,
 };
-for (let screen = 1; screen <= 9; screen++)
+for (let screen = 1; screen <= 3; screen++)
   test(`discovery screen ${screen} renders safely`, async () => {
     const html = await ejs.renderFile("views/discovery.ejs", {
       ...common,
       screen,
       schema,
       screens,
+      sectionFor,
+      progress: requiredProgress(d.answers),
       ownership,
       format,
       answer,
@@ -63,6 +65,19 @@ for (let screen = 1; screen <= 9; screen++)
     });
     assert.ok(html.includes(screens[screen - 1].replaceAll("&", "&amp;")));
     assert.ok(!html.includes("<script>alert(1)</script>"));
+    assert.ok(html.includes(`Section ${screen} of 3`));
+    for (const q of schema)
+      assert.equal(
+        html.includes(`data-question="${q.id}"`),
+        sectionFor(q) === screen,
+      );
+    assert.ok(html.includes("Change status"));
+    assert.ok(html.includes('value="not_sure"'));
+    assert.ok(html.includes('value="not_discussed"'));
+    assert.ok(!/class="answer-fields"[^>]*hidden/.test(html));
+    assert.ok(
+      !/<details[^>]*open[^>]*>\s*<summary>Question guidance/.test(html),
+    );
     assert.ok(!/<script(?![^>]*src=)/.test(html));
   });
 const input = prefill(d.answers),
@@ -121,6 +136,7 @@ const fixtures = {
     lines: calculation.lines,
   },
   handoff: {
+    clientRecord: null,
     client: null,
     error: null,
     schema: { errors: ["Not configured"] },

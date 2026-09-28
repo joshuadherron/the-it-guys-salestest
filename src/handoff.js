@@ -79,22 +79,30 @@ export function handoffRoutes(app) {
         )
       ).length > 0;
     const ready = !schema.errors.length && !p.hold;
+console.log("HANDOFF RENDER LOCALS", {
+  resLocalsInclude: res.locals.include,
+  resLocalsIncludeType: typeof res.locals.include,
+  appLocalsInclude: req.app.locals.include,
+  appLocalsIncludeType: typeof req.app.locals.include,
+  resLocalKeys: Object.keys(res.locals),
+  appLocalKeys: Object.keys(req.app.locals),
+});
     res.render("handoff", {
-      p,
-      client,
-      error,
-      schema,
-      missing,
-      approved,
-      ready,
-      requests: await query(
-        "SELECT * FROM sp_requests WHERE prospect_id=? ORDER BY id DESC",
-        [p.id],
-      ),
-      json,
-      plainResult,
-      lanes,
-    });
+  p,
+  clientRecord: client,
+  error,
+  schema,
+  missing,
+  approved,
+  ready,
+  requests: await query(
+    "SELECT * FROM sp_requests WHERE prospect_id=? ORDER BY id DESC",
+    [p.id],
+  ),
+  json,
+  plainResult,
+  lanes,
+});
   });
   app.post("/prospects/:id/handoff", async (req, res) => {
     const action = choice(req.body.action, [

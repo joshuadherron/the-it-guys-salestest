@@ -15,7 +15,12 @@ export function fixture() {
   const columns = (kind) =>
     required[kind].map((displayName, i) => ({
       displayName,
-      name: `internal_${kind}_${i}`,
+      name:
+        displayName === "Title"
+          ? "Title"
+          : kind === "clients" && displayName === "Opportunity ID"
+            ? "TIG_SalesOpportunityID"
+            : `internal_${kind}_${i}`,
       ...(requiredChoices[kind][displayName]
         ? { choice: { choices: requiredChoices[kind][displayName] } }
         : displayName === "Client"
@@ -45,6 +50,58 @@ class FakeGraph {
     this.writes.push(message);
   }
 }
+for (const [kind, key, internalName, displayName] of [
+  ["requests", "Title", "Title", "Request ID"],
+  ["clients", "Title", "Title", "Client Name"],
+  [
+    "clients",
+    "Opportunity ID",
+    "TIG_SalesOpportunityID",
+    "Sales Opportunity ID",
+  ],
+]) {
+  test(`${kind}.${key} resolves the live internal name regardless of display names`, () => {
+    const s = fixture();
+    const columns = {
+      requests: Object.values(s.maps.requests),
+      clients: Object.values(s.maps.clients),
+    };
+    const live = columns[kind].find((c) => c.name === internalName);
+    live.displayName = displayName;
+    // Neither duplicate live labels nor the old required label may override it.
+    columns[kind].push(
+      { name: "UnrelatedLiveLabel", displayName },
+      { name: "UnrelatedOldLabel", displayName: key },
+    );
+    const result = validateSchema(columns.requests, columns.clients);
+    assert.deepEqual(result.errors, []);
+    assert.equal(result.maps[kind][key], live);
+
+    columns[kind] = columns[kind].filter((c) => c !== live);
+    let invalid = validateSchema(columns.requests, columns.clients);
+    assert.ok(
+      invalid.errors.some((e) =>
+        e.includes(`required column ${internalName} is missing or ambiguous`),
+      ),
+    );
+    assert.equal(invalid.maps[kind][key], undefined);
+
+    // Matching display names and case-insensitive internal names are not fallbacks.
+    columns[kind].push({ ...live, name: internalName.toLowerCase() });
+    invalid = validateSchema(columns.requests, columns.clients);
+    assert.ok(invalid.errors.length);
+    assert.equal(invalid.maps[kind][key], undefined);
+
+    columns[kind].push(live, { ...live, displayName: "Another label" });
+    invalid = validateSchema(columns.requests, columns.clients);
+    assert.ok(invalid.errors.length);
+    assert.equal(invalid.maps[kind][key], undefined);
+    const sp = new SharePoint({});
+    sp.cache = invalid;
+    assert.throws(() => sp.ready(), /missing or ambiguous/);
+  });
+}
+
 test("exact Create Client and Start Stage JSON", () => {
   assert.deepEqual(payload("CreateClient", p, "Business IT Integration"), {
     opportunityId: "OPP-0001",
