@@ -276,6 +276,11 @@ export class SharePoint {
         checkedAt: new Date().toISOString(),
       };
     } catch (e) {
+      console.error("SharePoint schema check failed:", {
+        name: e?.name,
+        message: e?.message,
+        code: e?.code,
+      });
       this.cache = {
         errors: [
           e.message.startsWith("Required list")
