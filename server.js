@@ -95,6 +95,10 @@ app.use((err, req, res, _next) => {
       name: err?.name,
       code: err?.code,
       sqlState: err?.sqlState,
+      message: err?.message,
+      stack: typeof err?.stack === "string"
+        ? err.stack.split("\n").slice(0, 8).join("\n")
+        : undefined,
     });
   }
 
