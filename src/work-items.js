@@ -124,6 +124,7 @@ export function normalizeItem(
     blocking: yes(f.TIG_Blocking),
     signatureRequired: yes(f.TIG_SignatureRequired),
     signatureStatus: f.TIG_SignatureStatus || "Preparing",
+    internalNotesRemoved: yes(f.TIG_InternalNotesRemoved),
     sentAt:
       signatureSentColumn && f[signatureSentColumn]
         ? String(f[signatureSentColumn]).slice(0, 10)
