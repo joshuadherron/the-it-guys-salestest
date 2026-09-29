@@ -238,7 +238,7 @@ export function pipelineRoutes(app) {
       [p.id],
     );
     res.render("prospect", {
-      ...(await guidedData(p, req.session.user, req.session)),
+      ...(await guidedData(p, req.session.user, req.session, undefined, true)),
       p,
       activities,
       outcomes,
