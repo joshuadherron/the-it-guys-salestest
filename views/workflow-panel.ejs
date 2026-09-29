@@ -26,7 +26,15 @@
 <% if(item.url){ %><p><a href="<%= item.url %>" target="_blank" rel="noopener noreferrer">Open document</a></p><% } %>
 <% if(item.signingPdf){ %><a href="<%= item.signingPdf %>" target="_blank" rel="noopener noreferrer">Signing PDF</a><% } %>
 <% if(item.signedCopy){ %><a href="<%= item.signedCopy %>" target="_blank" rel="noopener noreferrer">Signed Copy</a><% } %>
-<% if(openItem(item)&&item.signatureRequired&&item.signatureStatus!=='Signed'){ %><p>Completes automatically when signed</p><% if(user.role==='owner'){ %><p>Set Internal Notes Removed = Yes and Signature Status = Ready to send on the document in SharePoint.</p><% }} %>
+<% if(openItem(item)&&item.signatureRequired&&item.signatureStatus!=='Signed'){ %><p>Completes automatically when the signed copy returns.</p><% if(user.role==='owner'){ %>
+<% if(item.signatureStatus==='Sent - awaiting signature'){ %><p>Waiting for the signed copy to return.</p>
+<% }else if(item.signingPdf){ %>
+<p><a class="button secondary" href="<%= item.signingPdf %>" target="_blank" rel="noopener noreferrer">Open signing PDF</a></p>
+<form method="post" action="/prospects/<%= p.id %>/signature" data-confirm="Confirm the Microsoft 365 eSignature request was actually sent?"><input type="hidden" name="_csrf" value="<%= csrf %>"><input type="hidden" name="action" value="SignatureSent"><input type="hidden" name="itemId" value="<%= item.id %>"><input type="hidden" name="confirm" value="yes"><button <%= disabled?'disabled':'' %>>Mark sent for signature</button></form>
+<% }else{ %>
+<form method="post" action="/prospects/<%= p.id %>/signature" data-confirm="Confirm you reviewed the document and removed all internal notes?"><input type="hidden" name="_csrf" value="<%= csrf %>"><input type="hidden" name="action" value="PrepareSignature"><input type="hidden" name="itemId" value="<%= item.id %>"><input type="hidden" name="confirm" value="yes"><button <%= disabled?'disabled':'' %>>Prepare for signature</button></form>
+<% } %>
+<% }} %>
 <% if(mayComplete(item,user)){ const proposalAccepted=item.workflowId==='MIT-05'; %><form method="post" action="/prospects/<%= p.id %>/work-items" <%= proposalAccepted?'data-confirm="Confirm the client accepted this proposal and mark the opportunity won?"':'' %>><input type="hidden" name="_csrf" value="<%= csrf %>"><input type="hidden" name="action" value="ItemCompleted"><input type="hidden" name="itemId" value="<%= item.id %>">
 <% for(const flag of flags){ const supported=schema.workChoices?.TIG_OutcomeFlags?.includes(flag.triggerFlag); %><label><input type="checkbox" name="outcomeFlags" value="<%= flag.triggerFlag %>" <%= supported?'':'disabled' %>><%= flag.triggerFlag %> → <%= flag.document %> (<%= flag.id %>) <%= supported?'':'— missing Outcome Flags choice' %></label><% } %>
 <button <%= disabled||schema.definitionErrors?.length||actionErrors.ItemCompleted?.length?'disabled':'' %>><%= proposalAccepted?'Proposal accepted / Mark won':'Mark complete' %></button></form><% } %>
