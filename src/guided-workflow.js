@@ -131,9 +131,7 @@ export async function guidedData(
     p,
     d.exists === false ? null : d,
     quotes,
-    // Do not expose this render local as "client": EJS treats a truthy
-    // top-level "client" value as its client-compilation option, which breaks includes.
-    clientRecord: client,
+    client,
     items,
     pending,
     user.role,
@@ -183,7 +181,8 @@ export async function guidedData(
     p,
     d,
     step,
-    client,
+    // Avoid EJS' reserved "client" render option; truthy values disable include().
+    clientRecord: client,
     items,
     itemGroups,
     requests,
