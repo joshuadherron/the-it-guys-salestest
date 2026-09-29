@@ -109,13 +109,20 @@ export function nextStep(p, d, quotes, client, items, pendingRequests, role) {
       if (item.signatureStatus === "Sent - awaiting signature")
         return result(
           `Out for signature${item.sentAt ? " since " + item.sentAt : ""}`,
-          "",
+          "The signed copy will complete this item automatically when it returns.",
           null,
           "Client",
         );
+      if (item.signingPdf)
+        return result(
+          "Send agreement for signature",
+          "Open the prepared signing PDF, send the Microsoft 365 eSignature request, then mark it sent below.",
+          owner ? link("Open signing PDF", item.signingPdf) : null,
+          "Josh",
+        );
       return result(
-        "Prepare for signature: set Internal Notes Removed and Ready to send",
-        "Set Internal Notes Removed = Yes and Signature Status = Ready to send on the document in SharePoint.",
+        "Prepare agreement for signature",
+        "Open and review the document. When internal notes are removed, return here and click Prepare for signature.",
         owner && item.url ? link("Open document", item.url) : null,
         "Josh",
       );
