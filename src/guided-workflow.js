@@ -210,6 +210,82 @@ export async function guidedData(
   };
 }
 
+export async function executeSignatureAction(
+  id,
+  input,
+  user,
+  deps = { transaction, audit, prospect, sp, graph },
+) {
+  if (user.role !== "owner") fail("Owner access required.", 403);
+  const { transaction, audit, prospect, sp, graph } = deps;
+  const action = choice(input.action, ["PrepareSignature", "SignatureSent"]);
+  const itemId = String(integer(input.itemId, 2147483647));
+  let p, schema, item;
+  await transaction(async (tx) => {
+    p = await prospect(id, tx);
+    if (!p.client_id) fail("Create the SharePoint client first.");
+    if (p.hold) fail("On Hold — Pending Josh Review");
+    schema = sp.ready();
+    const items = await sp.workItems(p.client_id, true);
+    item = items.find((i) => i.id === itemId);
+    if (!item || item.clientId !== p.client_id || !openItem(item))
+      fail("Select an open work item for this client.");
+    if (!item.signatureRequired) fail("This item does not require a signature.");
+    if (action === "PrepareSignature") {
+      if (item.signatureStatus === "Sent - awaiting signature")
+        fail("This item is already out for signature.");
+      if (item.signatureStatus === "Signed")
+        fail("This item is already signed.");
+      if (item.signingPdf)
+        fail("A signing PDF already exists. Open it and mark the request sent.");
+      if (input.confirm !== "yes")
+        fail("Confirm that the document was reviewed and internal notes were removed.");
+    } else {
+      if (!item.signingPdf)
+        fail("Prepare the signing PDF before marking the request sent.");
+      if (item.signatureStatus === "Sent - awaiting signature")
+        fail("This item is already marked sent.");
+      if (item.signatureStatus === "Signed")
+        fail("This item is already signed.");
+      if (input.confirm !== "yes")
+        fail("Confirm that the Microsoft 365 eSignature request was actually sent.");
+    }
+  });
+
+  const fields =
+    action === "PrepareSignature"
+      ? {
+          TIG_InternalNotesRemoved: true,
+          TIG_SignatureStatus: "Ready to send",
+        }
+      : {
+          TIG_SignatureStatus: "Sent - awaiting signature",
+          ...(schema.signatureSentColumn
+            ? { [schema.signatureSentColumn]: new Date().toISOString() }
+            : {}),
+        };
+
+  await graph.updateListItemFields(
+    schema.siteId,
+    schema.clientOpsId,
+    itemId,
+    fields,
+  );
+  sp.invalidateWorkItems(p.client_id);
+
+  await transaction(async (tx) => {
+    await audit(
+      tx,
+      user,
+      action === "PrepareSignature"
+        ? "prepare signature"
+        : "mark signature sent",
+      "client_operation",
+      itemId,
+    );
+  });
+}
+
 export async function executeWorkAction(
   id,
   input,
@@ -402,10 +478,18 @@ export function guidedRoutes(
     prospect,
     guidedData,
     executeWorkAction,
+    executeSignatureAction,
   },
 ) {
-  const { query, transaction, audit, prospect, guidedData, executeWorkAction } =
-    dependencies;
+  const {
+    query,
+    transaction,
+    audit,
+    prospect,
+    guidedData,
+    executeWorkAction,
+    executeSignatureAction,
+  } = dependencies;
   app.get("/prospects/:id/workflow-panel", async (req, res) =>
     res.render(
       "workflow-panel",
@@ -422,6 +506,14 @@ export function guidedRoutes(
       req.body,
       req.session.user,
       req.session.stageReviews?.[req.params.id],
+    );
+    res.redirect(`/prospects/${req.params.id}#work-items`);
+  });
+  app.post("/prospects/:id/signature", async (req, res) => {
+    await executeSignatureAction(
+      req.params.id,
+      req.body,
+      req.session.user,
     );
     res.redirect(`/prospects/${req.params.id}#work-items`);
   });
