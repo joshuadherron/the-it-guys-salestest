@@ -131,7 +131,9 @@ export async function guidedData(
     p,
     d.exists === false ? null : d,
     quotes,
-    client,
+    // Do not expose this render local as "client": EJS treats a truthy
+    // top-level "client" value as its client-compilation option, which breaks includes.
+    clientRecord: client,
     items,
     pending,
     user.role,
