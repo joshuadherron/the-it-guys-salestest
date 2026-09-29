@@ -18,7 +18,7 @@
   - Payload (plain JSON text)
   - Result Message
 - **Client Workflow Definitions** (list): the workflow rows (MIT-xx, BII-xx). Read-only for the app.
-- **Client Operations** (library): the client folders and working copies. **The app never writes files here.** Flows do.
+- **Client Operations** (library): the client folders and working copies. **The app never writes files here.** Flows do. The Sales App may update only the narrow signature-control metadata needed to trigger or record the Microsoft 365 eSignature handoff: Internal Notes Removed, Signature Status, and (when present) Signature Sent Date.
 - **Operational Standards & Templates** (library): masters. **The app never touches it.**
 
 ## How work happens
@@ -35,7 +35,7 @@ The app creates a Workflow Request item with **Processing Status = Pending**, **
 **v1.2:** Advance Stage, Item Completed, Create Working Copy and Request Exception are available through Workflow Requests. No library fields are written by the app.
 
 **Still outside the app:**
-- eSignature: the send click is always by hand in Microsoft 365.
+- Microsoft 365 eSignature's actual **Request signatures / Send** click is always performed by a person in Microsoft 365. The Sales App now owns the surrounding metadata handoff: **Prepare for signature** sets Internal Notes Removed = Yes and Signature Status = Ready to send; after the user actually sends the eSignature request, **Mark sent for signature** records Sent - awaiting signature and Signature Sent Date when that column exists.
 
 ### Stage values (Clients → Current Stage choice, lifecycle order)
 Sales Discovery → Technical Assessment → Risk Review → Quoting → Contracting → Client Activation → Onboarding → Go-Live → Operations → … → Project Delivery → Acceptance → Offboarding → Closed (Closed - Lost / Closed - Former Client). **Read the exact values from the list.** Don't hard-code beyond display order.
@@ -102,4 +102,4 @@ Library item reads filter by TIG_ClientID and pending request reads filter by th
 
 Assignees resolve from TIG_AssignedToLookupId via the site's User Information List fields.EMail, cached for the process lifetime. Only configured verified environment mappings are used as fallback. Unresolved or conflicting fallback mappings display Assigned (unknown), with completion restricted to the owner.
 
-Signature metadata is read-only. Signature-required unsigned items complete through the signing flow. The owner is directed to set Internal Notes Removed and Ready to send on the document in SharePoint; no library-edit API exists in the app. Per owner clarification on 2026-09-28, the sent-date column is optional and resolved only when exactly one column has displayName Signature Sent Date. Missing, ambiguous or blank values produce Out for signature without a date or an error. TIG_SignedDate is the confirmed signed-date field.
+Signature-required unsigned items complete through the signing flow. The app exposes owner-only signature controls so SharePoint metadata does not need to be edited manually: **Prepare for signature** updates only TIG_InternalNotesRemoved = true and TIG_SignatureStatus = Ready to send; **Mark sent for signature** updates only TIG_SignatureStatus = Sent - awaiting signature and the sent-date field when exactly one column has displayName Signature Sent Date. The actual Microsoft 365 eSignature send click remains manual. Signed Copy, Signed Date and Signed status are still owned by the signed-copy return flow. Missing, ambiguous or blank sent-date values produce Out for signature without a date or an error. TIG_SignedDate is the confirmed signed-date field.
