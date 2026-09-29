@@ -46,6 +46,13 @@ export class Graph {
       { fields },
     );
   }
+  async updateListItemFields(siteId, listId, itemId, fields) {
+    return this.request(
+      `/sites/${encodeURIComponent(siteId)}/lists/${encodeURIComponent(listId)}/items/${encodeURIComponent(itemId)}/fields`,
+      "PATCH",
+      fields,
+    );
+  }
   async sendMail(message) {
     return this.request("/users/josh%40theitguys.us/sendMail", "POST", message);
   }
