@@ -160,7 +160,20 @@ export function discoveryRoutes(app) {
         [p.id],
         c,
       );
+      const qualified = await query(
+        "UPDATE prospects SET stage='Qualified' WHERE id=? AND stage IN ('Prospecting','Discovery')",
+        [p.id],
+        c,
+      );
       await audit(c, req.session.user, "send to Josh", "discovery", p.id);
+      if (qualified.affectedRows)
+        await audit(
+          c,
+          req.session.user,
+          "auto qualify after discovery",
+          "prospect",
+          p.id,
+        );
       notice = await queueNotice(c, p, "Ready for Review");
     });
     await deliverNotice(notice);
