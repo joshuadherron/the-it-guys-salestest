@@ -10,7 +10,7 @@
 </section>
 <% if(p.client_id){ const disabled=Boolean(error||pending.length||p.hold||schema.errors.length||schema.workErrors?.length); %>
 <section class="card" id="work-items"><h2>Client work items</h2>
-<p><%= p.client_id %> · <%= currentStage||'Stage unavailable' %> · <%= client?.['Stage Status']||'' %></p>
+<p><%= p.client_id %> · <%= currentStage||'Stage unavailable' %> · <%= clientRecord?.['Stage Status']||'' %></p>
 <% if(error){ %><p class="error"><%= error %></p><% } %>
 <% for(const issue of [...schema.workErrors||[],...schema.definitionErrors||[],...Object.values(actionErrors).flat()]){ %><p class="error"><%= issue %></p><% } %>
 <% if(stageGateNotice){ %><p class="notice">Confirm Stage Gate v1.1 is imported before using outcome flags</p><% } %>
