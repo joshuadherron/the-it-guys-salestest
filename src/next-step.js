@@ -122,8 +122,10 @@ export function nextStep(p, d, quotes, client, items, pendingRequests, role) {
     }
     return result(
       `Complete ${item.document}`,
-      `Assigned to ${item.assignee}. Open the document, then mark complete below.`,
-      link("Open document & mark complete", root + `#item-${item.id}`),
+      `Assigned to ${item.assignee}. Open and save the document, then return here and mark complete below.`,
+      item.url
+        ? link("Open document", item.url)
+        : link("Go to completion controls", root + `#item-${item.id}`),
       item.assigneeEmail === "alanna@theitguys.us" ? "Alanna" : "Josh",
     );
   }
