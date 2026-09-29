@@ -71,6 +71,7 @@ export async function guidedData(
   user,
   session,
   dependencies = { query, discovery, refresh, sp },
+  freshItems = false,
 ) {
   const { query, discovery, refresh, sp } = dependencies;
   const d = await discovery(p.id);
@@ -92,7 +93,7 @@ export async function guidedData(
       if (p.client_id) {
         client = clientData(await sp.client(p), sp.ready());
         remote = await sp.requests();
-        items = await sp.workItems(p.client_id);
+        items = await sp.workItems(p.client_id, freshItems);
       }
     } catch {
       error =
@@ -497,6 +498,8 @@ export function guidedRoutes(
         await prospect(req.params.id),
         req.session.user,
         req.session,
+        undefined,
+        true,
       ),
     ),
   );
@@ -507,7 +510,7 @@ export function guidedRoutes(
       req.session.user,
       req.session.stageReviews?.[req.params.id],
     );
-    res.redirect(`/prospects/${req.params.id}#work-items`);
+    res.redirect(`/prospects/${req.params.id}`);
   });
   app.post("/prospects/:id/signature", async (req, res) => {
     await executeSignatureAction(
@@ -515,7 +518,7 @@ export function guidedRoutes(
       req.body,
       req.session.user,
     );
-    res.redirect(`/prospects/${req.params.id}#work-items`);
+    res.redirect(`/prospects/${req.params.id}`);
   });
   app.post("/requests/:id/acknowledge", ownerOnly, async (req, res) => {
     await transaction(async (c) => {
