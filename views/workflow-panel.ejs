@@ -1,6 +1,6 @@
 <section class="card" id="next-step"><h2>Next step</h2><h3><%= step.title %></h3><p><%= step.detail %></p>
 <% if(step.waitingOn){ %><p>Waiting on <%= step.waitingOn %></p><% } %>
-<% if(step.action?.href){ %><a class="button" href="<%= step.action.href %>"><%= step.action.label %></a><% } %>
+<% if(step.action?.href){ const external=/^https:\/\//i.test(step.action.href); %><a class="button" href="<%= step.action.href %>" <%= external?'target="_blank" rel="noopener noreferrer"':'' %>><%= step.action.label %></a><% } %>
 <% if(step.action?.form){ %><form method="post" action="/prospects/<%= p.id %>/work-items"><input type="hidden" name="_csrf" value="<%= csrf %>"><input type="hidden" name="action" value="AdvanceStage"><input type="hidden" name="expectedStage" value="<%= currentStage %>"><button <%= error||pending.length||schema.workErrors?.length||actionErrors.AdvanceStage?.length?'disabled':'' %>>Advance stage</button></form><% } %>
 </section>
 <section class="card"><h2>Discovery</h2><p><%= p.hold?'On Hold':d.status %> · <%= completedGroups %> of 8 groups complete</p>
