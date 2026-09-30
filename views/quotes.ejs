@@ -45,7 +45,7 @@
 </div>
 <% } %>
 <label>
-<input type="checkbox" name="confirmed" value="yes" <%= input.confirmed?'checked':'' %>> I have confirmed all counts, including zero values and devices counted once.</label>
+<input type="checkbox" name="confirmed" value="yes" <%= input.confirmed?'checked':'' %> <%= user.role==='owner'?'required':'' %>> I have confirmed all counts, including zero values and devices counted once.</label>
 </fieldset>
 <button <%= p.hold?'disabled':'' %>>
 <%= user.role==='owner'?'Save new draft':'Create draft from discovery for Josh' %>
@@ -70,6 +70,11 @@
 <input type="hidden" name="_csrf" value="<%= csrf %>">
 <h3>Pre-quote stop conditions</h3>
 <p>Tick any condition that applies. Any tick blocks approval: targeted assessment first.</p>
+<% if(!input.confirmed){ %>
+<label>
+<input type="checkbox" name="confirm_counts" value="yes" required> I confirm the saved draft counts, including zero values and devices counted once.
+</label>
+<% } %>
 <% for(const stop of stops){ %>
 <label>
 <input type="checkbox" name="stop_<%= stop.id %>" value="yes"> <%= stop.label %> · <%= stop.status %>
