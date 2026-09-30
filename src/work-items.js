@@ -66,6 +66,37 @@ export function safeLink(value) {
   const link = typeof value === "object" ? value?.Url || value?.url : value;
   return typeof link === "string" && /^https:\/\//i.test(link) ? link : null;
 }
+export function parentFolderLink(value) {
+  const link = safeLink(value);
+  if (!link) return null;
+  try {
+    const u = new URL(link);
+    const parts = decodeURIComponent(u.pathname).split("/").filter(Boolean);
+    if (parts.length < 2) return null;
+    const folderParts = parts.slice(0, -1);
+    const scopeIndex = folderParts.findIndex(
+      (part) => part === "sites" || part === "teams",
+    );
+    if (scopeIndex >= 0 && folderParts.length > scopeIndex + 2) {
+      const libraryParts = folderParts.slice(0, scopeIndex + 3);
+      u.pathname =
+        "/" +
+        libraryParts.map((part) => encodeURIComponent(part)).join("/") +
+        "/Forms/AllItems.aspx";
+      u.search = "";
+      u.searchParams.set("id", "/" + folderParts.join("/"));
+      u.hash = "";
+      return u.toString();
+    }
+    u.pathname =
+      "/" + folderParts.map((part) => encodeURIComponent(part)).join("/");
+    u.search = "";
+    u.hash = "";
+    return u.toString();
+  } catch {
+    return null;
+  }
+}
 export function columnErrors(columns, required, label) {
   return required
     .filter((name) => columns.filter((c) => c.name === name).length !== 1)
@@ -131,6 +162,7 @@ export function normalizeItem(
         : null,
     signedAt: f.TIG_SignedDate ? String(f.TIG_SignedDate).slice(0, 10) : null,
     signingPdf: safeLink(f.TIG_SigningPDF),
+    signingFolder: parentFolderLink(f.TIG_SigningPDF),
     signedCopy: safeLink(f.TIG_SignedCopy),
     exceptionStatus: f.TIG_ExceptionStatus || "",
     ticket: f.TIG_MSPManagerTicket,
