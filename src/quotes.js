@@ -173,7 +173,7 @@ export function quotesRoutes(app) {
       await audit(c, req.session.user, "create draft", "quote", r.insertId);
     });
 
-    res.redirect(`/prospects/${req.params.id}/quotes`);
+    res.redirect(`/prospects/${req.params.id}`);
   });
 
   app.post("/quotes/:id/approve", ownerOnly, async (req, res) => {
