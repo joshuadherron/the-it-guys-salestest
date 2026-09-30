@@ -301,6 +301,7 @@ if (clientStatus) {
 const workflowPanel = document.querySelector("[data-workflow-panel]");
 if (workflowPanel) {
   let dirty = false;
+  let refreshTimer;
   workflowPanel.addEventListener("input", () => {
     dirty = true;
   });
@@ -311,21 +312,41 @@ if (workflowPanel) {
     const message = event.target.dataset.confirm;
     if (message && !window.confirm(message)) event.preventDefault();
   });
-  setInterval(async () => {
+
+  const refreshDelay = () =>
+    Number(
+      workflowPanel.querySelector("#next-step")?.dataset.pendingCount || 0,
+    ) > 0
+      ? 5000
+      : 30000;
+
+  const scheduleRefresh = () => {
+    clearTimeout(refreshTimer);
+    refreshTimer = setTimeout(refreshWorkflow, refreshDelay());
+  };
+
+  const refreshWorkflow = async () => {
     if (
       document.hidden ||
       dirty ||
       workflowPanel.contains(document.activeElement)
-    )
+    ) {
+      scheduleRefresh();
       return;
+    }
     try {
       const response = await fetch(
         `/prospects/${workflowPanel.dataset.workflowPanel}/workflow-panel`,
+        { cache: "no-store" },
       );
       if (response.ok && !response.redirected)
         workflowPanel.innerHTML = await response.text();
     } catch {
       /* Keep the last visible state; POST revalidates every action. */
+    } finally {
+      scheduleRefresh();
     }
-  }, 30000);
+  };
+
+  scheduleRefresh();
 }
