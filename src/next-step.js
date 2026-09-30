@@ -121,7 +121,7 @@ export function nextStep(p, d, quotes, client, items, pendingRequests, role) {
       if (item.signingPdf)
         return result(
           "Send agreement for signature",
-          "Open the folder containing the prepared signing PDF and send the Microsoft 365 eSignature request. No further app action is required; the signed copy will complete this item automatically when it returns.",
+          "Open the folder containing the prepared signing PDF, send the Microsoft 365 eSignature request, then mark it sent below.",
           owner
             ? link(
                 "Open signing folder",
