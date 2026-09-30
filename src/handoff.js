@@ -36,7 +36,27 @@ export async function refresh(
     [p.id, p.client_id || null],
   );
   for (const r of rows) {
-    const remote = await sp.request(r.item_id);
+    let remote;
+    try {
+      remote = await sp.request(r.item_id);
+    } catch (e) {
+      if (e?.status === 404) {
+        await applyRequestStatus(
+          p,
+          r,
+          "Failed",
+          "The SharePoint Workflow Request no longer exists (HTTP 404). No retry was sent automatically.",
+          { query, transaction, audit },
+        );
+        console.warn("SharePoint workflow request missing:", {
+          localRequestId: r.id,
+          remoteItemId: r.item_id,
+          action: r.action,
+        });
+        continue;
+      }
+      throw e;
+    }
     const status = remote.fields[s.maps.requests["Processing Status"].name];
     const message = remote.fields[s.maps.requests["Result Message"].name] || "";
     if (["Done", "Rejected"].includes(status) && status !== r.status)
