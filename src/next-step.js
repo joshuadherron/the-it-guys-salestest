@@ -92,6 +92,11 @@ export function nextStep(p, d, quotes, client, items, pendingRequests, role) {
   }
   if (["Closed - Lost", "Closed - Former Client"].includes(stage))
     return result("Closed");
+  if (stage === "Operations")
+    return result(
+      "Client is live",
+      "No open blocking onboarding work remains.",
+    );
   if (!items)
     return result(
       "Work items unavailable",
