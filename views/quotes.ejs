@@ -66,6 +66,10 @@
 </p>
 <a href="/quotes/<%= selected.id %>/print">Printable internal worksheet</a>
 <% if(user.role==='owner'&&selected.status==='Draft'){ %>
+<form method="post" action="/quotes/<%= selected.id %>/delete" data-confirm="Delete this draft quote? This cannot be undone.">
+<input type="hidden" name="_csrf" value="<%= csrf %>">
+<button type="submit">Delete draft</button>
+</form>
 <form method="post" action="/quotes/<%= selected.id %>/approve">
 <input type="hidden" name="_csrf" value="<%= csrf %>">
 <h3>Pre-quote stop conditions</h3>
