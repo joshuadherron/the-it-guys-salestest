@@ -30,7 +30,7 @@
 <% if(item.signatureStatus==='Sent - awaiting signature'){ %><p>Waiting for the signed copy to return.</p>
 <% }else if(item.signingPdf){ %>
 <p><a class="button secondary" href="<%= item.signingFolder||item.signingPdf %>" target="_blank" rel="noopener noreferrer">Open signing folder</a></p>
-<p>Send the PDF through Microsoft 365 eSignature. No further app action is required; the signed copy will be detected automatically when it returns.</p>
+<form method="post" action="/prospects/<%= p.id %>/signature" data-confirm="Confirm the Microsoft 365 eSignature request was actually sent?"><input type="hidden" name="_csrf" value="<%= csrf %>"><input type="hidden" name="action" value="SignatureSent"><input type="hidden" name="itemId" value="<%= item.id %>"><input type="hidden" name="confirm" value="yes"><button <%= disabled?'disabled':'' %>>Mark sent for signature</button></form>
 <% }else{ %>
 <form method="post" action="/prospects/<%= p.id %>/signature" data-confirm="Confirm you reviewed the document and removed all internal notes?"><input type="hidden" name="_csrf" value="<%= csrf %>"><input type="hidden" name="action" value="PrepareSignature"><input type="hidden" name="itemId" value="<%= item.id %>"><input type="hidden" name="confirm" value="yes"><button <%= disabled?'disabled':'' %>>Prepare for signature</button></form>
 <% } %>
