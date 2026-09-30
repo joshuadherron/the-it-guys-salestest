@@ -158,6 +158,17 @@ const cases = [
     false,
   ],
   [
+    "BII sent quote still needs Quoting handoff",
+    {
+      client: { ...client, "Current Stage": "Sales Discovery" },
+      quotes: [{ id: 2, status: "Sent" }],
+    },
+    "Send to Quoting",
+    "Josh",
+    true,
+    false,
+  ],
+  [
     "Managed IT",
     {
       p: { ...p, service_lane: "Managed IT" },
