@@ -1,0 +1,4 @@
+<%- include('quote-lines',{lines:calculation.lines,total:calculation.total}) %>
+<% if(calculation.pending.length){ %>
+<p>Priced by Josh — amounts still required: <%= calculation.pending.join(', ') %>. Displayed total excludes these unresolved items.</p>
+<% } %>
