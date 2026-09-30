@@ -25,7 +25,14 @@
 <% } %>
 </div>
 <h2>Priced by Josh</h2>
-<p>OWNER ONE-OFF — NOT STANDARD UNIT PRICE. Additional locations are never calculated as a percentage by this app.</p>
+<p>OWNER ONE-OFF — NOT STANDARD UNIT PRICE for custom items below. Mirrored additional locations are calculated separately at 30% of the owner-confirmed repeatable BII implementation labor applicable to those locations.</p>
+<div class="row">
+<div>
+<label>Additional mirrored location repeatable labor base</label>
+<input type="number" step="0.01" min="0" name="locationLaborBase" value="<%= input.locationLaborBase??'' %>">
+</div>
+<p>When there is more than one additional mirrored location, enter the sum of the repeatable implementation labor base applicable to each additional location. Exclude hardware, software/licenses, Brownfield Remediation, migrations, Advanced Technology Assessment, and specialized/custom work.</p>
+</div>
 <% for(const [i,label] of oneOffItems.entries()){ %>
 <div class="row">
 <label>
