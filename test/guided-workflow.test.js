@@ -185,6 +185,14 @@ const cases = [
     false,
   ],
   [
+    "operations steady state",
+    { client: { ...client, "Current Stage": "Operations", "Stage Status": "On track" } },
+    "Client is live",
+    null,
+    false,
+    false,
+  ],
+  [
     "signature preparing",
     {
       items: [
