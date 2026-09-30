@@ -102,11 +102,24 @@ export function nextStep(p, d, quotes, client, items, pendingRequests, role) {
     p.service_lane === "Business IT Integration" &&
     items &&
     !items.some((i) => i.stage === "Acceptance" && i.blocking && openItem(i))
-  )
+  ) {
+    const clientLanes = Array.isArray(client["Service Lanes"])
+      ? client["Service Lanes"]
+      : client["Service Lanes"]
+        ? [client["Service Lanes"]]
+        : [];
+    if (!clientLanes.includes("Managed IT"))
+      return result(
+        "Follow up for Managed IT",
+        "BII is complete. SharePoint handles the BII-15 follow-up and client-owner notification. When Managed IT is authorized, start its Technical Assessment from the workflow actions.",
+        owner ? link("Start Managed IT", root + "/handoff") : null,
+        "Josh",
+      );
     return result(
       "BII project complete",
-      "Acceptance is complete and there are no open blocking BII work items. No further stage advance is required unless a new service is authorized.",
+      "Acceptance is complete and Managed IT is already present in the client's service lanes.",
     );
+  }
   if (!items)
     return result(
       "Work items unavailable",
