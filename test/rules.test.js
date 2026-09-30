@@ -306,18 +306,33 @@ test("pricing included amounts, zero devices, many devices, Dell labor", () => {
   assert.throws(() => priceQuote({ windows: -1 }, prices));
   assert.throws(() => priceQuote({}, {}));
 });
-test("additional locations and owner one-offs require owner price, never percentage", () => {
+test("mirrored additional locations use 30 percent of applicable repeatable labor base", () => {
   const input = {
     locations: 2,
+    locationLaborBase: null,
     oneOff: { "Complex migration": { selected: true, amount: null } },
   };
-  const result = priceQuote(input, prices);
-  assert.deepEqual(result.pending, [
+  const pending = priceQuote(input, prices);
+  assert.deepEqual(pending.pending, [
     "Complex migration",
-    "Additional locations",
+    "Additional locations — repeatable implementation labor base",
   ]);
-  assert.equal(result.total, 3750);
-  input.oneOff["Additional locations"] = { amount: 300 };
+  assert.equal(pending.total, 3750);
+
+  input.locationLaborBase = 1000;
   input.oneOff["Complex migration"].amount = 250;
-  assert.equal(priceQuote(input, prices).total, 4300);
+  const result = priceQuote(input, prices);
+  assert.equal(result.total, 4300);
+  assert.ok(
+    result.lines.some(
+      (line) =>
+        line.label.includes("Additional mirrored location fee") &&
+        line.amount === 300,
+    ),
+  );
+
+  assert.equal(
+    priceQuote({ locations: 1, locationLaborBase: 1000 }, prices).total,
+    3750,
+  );
 });
