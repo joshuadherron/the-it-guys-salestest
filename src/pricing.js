@@ -6,7 +6,6 @@ export const oneOffItems = [
   "LOB apps",
   "Tenant-to-tenant",
   "Additional STANDARD workloads",
-  "Additional locations",
 ];
 export function priceQuote(input, prices) {
   const get = (k) => {
@@ -61,11 +60,7 @@ export function priceQuote(input, prices) {
   const pending = [];
   for (const label of oneOffItems) {
     const item = input.oneOff?.[label];
-    if (
-      item?.selected ||
-      (label === "Additional locations" &&
-        count("locations") > get("included_locations"))
-    ) {
+    if (item?.selected) {
       if (
         item?.amount === null ||
         item?.amount === undefined ||
@@ -85,6 +80,34 @@ export function priceQuote(input, prices) {
       }
     }
   }
+
+  const additionalLocations = Math.max(
+    0,
+    count("locations") - get("included_locations"),
+  );
+  if (additionalLocations) {
+    const base = input.locationLaborBase;
+    if (base === null || base === undefined || base === "") {
+      pending.push("Additional locations — repeatable implementation labor base");
+    } else {
+      const laborBase = Number(base);
+      if (
+        !Number.isFinite(laborBase) ||
+        laborBase < 0 ||
+        laborBase > 100000000
+      )
+        throw new Error("Invalid additional-location labor base.");
+      const amount = Math.round(laborBase * 0.3 * 100) / 100;
+      lines.push({
+        label:
+          "Additional mirrored location fee — 30% of owner-confirmed repeatable BII implementation labor base",
+        quantity: 1,
+        unit: amount,
+        amount,
+      });
+    }
+  }
+
   return {
     devices,
     lines,
