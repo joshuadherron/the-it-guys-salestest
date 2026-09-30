@@ -204,6 +204,17 @@ const cases = [
     false,
   ],
   [
+    "standalone BII acceptance complete",
+    {
+      client: { ...client, "Current Stage": "Acceptance", "Stage Status": "On track" },
+      items: [],
+    },
+    "BII project complete",
+    null,
+    false,
+    false,
+  ],
+  [
     "signature preparing",
     {
       items: [
