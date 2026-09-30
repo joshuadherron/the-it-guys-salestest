@@ -724,6 +724,29 @@ test("Graph fallback carries Prefer, filters locally, sanitizes warning and does
     ),
   );
 });
+test("completed BII Managed IT follow-up posts directly to handoff", () => {
+  const step = nextStep(
+    p,
+    d,
+    [],
+    {
+      ...client,
+      "Current Stage": "Acceptance",
+      "Stage Status": "On track",
+      "Service Lanes": ["Business IT Integration"],
+    },
+    [],
+    [],
+    "owner",
+  );
+  assert.equal(step.title, "Follow up for Managed IT");
+  assert.equal(step.action.label, "Start Managed IT");
+  assert.deepEqual(step.action.form, {
+    endpoint: "/prospects/1/handoff",
+    action: "TechnicalAssessment",
+  });
+});
+
 test("work item cache, assignee lookup and definition fallback", async () => {
   let reads = 0,
     userReads = 0;
