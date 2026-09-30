@@ -205,7 +205,7 @@ export function quotesRoutes(app) {
       await audit(c, req.session.user, "delete draft", "quote", q.id);
     });
 
-    res.redirect(`/prospects/${pid}/quotes`);
+    res.redirect(`/prospects/${pid}`);
   });
 
   app.post("/quotes/:id/approve", ownerOnly, async (req, res) => {
@@ -286,7 +286,7 @@ export function quotesRoutes(app) {
       await audit(c, req.session.user, "approve", "quote", q.id);
     });
 
-    res.redirect(`/prospects/${pid}/quotes`);
+    res.redirect(`/prospects/${pid}`);
   });
 
   app.post("/quotes/:id/sent", ownerOnly, async (req, res) => {
