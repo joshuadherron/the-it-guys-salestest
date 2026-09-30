@@ -75,10 +75,10 @@ export function nextStep(p, d, quotes, client, items, pendingRequests, role) {
           owner ? link("Approve quote", root + "/quotes") : null,
           "Josh",
         );
-      if (quote.status === "Approved")
+      if (["Approved", "Sent"].includes(quote.status))
         return result(
           "Send to Quoting",
-          "",
+          "Start the controlled BII Quoting stage in SharePoint before any further stage advance.",
           owner ? link("Send to Quoting", root + "/handoff") : null,
           "Josh",
         );
