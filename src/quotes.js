@@ -38,6 +38,7 @@ export function prefill(a) {
     phones: 0,
     locations:
       answer(a, "Q2.4") === "No" ? 1 : Number(value(a, "Q2.4")?.detail) || 0,
+    locationLaborBase: null,
     oneOff: {},
     confirmed: false,
   };
@@ -57,6 +58,19 @@ export function validateInputs(body) {
     input[k] = integer(body[k]);
 
   input.confirmed = body.confirmed === "yes";
+
+  const locationLaborBase = body.locationLaborBase;
+  if (
+    locationLaborBase !== undefined &&
+    locationLaborBase !== "" &&
+    !/^\d+(\.\d{1,2})?$/.test(locationLaborBase)
+  )
+    fail("Enter a nonnegative additional-location labor base with at most two decimals.");
+  input.locationLaborBase =
+    locationLaborBase === "" || locationLaborBase === undefined
+      ? null
+      : Number(locationLaborBase);
+
   input.oneOff = {};
 
   for (const [i, label] of oneOffItems.entries()) {
