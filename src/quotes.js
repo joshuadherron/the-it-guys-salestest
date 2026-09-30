@@ -289,40 +289,6 @@ export function quotesRoutes(app) {
     res.redirect(`/prospects/${pid}`);
   });
 
-  app.post("/quotes/:id/sent", ownerOnly, async (req, res) => {
-    let pid;
-
-    await transaction(async (c) => {
-      let [q] = await query(
-        "SELECT * FROM quotes WHERE id=?",
-        [integer(req.params.id)],
-        c,
-      );
-
-      if (!q) fail("Quote not found.", 404);
-
-      pid = q.prospect_id;
-
-      await query("SELECT id FROM prospects WHERE id=? FOR UPDATE", [pid], c);
-
-      [q] = await query(
-        "SELECT * FROM quotes WHERE id=? FOR UPDATE",
-        [q.id],
-        c,
-      );
-
-      if ((await prospect(pid, c)).hold) fail("On Hold — Pending Josh Review");
-
-      if (q.status !== "Approved") fail("Approve the quote first.");
-
-      await query("UPDATE quotes SET status='Sent' WHERE id=?", [q.id], c);
-
-      await audit(c, req.session.user, "mark sent", "quote", q.id);
-    });
-
-    res.redirect(`/prospects/${pid}`);
-  });
-
   app.get("/quotes/:id/print", async (req, res) => {
     let [q] = await query("SELECT * FROM quotes WHERE id=?", [
       integer(req.params.id),
