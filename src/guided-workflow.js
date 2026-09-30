@@ -87,18 +87,52 @@ export async function guidedData(
     items = null,
     remote = [],
     error = null;
-  if (p.client_id || requests.some((r) => r.item_id))
+  if (p.client_id || requests.some((r) => r.item_id)) {
     try {
       await refresh(p);
-      if (p.client_id) {
-        client = clientData(await sp.client(p), sp.ready());
-        remote = await sp.requests();
-        items = await sp.workItems(p.client_id, freshItems);
-      }
-    } catch {
+    } catch (e) {
+      console.error("SharePoint request reconciliation failed:", {
+        name: e?.name,
+        message: e?.message,
+        status: e?.status,
+      });
       error =
-        "SharePoint work status could not be refreshed. Check the connection before acting.";
+        "A SharePoint request status could not be reconciled. Live client status will still be loaded.";
     }
+    if (p.client_id) {
+      try {
+        client = clientData(await sp.client(p), sp.ready());
+      } catch (e) {
+        console.error("SharePoint client read failed:", {
+          name: e?.name,
+          message: e?.message,
+          status: e?.status,
+        });
+        error =
+          "SharePoint client status could not be refreshed. Check the connection before acting.";
+      }
+      try {
+        remote = await sp.requests();
+      } catch (e) {
+        console.error("SharePoint pending-request read failed:", {
+          name: e?.name,
+          message: e?.message,
+          status: e?.status,
+        });
+        error ||= "Pending SharePoint requests could not be refreshed.";
+      }
+      try {
+        items = await sp.workItems(p.client_id, freshItems);
+      } catch (e) {
+        console.error("SharePoint work-item read failed:", {
+          name: e?.name,
+          message: e?.message,
+          status: e?.status,
+        });
+        error ||= "SharePoint work items could not be refreshed.";
+      }
+    }
+  }
   requests = await query(
     "SELECT * FROM sp_requests WHERE prospect_id=? ORDER BY id DESC",
     [p.id],
