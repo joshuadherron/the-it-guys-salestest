@@ -106,8 +106,10 @@
         <button
           <%= !ready ||
               !p.client_id ||
-              p.service_lane !== lane ||
-              (action === 'Quoting' && !approved)
+              (action === 'Quoting' && (p.service_lane !== lane || !approved)) ||
+              (action === 'TechnicalAssessment' &&
+                p.service_lane !== 'Managed IT' &&
+                expectedStage !== 'Acceptance')
               ? 'disabled'
               : '' %>
         >
