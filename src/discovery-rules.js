@@ -101,6 +101,10 @@ export function flags(a) {
   );
   add("FLAG-SECURITY-HISTORY", v("Q6.3a") === "Yes");
   add(
+    "FLAG-HEALTH-DATA",
+    has("Q7.1", "Patient/medical information"),
+  );
+  add(
     "FLAG-REGULATORY",
     [
       "Patient/medical information",
@@ -175,6 +179,7 @@ export const majorFlagOrder = [
   "FLAG-DOMAIN-ACCESS-CONCERN",
   "FLAG-MS-ADMIN-ACCESS-CONCERN",
   "FLAG-MULTI-LOCATION",
+  "FLAG-HEALTH-DATA",
   "FLAG-REGULATORY",
   "FLAG-SENSITIVE-DATA",
   "FLAG-SECURITY-HISTORY",
