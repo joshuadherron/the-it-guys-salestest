@@ -152,7 +152,12 @@ function payloadData(action, p, lane, options) {
   if (actionTypes[action]) return workPayload(action, p, lane, options);
   if (!p.client_id) throw new Error("Create the SharePoint client first.");
   if (action === "Quoting" && lane === "Business IT Integration")
-    return { clientId: p.client_id, stage: "Quoting", serviceLane: lane };
+    return {
+      clientId: p.client_id,
+      stage: "Quoting",
+      serviceLane: lane,
+      prepareBaa: Boolean(options.prepareBaa),
+    };
   if (action === "TechnicalAssessment" && lane === "Managed IT")
     return {
       clientId: p.client_id,
