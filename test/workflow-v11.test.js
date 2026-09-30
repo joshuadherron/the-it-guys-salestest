@@ -319,7 +319,7 @@ function routeHarness({
       lostReviews: { 42: "Quoting" },
     },
   };
-  let rendered;
+  let rendered, redirected;
   const res = {
     status(code) {
       this.code = code;
@@ -328,7 +328,9 @@ function routeHarness({
     send(message) {
       throw Object.assign(new Error(message), { status: this.code });
     },
-    redirect() {},
+    redirect(url) {
+      redirected = url;
+    },
     render: (_view, locals) => {
       rendered = locals;
     },
@@ -341,6 +343,9 @@ function routeHarness({
     sp,
     req,
     s,
+    get redirected() {
+      return redirected;
+    },
     async call(path, body = {}) {
       req.body = body;
       const handlers = routes.get(path);
@@ -373,6 +378,15 @@ test("Create Client dryrun stores the full discovery body before dispatch", asyn
         w.values[0] === "Dryrun",
     ),
   );
+});
+
+test("handoff submissions return to the prospect workspace", async () => {
+  const h = routeHarness();
+  await h.call("POST /prospects/:id/handoff", {
+    action: "CreateClient",
+    service_lane: prospect.service_lane,
+  });
+  assert.equal(h.redirected, "/prospects/42");
 });
 
 test("Mark Lost route is owner only, validates stale stage/reasons and respects pending requests", async () => {
