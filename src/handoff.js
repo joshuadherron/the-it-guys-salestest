@@ -416,7 +416,7 @@ export function handoffRoutes(
         );
       }
     });
-    res.redirect(`/prospects/${req.params.id}/handoff`);
+    res.redirect(`/prospects/${req.params.id}`);
   };
   app.post("/prospects/:id/handoff", handoff);
   app.post("/prospects/:id/mark-lost", ownerOnly, (req, res) => {
