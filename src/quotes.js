@@ -108,6 +108,16 @@ export function quotesRoutes(app) {
     });
   });
 
+  app.post("/prospects/:id/quotes/calculate", async (req, res) => {
+    const p = await prospect(req.params.id);
+    if (p.hold) fail("On Hold — Pending Josh Review. Pricing is blocked.");
+    if (req.session.user.role !== "owner") fail("Owner access required.", 403);
+    const input = validateInputs(req.body);
+    res.render("quote-calculation", {
+      calculation: priceQuote(input, await priceConfig()),
+    });
+  });
+
   app.post("/prospects/:id/quotes", async (req, res) => {
     await transaction(async (c) => {
       await query(
