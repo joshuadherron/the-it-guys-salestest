@@ -320,7 +320,7 @@ export function quotesRoutes(app) {
       await audit(c, req.session.user, "mark sent", "quote", q.id);
     });
 
-    res.redirect(`/prospects/${pid}/quotes`);
+    res.redirect(`/prospects/${pid}`);
   });
 
   app.get("/quotes/:id/print", async (req, res) => {
