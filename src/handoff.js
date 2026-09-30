@@ -131,6 +131,14 @@ export async function applyRequestStatus(
         "sp_request",
         r.id,
       );
+    if (status === "Done" && r.action === "TechnicalAssessment") {
+      await query(
+        "UPDATE prospects SET service_lane='Managed IT' WHERE id=?",
+        [p.id],
+        c,
+      );
+      p.service_lane = "Managed IT";
+    }
     if (status === "Done" && r.action === "MarkLost") {
       const applied = await query(
         "SELECT id FROM audit_log WHERE action='apply Mark Lost' AND entity='sp_request' AND entity_id=?",
@@ -252,7 +260,13 @@ export function handoffRoutes(
       )
         fail("A request is already active or needs reconciliation.");
       const lane = choice(
-        action === "CreateClient" ? req.body.service_lane : p.service_lane,
+        action === "CreateClient"
+          ? req.body.service_lane
+          : action === "TechnicalAssessment"
+            ? "Managed IT"
+            : action === "Quoting"
+              ? "Business IT Integration"
+              : p.service_lane,
         lanes,
       );
       const d = await discovery(p.id, c);
@@ -340,6 +354,15 @@ export function handoffRoutes(
         ).length
       )
         fail("An Approved quote is required.");
+      if (action === "TechnicalAssessment" && p.service_lane !== "Managed IT") {
+        const client = await sp.client(p);
+        const currentStage =
+          client?.fields[schema.maps.clients["Current Stage"].name];
+        if (currentStage !== "Acceptance")
+          fail(
+            "Managed IT follow-up can start from completed BII Acceptance only.",
+          );
+      }
       try {
         assertNoPending(await sp.requests(), schema, p);
         body = buildFields(
@@ -361,11 +384,12 @@ export function handoffRoutes(
         c,
       );
       id = result.insertId;
-      await query(
-        "UPDATE prospects SET service_lane=? WHERE id=?",
-        [lane, p.id],
-        c,
-      );
+      if (action !== "TechnicalAssessment" || p.service_lane === lane)
+        await query(
+          "UPDATE prospects SET service_lane=? WHERE id=?",
+          [lane, p.id],
+          c,
+        );
       await audit(c, req.session.user, "prepare handoff", "sp_request", id);
     });
     await transaction(async (c) => {
