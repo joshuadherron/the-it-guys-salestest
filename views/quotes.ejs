@@ -9,7 +9,7 @@
 <% if(p.hold){ %>
 <div class="hold">On Hold — Pending Josh Review. Quote actions are blocked.</div>
 <% } %>
-<form method="post" action="/prospects/<%= p.id %>/quotes" class="card">
+<form method="post" action="/prospects/<%= p.id %>/quotes" class="card" data-quote-calculator data-calculate-url="/prospects/<%= p.id %>/quotes/calculate">
 <input type="hidden" name="_csrf" value="<%= csrf %>">
 <fieldset <%= user.role!=='owner'||p.hold?'disabled':'' %>>
 <legend>Counts — Josh confirms these before approval</legend>
@@ -46,10 +46,10 @@
 </form>
 <section class="card">
 <h2>Current calculation</h2>
-<%- include('quote-lines',{lines:calculation.lines,total:calculation.total}) %>
-<% if(calculation.pending.length){ %>
-<p>Priced by Josh — amounts still required: <%= calculation.pending.join(', ') %>. Displayed total excludes these unresolved items.</p>
-<% } %>
+<p id="quote-preview-status" aria-live="polite">Updates as counts and one-off amounts change.</p>
+<div id="quote-calculation">
+<%- include('quote-calculation',{calculation}) %>
+</div>
 </section>
 <% if(selected){ %>
 <section class="card">
