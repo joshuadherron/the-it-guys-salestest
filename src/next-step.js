@@ -121,8 +121,13 @@ export function nextStep(p, d, quotes, client, items, pendingRequests, role) {
       if (item.signingPdf)
         return result(
           "Send agreement for signature",
-          "Open the prepared signing PDF, send the Microsoft 365 eSignature request, then mark it sent below.",
-          owner ? link("Open signing PDF", item.signingPdf) : null,
+          "Open the folder containing the prepared signing PDF, send the Microsoft 365 eSignature request, then mark it sent below.",
+          owner
+            ? link(
+                "Open signing folder",
+                item.signingFolder || item.signingPdf,
+              )
+            : null,
           "Josh",
         );
       return result(
