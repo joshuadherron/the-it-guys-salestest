@@ -86,13 +86,7 @@
 <% } %>
 <label>
 <input type="checkbox" name="reviewed" value="yes" required> I reviewed every stop condition.</label>
-<button <%= p.hold?'disabled':'' %>>Approve quote</button>
-</form>
-<% }if(user.role==='owner'&&selected.status==='Approved'){ %>
-<form method="post" action="/quotes/<%= selected.id %>/sent">
-<input type="hidden" name="_csrf" value="<%= csrf %>">
-<p>Only after manually sending the Quote/SOW from SharePoint:</p>
-<button <%= p.hold?'disabled':'' %>>Mark Sent</button>
+<button <%= p.hold?'disabled':'' %>>Approve pricing</button>
 </form>
 <% } %>
 </section>
