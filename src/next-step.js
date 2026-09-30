@@ -111,8 +111,16 @@ export function nextStep(p, d, quotes, client, items, pendingRequests, role) {
     if (!clientLanes.includes("Managed IT"))
       return result(
         "Follow up for Managed IT",
-        "BII is complete. SharePoint handles the BII-15 follow-up and client-owner notification. When Managed IT is authorized, start its Technical Assessment from the workflow actions.",
-        owner ? link("Start Managed IT", root + "/handoff") : null,
+        "BII is complete. SharePoint handles the BII-15 follow-up and client-owner notification. When Managed IT is authorized, start its Technical Assessment here.",
+        owner
+          ? {
+              label: "Start Managed IT",
+              form: {
+                endpoint: root + "/handoff",
+                action: "TechnicalAssessment",
+              },
+            }
+          : null,
         "Josh",
       );
     return result(
