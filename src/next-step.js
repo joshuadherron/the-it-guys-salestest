@@ -70,9 +70,9 @@ export function nextStep(p, d, quotes, client, items, pendingRequests, role) {
         );
       if (quote.status === "Draft")
         return result(
-          "Approve quote",
-          "",
-          owner ? link("Approve quote", root + "/quotes") : null,
+          "Approve BII pricing",
+          "Review the internal pricing worksheet and approve it before starting the SharePoint Quoting stage.",
+          owner ? link("Approve pricing", root + "/quotes") : null,
           "Josh",
         );
       if (["Approved", "Sent"].includes(quote.status))
