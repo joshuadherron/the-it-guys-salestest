@@ -66,6 +66,29 @@ app.use((req, res, next) => {
 });
 authRoutes(app);
 app.get("/health", (_req, res) => res.json({ ok: true }));
+
+const sharePointStartup = sp
+  .check()
+  .then((schema) => {
+    if (schema.errors?.length) {
+      console.warn(
+        "SharePoint schema check completed with errors:",
+        schema.errors.join(" "),
+      );
+    } else {
+      console.log("SharePoint schema check passed.");
+    }
+    return schema;
+  })
+  .catch((err) => {
+    console.error("SharePoint startup check failed:", {
+      name: err.name,
+      code: err.code,
+      message: err.message,
+    });
+    return null;
+  });
+
 app.use(requireUser);
 app.use(async (req, res, next) => {
   const [user] = await query(
@@ -77,6 +100,10 @@ app.use(async (req, res, next) => {
   req.session.user = user;
   res.locals.user = user;
   res.set("Cache-Control", "no-store");
+  next();
+});
+app.use(async (_req, _res, next) => {
+  await sharePointStartup;
   next();
 });
 pipelineRoutes(app);
@@ -119,22 +146,4 @@ const port = Number(process.env.PORT || 3000);
 
 app.listen(port, () => {
   console.log("Sales app listening.");
-
-  sp.check()
-    .then((schema) => {
-      if (schema.errors?.length) {
-        console.warn(
-          "SharePoint schema check completed with errors:",
-          schema.errors.join(" "),
-        );
-      } else {
-        console.log("SharePoint schema check passed.");
-      }
-    })
-    .catch((err) => {
-      console.error("SharePoint startup check failed:", {
-        name: err.name,
-        code: err.code,
-      });
-    });
 });
