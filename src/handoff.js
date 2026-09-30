@@ -32,8 +32,8 @@ export async function refresh(
   const { sp, query, transaction, audit } = dependencies;
   const s = sp.ready();
   const rows = await query(
-    "SELECT * FROM sp_requests WHERE prospect_id=? AND item_id IS NOT NULL",
-    [p.id],
+    "SELECT * FROM sp_requests WHERE prospect_id=? AND item_id IS NOT NULL AND (status IN ('Preparing','Pending','Processing','Unknown') OR (action='CreateClient' AND status='Done' AND ? IS NULL))",
+    [p.id, p.client_id || null],
   );
   for (const r of rows) {
     const remote = await sp.request(r.item_id);
