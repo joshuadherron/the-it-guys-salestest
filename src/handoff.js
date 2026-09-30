@@ -15,7 +15,7 @@ import {
 import { query, transaction, audit, json } from "./db.js";
 import { prospect } from "./pipeline.js";
 import { discovery } from "./discovery.js";
-import { mvd } from "./discovery-rules.js";
+import { mvd, flags } from "./discovery-rules.js";
 import { ownerOnly, integer, choice, text, fail } from "./security.js";
 import { lanes } from "./config.js";
 export const sp = new SharePoint(graph);
@@ -354,6 +354,10 @@ export function handoffRoutes(
         ).length
       )
         fail("An Approved quote is required.");
+      if (action === "Quoting")
+        options.prepareBaa = flags(d.answers).some(
+          (flag) => flag.code === "FLAG-HEALTH-DATA",
+        );
       if (action === "TechnicalAssessment" && p.service_lane !== "Managed IT") {
         const client = await sp.client(p);
         const currentStage =
