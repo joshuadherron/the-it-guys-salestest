@@ -23,6 +23,7 @@ import {
   emptyAnswers,
   groups,
   format,
+  flags,
 } from "../src/discovery-rules.js";
 import { handoffRoutes, applyRequestStatus } from "../src/handoff.js";
 import { adminRoutes } from "../src/admin.js";
@@ -130,6 +131,30 @@ test("Create Client exports every question in order, all states, summary values 
   assert.throws(
     () => payload("CreateClient", prospect, prospect.service_lane),
     /snapshot/,
+  );
+});
+
+test("patient or medical information requests BAA staging at BII Quoting", () => {
+  const d = discovery();
+  d.answers["Q7.1"] = {
+    state: "answered",
+    value: ["Patient/medical information"],
+  };
+  assert.ok(flags(d.answers).some((flag) => flag.code === "FLAG-HEALTH-DATA"));
+  const p = { ...prospect, client_id: "CL-0007" };
+  assert.deepEqual(
+    payload("Quoting", p, "Business IT Integration", { prepareBaa: true }),
+    {
+      clientId: "CL-0007",
+      stage: "Quoting",
+      serviceLane: "Business IT Integration",
+      prepareBaa: true,
+    },
+  );
+  assert.equal(
+    payload("Quoting", p, "Business IT Integration", { prepareBaa: false })
+      .prepareBaa,
+    false,
   );
 });
 
