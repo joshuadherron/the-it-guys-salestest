@@ -187,7 +187,7 @@ export function handoffRoutes(
     const approved =
       (
         await query(
-          "SELECT id FROM quotes WHERE prospect_id=? AND status='Approved'",
+          "SELECT id FROM quotes WHERE prospect_id=? AND status IN ('Approved','Sent')",
           [p.id],
         )
       ).length > 0;
@@ -333,7 +333,7 @@ export function handoffRoutes(
         action === "Quoting" &&
         !(
           await query(
-            "SELECT id FROM quotes WHERE prospect_id=? AND status='Approved'",
+            "SELECT id FROM quotes WHERE prospect_id=? AND status IN ('Approved','Sent')",
             [p.id],
             c,
           )
