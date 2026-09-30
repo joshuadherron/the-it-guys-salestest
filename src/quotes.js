@@ -206,8 +206,11 @@ export function quotesRoutes(app) {
 
       const input = json(q.inputs);
 
-      if (!input.confirmed)
-        fail("Josh must confirm every count and save a draft first.");
+      if (!input.confirmed) {
+        if (req.body.confirm_counts !== "yes")
+          fail("Confirm the saved draft counts before approval.");
+        input.confirmed = true;
+      }
 
       const stops = await query(
         "SELECT * FROM config_stop_conditions ORDER BY id",
@@ -229,7 +232,7 @@ export function quotesRoutes(app) {
         fail("Priced by Josh: enter every selected one-off amount.");
 
       await query(
-        "UPDATE quotes SET status='Approved',approved_by=?,approved_at=UTC_TIMESTAMP(),stop_review=?,line_items=?,total=? WHERE id=?",
+        "UPDATE quotes SET status='Approved',approved_by=?,approved_at=UTC_TIMESTAMP(),stop_review=?,inputs=?,line_items=?,total=? WHERE id=?",
         [
           req.session.user.email,
           JSON.stringify(
@@ -240,6 +243,7 @@ export function quotesRoutes(app) {
               selected: false,
             })),
           ),
+          JSON.stringify(input),
           JSON.stringify(calc.lines),
           calc.total,
           q.id,
