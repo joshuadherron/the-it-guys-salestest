@@ -97,6 +97,16 @@ export function nextStep(p, d, quotes, client, items, pendingRequests, role) {
       "Client is live",
       "No open blocking onboarding work remains.",
     );
+  if (
+    stage === "Acceptance" &&
+    p.service_lane === "Business IT Integration" &&
+    items &&
+    !items.some((i) => i.stage === "Acceptance" && i.blocking && openItem(i))
+  )
+    return result(
+      "BII project complete",
+      "Acceptance is complete and there are no open blocking BII work items. No further stage advance is required unless a new service is authorized.",
+    );
   if (!items)
     return result(
       "Work items unavailable",
