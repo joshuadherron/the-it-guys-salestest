@@ -253,7 +253,7 @@ export async function executeSignatureAction(
 ) {
   if (user.role !== "owner") fail("Owner access required.", 403);
   const { transaction, audit, prospect, sp, graph } = deps;
-  const action = choice(input.action, ["PrepareSignature"]);
+  const action = choice(input.action, ["PrepareSignature", "SignatureSent"]);
   const itemId = String(integer(input.itemId, 2147483647));
   let p, schema, item;
   await transaction(async (tx) => {
@@ -266,24 +266,45 @@ export async function executeSignatureAction(
     if (!item || item.clientId !== p.client_id || !openItem(item))
       fail("Select an open work item for this client.");
     if (!item.signatureRequired) fail("This item does not require a signature.");
-    if (item.signatureStatus === "Signed")
-      fail("This item is already signed.");
-    if (item.signatureStatus === "Cancelled")
-      fail("This signature item is cancelled.");
-    if (item.signingPdf)
-      fail("A signing PDF already exists. Open the signing folder and send it through Microsoft 365 eSignature.");
-    if (input.confirm !== "yes")
-      fail("Confirm that the document was reviewed and internal notes were removed.");
+    if (action === "PrepareSignature") {
+      if (item.signatureStatus === "Sent - awaiting signature")
+        fail("This item is already out for signature.");
+      if (item.signatureStatus === "Signed")
+        fail("This item is already signed.");
+      if (item.signingPdf)
+        fail("A signing PDF already exists. Open it and mark the request sent.");
+      if (input.confirm !== "yes")
+        fail("Confirm that the document was reviewed and internal notes were removed.");
+    } else {
+      if (!item.signingPdf)
+        fail("Prepare the signing PDF before marking the request sent.");
+      if (item.signatureStatus === "Sent - awaiting signature")
+        fail("This item is already marked sent.");
+      if (item.signatureStatus === "Signed")
+        fail("This item is already signed.");
+      if (input.confirm !== "yes")
+        fail("Confirm that the Microsoft 365 eSignature request was actually sent.");
+    }
   });
+
+  const fields =
+    action === "PrepareSignature"
+      ? {
+          TIG_InternalNotesRemoved: true,
+          TIG_SignatureStatus: "Ready to send",
+        }
+      : {
+          TIG_SignatureStatus: "Sent - awaiting signature",
+          ...(schema.signatureSentColumn
+            ? { [schema.signatureSentColumn]: new Date().toISOString() }
+            : {}),
+        };
 
   await graph.updateListItemFields(
     schema.siteId,
     schema.clientOpsId,
     itemId,
-    {
-      TIG_InternalNotesRemoved: true,
-      TIG_SignatureStatus: "Ready to send",
-    },
+    fields,
   );
   sp.invalidateWorkItems(p.client_id);
 
@@ -291,7 +312,9 @@ export async function executeSignatureAction(
     await audit(
       tx,
       user,
-      "prepare signature",
+      action === "PrepareSignature"
+        ? "prepare signature"
+        : "mark signature sent",
       "client_operation",
       itemId,
     );
