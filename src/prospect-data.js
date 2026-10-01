@@ -1,7 +1,12 @@
 import { choice, date, fail, integer } from "./security.js";
 import { services } from "./config.js";
-export const structuredFields = [
+export const locationFields = [
+  ["street_address", "Address"],
+  ["zip", "ZIP"],
   ["city", "City"],
+  ["state", "State"],
+];
+export const structuredFields = [
   ["icp", "ICP"],
   ["next_action", "Next action"],
   ["next_action_date", "Next action date"],
@@ -58,10 +63,24 @@ export function optionalRevenue(value) {
     );
   return Number(value).toFixed(2);
 }
+export function validateLocation(body) {
+  const result = {
+    street_address: blank(body.street_address)
+      ? null
+      : sourceText(body.street_address, 500),
+    city: blank(body.city) ? null : sourceText(body.city, 500),
+    state: blank(body.state) ? null : sourceText(body.state, 80),
+    zip: blank(body.zip) ? null : sourceText(String(body.zip).trim(), 10),
+  };
+  if (result.zip && !/^\d{5}(?:-\d{4})?$/.test(result.zip))
+    fail("ZIP must be 5 digits or ZIP+4.");
+  if (result.state && /^[A-Za-z]{2}$/.test(result.state))
+    result.state = result.state.toUpperCase();
+  return result;
+}
 export function validateStructured(body) {
   const result = {};
   const limits = {
-    city: 500,
     icp: 80,
     next_action: 10000,
     next_action_method: 255,
