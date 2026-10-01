@@ -32,10 +32,15 @@ const p = {
   hold: false,
 };
 const d = { answers: emptyAnswers(), flags: [], revision: 0, status: "Draft" };
-import { structuredFields, statusChoices } from "../src/prospect-data.js";
+import {
+  structuredFields,
+  locationFields,
+  statusChoices,
+} from "../src/prospect-data.js";
 import { importNames, needsLane } from "../src/sales-import.js";
 const common = {
   structuredFields,
+  locationFields,
   importNames,
   needsLane,
   statusChoices,
@@ -95,6 +100,7 @@ const fixtures = {
     fields,
     frequencies,
     services,
+    locationFields,
     stages: stages.map((name) => ({ name })),
     owners: [{ email: "alanna@theitguys.us" }],
   },
