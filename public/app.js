@@ -256,6 +256,40 @@ if (discovery) {
   });
 }
 
+const zipInput = document.querySelector("#zip");
+if (zipInput) {
+  const cityInput = document.querySelector("#city");
+  const stateInput = document.querySelector("#state");
+  const zipStatus = document.querySelector("#zip-lookup-status");
+  let lastZip = "";
+
+  const lookupZip = async () => {
+    const zip = zipInput.value.trim().slice(0, 5);
+    if (!/^\d{5}$/.test(zip) || zip === lastZip) return;
+    lastZip = zip;
+    if (zipStatus) zipStatus.textContent = "Looking up ZIP…";
+    try {
+      const response = await fetch(`/zip-lookup/${zip}`, { cache: "no-store" });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "ZIP lookup failed.");
+      if (cityInput) cityInput.value = data.city || "";
+      if (stateInput) stateInput.value = data.state || "";
+      if (zipStatus) zipStatus.textContent = "City and state filled from ZIP.";
+    } catch (e) {
+      if (zipStatus) zipStatus.textContent = e.message;
+    }
+  };
+
+  zipInput.addEventListener("blur", lookupZip);
+  zipInput.addEventListener("change", lookupZip);
+  zipInput.addEventListener("input", () => {
+    if (zipInput.value.trim().length < 5) {
+      lastZip = "";
+      if (zipStatus) zipStatus.textContent = "";
+    }
+  });
+}
+
 document
   .querySelector(".print-button")
   ?.addEventListener("click", () => window.print());
