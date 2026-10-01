@@ -6,10 +6,14 @@
 <%= p.business_name %>
 </h1>
 <p>
-<%= p.contact_name %> · <a href="tel:<%= p.phone %>">
-<%= p.phone %>
-</a> · <%= p.email %>
+<%= p.contact_name %> · <a href="tel:<%= p.phone %>"><%= p.phone %></a> · <%= p.email %>
 </p>
+<% if(p.street_address||p.city||p.state||p.zip){ %>
+<p>
+<%= p.street_address||'' %><% if(p.street_address&&(p.city||p.state||p.zip)){ %><br><% } %>
+<%= p.city||'' %><%= p.city&&p.state?', ':'' %><%= p.state||'' %><%= p.zip?' '+p.zip:'' %>
+</p>
+<% } %>
 <div data-workflow-panel="<%= p.id %>"><%- include('workflow-panel') %></div>
 <div class="row no-print">
 <a class="button" href="/prospects/<%= p.id %>/discovery/1">Business discovery</a>
