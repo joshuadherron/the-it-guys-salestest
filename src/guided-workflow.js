@@ -234,7 +234,11 @@ export async function guidedData(
     definitions: definitionsFor(
       schema.definitions || [],
       clientLanes(client),
-    ).filter((d) => d.createCopy),
+    ).filter(
+      (d) =>
+        d.createCopy &&
+        (!currentStage || !d.stage || d.stage === currentStage),
+    ),
     mayComplete,
     openItem,
     stageChoices: (
@@ -402,15 +406,24 @@ export async function executeWorkAction(
       const eligible = definitionsFor(
         schema.definitions,
         clientLanes(client),
-      ).filter((d) => d.createCopy);
+      ).filter(
+        (d) =>
+          d.createCopy &&
+          (!client["Current Stage"] ||
+            !d.stage ||
+            d.stage === client["Current Stage"]),
+      );
       if (eligible.filter((d) => d.id === input.workflowId).length !== 1)
         fail(
-          "Select a unique active working-copy definition in the client's lanes.",
+          "Select a unique active working-copy definition for the client's current stage.",
         );
-      lane = choice(
-        eligible.find((d) => d.id === input.workflowId).lane,
-        clientLanes(client),
-      );
+      const definition = eligible.find((d) => d.id === input.workflowId);
+      if (
+        ["BII-10", "BII-17"].includes(definition.id) &&
+        !String(input.instanceRef || "").trim()
+      )
+        fail("Enter the device name as the instance reference.");
+      lane = choice(definition.lane, clientLanes(client));
     }
     if (action === "AdvanceStage") {
       if (
