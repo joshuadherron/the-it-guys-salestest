@@ -12,6 +12,8 @@ import { lanes } from "./config.js";
 export { weeklyHeaders };
 import {
   structuredFields,
+  locationFields,
+  validateLocation,
   validateStructured,
   service,
   sourceText,
@@ -33,7 +35,9 @@ export const fields = [
 ];
 export const pipelineExportFields = [
   ["opp", "Opportunity ID"],
-  ...fields,
+  ...fields.slice(0, 4),
+  ...locationFields,
+  ...fields.slice(4),
   ...structuredFields,
   ["service_lane", "Workflow lane"],
   ["legacy_stage", "Source stage"],
@@ -128,7 +132,11 @@ export async function validateProspect(body, c, runQuery = query) {
     ? choice(body.import_source, ["pipeline", "current_sales"])
     : null;
   result.likely_tier = body.likely_tier ? sourceText(body.likely_tier, 80) : "";
-  return { ...result, ...validateStructured(body) };
+  return {
+    ...result,
+    ...validateLocation(body),
+    ...validateStructured(body),
+  };
 }
 export async function insertProspect(
   body,
@@ -141,6 +149,7 @@ export async function insertProspect(
     fail("Owner access required.", 403);
   const keys = [
     ...fields.map((x) => x[0]),
+    ...locationFields.map(([key]) => key),
     ...structuredFields.map(([key]) => key),
     "service_lane",
     "legacy_stage",
@@ -207,11 +216,36 @@ export function pipelineRoutes(app) {
       fields,
       frequencies,
       services,
+      locationFields,
       structuredFields,
       stages: await query("SELECT * FROM config_stages ORDER BY sort_order"),
       owners: await query("SELECT email FROM allowlist WHERE enabled=TRUE"),
     }),
   );
+  app.get("/zip-lookup/:zip", async (req, res) => {
+    const zip = String(req.params.zip || "").trim();
+    if (!/^\d{5}$/.test(zip))
+      return res.status(400).json({ error: "Enter a 5-digit ZIP code." });
+    try {
+      const response = await fetch(`https://api.zippopotam.us/us/${zip}`, {
+        headers: { Accept: "application/json" },
+        signal: AbortSignal.timeout(3000),
+      });
+      if (response.status === 404)
+        return res.status(404).json({ error: "ZIP code not found." });
+      if (!response.ok) throw new Error("ZIP lookup failed.");
+      const data = await response.json();
+      const place = data.places?.[0];
+      if (!place) return res.status(404).json({ error: "ZIP code not found." });
+      res.json({
+        city: place["place name"],
+        state: place["state abbreviation"],
+      });
+    } catch {
+      res.status(503).json({ error: "ZIP lookup is temporarily unavailable." });
+    }
+  });
+
   app.post("/prospects", async (req, res) => {
     const id = await transaction((c) =>
       insertProspect(
@@ -253,6 +287,7 @@ export function pipelineRoutes(app) {
       fields,
       frequencies,
       services,
+      locationFields,
       structuredFields,
       stages: await query("SELECT * FROM config_stages ORDER BY sort_order"),
       owners: await query("SELECT email FROM allowlist WHERE enabled=TRUE"),
@@ -279,6 +314,7 @@ export function pipelineRoutes(app) {
         fail("Owner access required.", 403);
       const keys = [
         ...fields.map((x) => x[0]),
+        ...locationFields.map(([key]) => key),
         ...structuredFields.map(([key]) => key),
       ];
       await query(
