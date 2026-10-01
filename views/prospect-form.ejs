@@ -1,12 +1,42 @@
 <%- include('header') %>
-<h1>
-<%= p.id?'Edit opportunity':'A new conversation' %>
-</h1>
-<p>Start with a business name. Add the rest as you learn it.</p>
+<h1><%= p.id?'Edit opportunity':'A new conversation' %></h1>
+<p>Start with the basic business information. Add the rest as you learn it.</p>
 <form method="post" action="/prospects<%= p.id?'/'+p.id:'' %>" class="card">
 <input type="hidden" name="_csrf" value="<%= csrf %>">
+
+<fieldset>
+<legend>Basic business information</legend>
 <div class="grid">
-<% for(const [key,label] of fields){ %>
+<% for(const [key,label] of [
+  ['business_name','Business Name'],
+  ['contact_name','Contact Name'],
+  ['phone','Phone'],
+  ['email','Email'],
+  ...locationFields
+]){ %>
+<div>
+<label for="<%= key %>"><%= label %></label>
+<input
+  id="<%= key %>"
+  name="<%= key %>"
+  value="<%= p[key]??'' %>"
+  type="<%= key==='email'?'email':key==='phone'?'tel':'text' %>"
+  <%= key==='business_name'?'required':'' %>
+  <%= key==='zip'?'inputmode="numeric" autocomplete="postal-code" maxlength="10"':'' %>
+  <%= key==='street_address'?'autocomplete="street-address"':'' %>
+  <%= key==='city'?'autocomplete="address-level2"':'' %>
+  <%= key==='state'?'autocomplete="address-level1"':'' %>
+>
+</div>
+<% } %>
+</div>
+<p class="muted" id="zip-lookup-status" aria-live="polite"></p>
+</fieldset>
+
+<fieldset>
+<legend>Additional prospect information</legend>
+<div class="grid">
+<% for(const [key,label] of fields.slice(4)){ %>
 <div>
 <label for="<%= key %>">
 <%= label %>
@@ -16,27 +46,37 @@
 <select id="<%= key %>" name="<%= key %>">
 <% if(key==='likely_service'||key==='call_frequency'){ %><option value="" <%= !p[key]?'selected':'' %>>Unset</option><% } %>
 <% for(const option of opts){ %>
-<option <%= (p[key]||(key==='stage'?'Prospecting':key==='owner'?'alanna@theitguys.us':''))===option?'selected':'' %>>
-<%= option %>
-</option>
+<option <%= (p[key]||(key==='stage'?'Prospecting':key==='owner'?'alanna@theitguys.us':''))===option?'selected':'' %>><%= option %></option>
 <% } %>
 </select>
 <% }else if(['notes','current_it','key_dependency'].includes(key)){ %>
-<textarea id="<%= key %>" name="<%= key %>">
-<%= p[key]||'' %>
-</textarea>
+<textarea id="<%= key %>" name="<%= key %>"><%= p[key]||'' %></textarea>
 <% }else{ %>
-<input id="<%= key %>" name="<%= key %>" value="<%= p[key]??'' %>" type="<%= ['first_contact','follow_up'].includes(key)?'date':key==='employee_count'?'number':key==='email'?'email':key==='phone'?'tel':'text' %>" <%= key==='business_name'?'required':'' %> min="0">
+<input id="<%= key %>" name="<%= key %>" value="<%= p[key]??'' %>" type="<%= ['first_contact','follow_up'].includes(key)?'date':key==='employee_count'?'number':'text' %>" min="0">
 <% } %>
 </div>
 <% } %>
 </div>
-<fieldset><legend>Next action, meeting & source status</legend><div class="grid">
-<% for(const [key,label] of structuredFields){ %><div><label for="<%= key %>"><%= label %></label>
-<% if(['teams_scheduled','josh_needed'].includes(key)){ %><select name="<%= key %>" id="<%= key %>"><option value="">Unset</option><option value="true" <%= p[key]===true||p[key]===1?'selected':'' %>>Yes</option><option value="false" <%= p[key]===false||p[key]===0?'selected':'' %>>No</option></select>
-<% }else if(key==='status'){ %><select name="status" id="status"><option value="">Unset</option><% for(const v of ['Active','Nurture','Lost']){ %><option <%= p.status===v?'selected':'' %>><%= v %></option><% } %></select>
-<% }else{ %><input name="<%= key %>" id="<%= key %>" value="<%= p[key]??'' %>" type="<%= key.endsWith('_date')?'date':key.endsWith('_time')?'time':['meeting_duration','est_monthly_revenue'].includes(key)?'number':'text' %>" min="0" step="<%= key==='est_monthly_revenue'?'0.01':key.endsWith('_time')?'1':'1' %>">
-<% } %></div><% } %></div></fieldset>
+</fieldset>
+
+<fieldset>
+<legend>Next action, meeting & source status</legend>
+<div class="grid">
+<% for(const [key,label] of structuredFields){ %>
+<div>
+<label for="<%= key %>"><%= label %></label>
+<% if(['teams_scheduled','josh_needed'].includes(key)){ %>
+<select name="<%= key %>" id="<%= key %>"><option value="">Unset</option><option value="true" <%= p[key]===true||p[key]===1?'selected':'' %>>Yes</option><option value="false" <%= p[key]===false||p[key]===0?'selected':'' %>>No</option></select>
+<% }else if(key==='status'){ %>
+<select name="status" id="status"><option value="">Unset</option><% for(const v of ['Active','Nurture','Lost']){ %><option <%= p.status===v?'selected':'' %>><%= v %></option><% } %></select>
+<% }else{ %>
+<input name="<%= key %>" id="<%= key %>" value="<%= p[key]??'' %>" type="<%= key.endsWith('_date')?'date':key.endsWith('_time')?'time':['meeting_duration','est_monthly_revenue'].includes(key)?'number':'text' %>" min="0" step="<%= key==='est_monthly_revenue'?'0.01':key.endsWith('_time')?'1':'1' %>">
+<% } %>
+</div>
+<% } %>
+</div>
+</fieldset>
+
 <button>Save prospect</button>
 </form>
 <%- include('footer') %>
