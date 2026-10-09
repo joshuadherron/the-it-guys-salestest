@@ -1,0 +1,9 @@
+{
+  "mode": "dryrun",
+  "requestType": "Start Stage",
+  "payload": {
+    "clientId": "CL-0007",
+    "stage": "Technical Assessment",
+    "serviceLane": "Managed IT"
+  }
+}

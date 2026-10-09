@@ -45,6 +45,7 @@
   <% } %>
 </section>
 
+<% if(p.relationship_type!=='existing_client'){ %>
 <section class="card">
   <h2>Create client in SharePoint</h2>
 
@@ -56,6 +57,7 @@
   <form method="post" action="/prospects/<%= p.id %>/handoff">
     <input type="hidden" name="_csrf" value="<%= csrf %>">
     <input type="hidden" name="action" value="CreateClient">
+    <% if(typeof duplicates!=='undefined'&&duplicates.length){ %><div class="error"><h3>Possible existing client found</h3><% for(const c of duplicates){ %><p><%= c.Title %> - <%= c['Client ID'] %> - <%= c['Service Lanes'] %></p><% } %><a href="/prospects/<%= p.id %>/relationship">Use existing client (Josh)</a><label><input type="checkbox" name="confirm_different" value="yes" required>This is a different company</label></div><% } %>
 
     <% for (const lane of lanes) { %>
       <label>
@@ -90,6 +92,7 @@
   </form>
 </section>
 
+<% }else{ %><section class="card"><h2>Existing SharePoint Client</h2><p><%= p.business_name %> - <%= p.client_id %></p><p>New service being sold: <%= p.service_lane %></p><a href="/prospects/<%= p.id %>/additional-discovery">Additional Service Discovery</a><% if(typeof transitionError!=='undefined'&&transitionError){ %><p class="error"><%= transitionError %></p><% } %></section><% } %>
 <% if (user.role === 'owner') { %>
   <section class="card">
     <h2>Next workflow stage</h2>
@@ -97,14 +100,14 @@
     <% for (const [action, label, lane] of [
       ['Quoting', 'Send to Quoting', 'Business IT Integration'],
       ['TechnicalAssessment', 'Start Technical Assessment', 'Managed IT']
-    ]) { %>
+    ].filter(([action])=>p.relationship_type!=='existing_client'||action==='TechnicalAssessment')) { %>
 
       <form method="post" action="/prospects/<%= p.id %>/handoff">
         <input type="hidden" name="_csrf" value="<%= csrf %>">
         <input type="hidden" name="action" value="<%= action %>">
 
         <button
-          <%= !ready ||
+          <%= !ready || (p.relationship_type==='existing_client'&&typeof transitionError!=='undefined'&&transitionError) ||
               !p.client_id ||
               (action === 'Quoting' && (p.service_lane !== lane || !approved)) ||
               (action === 'TechnicalAssessment' &&
@@ -113,7 +116,7 @@
               ? 'disabled'
               : '' %>
         >
-          <%= label %>
+          <%= p.relationship_type==='existing_client'&&action==='TechnicalAssessment'?'Start Managed IT Transition':label %>
         </button>
       </form>
 

@@ -1,0 +1,13 @@
+<%- include('header') %>
+<h1>Customer relationship</h1><p><a href="/prospects/<%= p.id %>"><%= p.opp %> - <%= p.business_name %></a></p>
+<p>One SharePoint client may have several sales opportunities. Linking reuses the client identity and existing folders.</p>
+<% if(error){ %><p class="error"><%= error %></p><% } %>
+<% if(p.client_id){ %><p>This opportunity is linked to <%= p.client_id %>. The client cannot be reassigned.</p><% }else{ %>
+<form method="get"><label>Find a SharePoint client by company name or Client ID<input name="q" value="<%= q %>"></label><button>Search</button></form>
+<form method="post"><input type="hidden" name="_csrf" value="<%= csrf %>">
+<label><input type="radio" name="relationship_type" value="new_client" checked>New customer</label>
+<label><input type="radio" name="relationship_type" value="existing_client">Existing customer / additional service</label>
+<label>Existing SharePoint client<select name="client_id"><option value="">Explicitly select a client</option><% for(const c of clients){ %><option value="<%= c['Client ID'] %>"><%= c.Title %> - <%= c['Client ID'] %> - <%= c['Current Stage'] %> - <%= c['Service Lanes'] %> - <%= c['Stage Status'] %> - <%= c['Next Action'] %></option><% } %></select></label>
+<label>New service workflow lane<select name="service_lane"><% for(const lane of lanes){ %><option <%= p.service_lane===lane?'selected':'' %>><%= lane %></option><% } %></select></label>
+<p>Only the BII to Managed IT transition is supported for existing clients today. Other relationships can be recorded for future workflows.</p><button>Save customer relationship</button></form><% } %>
+<%- include('footer') %>

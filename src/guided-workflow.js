@@ -1,3 +1,4 @@
+import { isExisting, lockClientRequests } from "./existing-client-rules.js";
 import { query, transaction, audit, json } from "./db.js";
 import { discovery } from "./discovery.js";
 import { prospect } from "./pipeline.js";
@@ -77,6 +78,10 @@ export async function guidedData(
 ) {
   const { query, discovery, refresh, sp } = dependencies;
   const d = await discovery(p.id);
+  if (isExisting(p)) {
+    const [additional] = await query("SELECT complete FROM additional_service_discoveries WHERE prospect_id=?", [p.id]);
+    p.additional_discovery_complete = Boolean(additional?.complete);
+  }
   const quotes = await query(
     "SELECT id,status FROM quotes WHERE prospect_id=? ORDER BY id DESC",
     [p.id],
@@ -344,6 +349,7 @@ export async function executeWorkAction(
     if (!p.client_id) fail("Create the SharePoint client first.");
     if (p.hold) fail("On Hold — Pending Josh Review");
     schema = sp.ready();
+    await lockClientRequests(p, query, c);
     if (schema.actionErrors?.[action]?.length)
       fail(schema.actionErrors[action].join(" "));
     if (
@@ -436,6 +442,8 @@ export async function executeWorkAction(
         fail("The client stage changed. Reload before advancing.", 409);
     }
     if (action === "StartStage") {
+      if (isExisting(p) && input.stage === "Technical Assessment")
+        fail("Use Start Managed IT Transition on SharePoint actions & history.");
       if (input.stage === "Technical Assessment" && lane !== "Managed IT")
         fail("Technical Assessment is Managed IT only.");
       if (

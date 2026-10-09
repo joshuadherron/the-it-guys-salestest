@@ -1,0 +1,9 @@
+<%- include('header') %>
+<h1>Additional Service Discovery</h1><a href="/prospects/<%= p.id %>">Back to opportunity</a>
+<p><%= p.business_name %> - <%= p.client_id %> - New workflow lane: <%= p.service_lane %></p>
+<p>Capture the new sales context. SharePoint and Power Automate still own the BII-08 Managed IT Delta assessment.</p>
+<% if(error){ %><p class="error"><%= error %></p><% } %><% if(clientRecord){ %><section class="card"><h2>Live SharePoint client</h2><% for(const key of ['Title','Current Stage','Service Lanes','Stage Status','Next Action']){ %><p><strong><%= key %>:</strong> <%= clientRecord[key] %></p><% } %></section><% } %>
+<form method="post" class="card"><input type="hidden" name="_csrf" value="<%= csrf %>"><input type="hidden" name="revision" value="<%= revision %>">
+<% for(const [key,label] of fields){ %><label><%= label %><textarea name="<%= key %>" maxlength="5000" <%= complete&&user.role!=='owner'?'readonly':'' %>><%= answers[key]||'' %></textarea></label><% } %>
+<label><input type="checkbox" name="complete" value="yes" <%= complete?'checked':'' %>>Sales context complete (service, reason, decision maker and timeframe required)</label>
+<button <%= p.hold||(complete&&user.role!=='owner')?'disabled':'' %>>Save discovery</button></form><%- include('footer') %>

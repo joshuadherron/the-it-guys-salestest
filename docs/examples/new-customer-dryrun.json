@@ -1,0 +1,242 @@
+{
+  "mode": "dryrun",
+  "requestType": "Create Client",
+  "payload": {
+    "opportunityId": "OPP-0046",
+    "client": "Synthetic New Customer",
+    "stage": "Sales Discovery",
+    "serviceLane": "Managed IT",
+    "discovery": {
+      "form": "BII Business Discovery Form v0.3 + v0.4 corrections",
+      "opportunityId": "OPP-0046",
+      "status": "Ready for Review",
+      "revision": 1,
+      "capturedBy": "josh@theitguys.us",
+      "exportedAt": "2026-10-09T12:00:00.000Z",
+      "mvdComplete": true,
+      "flags": [],
+      "hold": {
+        "onHold": false,
+        "releasedBy": null,
+        "releaseNote": null
+      },
+      "answers": {
+        "Q1.1": {
+          "label": "Business name",
+          "state": "answered",
+          "value": "Synthetic New Customer"
+        },
+        "Q1.2a": {
+          "label": "Contact name",
+          "state": "not_sure",
+          "value": null
+        },
+        "Q1.2b": {
+          "label": "Contact role",
+          "state": "not_discussed",
+          "value": null
+        },
+        "Q1.3": {
+          "label": "Phone",
+          "state": "not_sure",
+          "value": null
+        },
+        "Q1.4": {
+          "label": "Email",
+          "state": "not_discussed",
+          "value": null
+        },
+        "Q1.5": {
+          "label": "Primary location",
+          "state": "not_sure",
+          "value": null
+        },
+        "Q1.6": {
+          "label": "Industry",
+          "state": "not_discussed",
+          "value": null
+        },
+        "Q2.1": {
+          "label": "Employee count",
+          "state": "not_sure",
+          "value": null
+        },
+        "Q2.2": {
+          "label": "Computer count",
+          "state": "not_sure",
+          "value": null
+        },
+        "Q2.3": {
+          "label": "Integration-user count",
+          "state": "not_sure",
+          "value": null
+        },
+        "Q2.4": {
+          "label": "Locations",
+          "state": "not_sure",
+          "value": null
+        },
+        "Q2.5": {
+          "label": "Work pattern",
+          "state": "not_discussed",
+          "value": null
+        },
+        "Q2.6": {
+          "label": "Contractors",
+          "state": "not_discussed",
+          "value": null
+        },
+        "Q2.7": {
+          "label": "Personal-device use",
+          "state": "not_discussed",
+          "value": null
+        },
+        "Q2.8": {
+          "label": "Hardware replacement awareness",
+          "state": "not_discussed",
+          "value": null
+        },
+        "Q2.9": {
+          "label": "Server awareness",
+          "state": "not_discussed",
+          "value": null
+        },
+        "Q3.1": {
+          "label": "Who handles IT today",
+          "state": "not_sure",
+          "value": null
+        },
+        "Q3.2": {
+          "label": "Management style",
+          "state": "not_discussed",
+          "value": null
+        },
+        "Q3.3": {
+          "label": "Reason for looking",
+          "state": "not_sure",
+          "value": null
+        },
+        "Q3.4": {
+          "label": "Pain points",
+          "state": "not_discussed",
+          "value": null
+        },
+        "Q3.5": {
+          "label": "Biggest problem",
+          "state": "not_sure",
+          "value": null
+        },
+        "Q3.6": {
+          "label": "Transition considerations",
+          "state": "not_discussed",
+          "value": null
+        },
+        "Q4.1": {
+          "label": "Ownership control matrix",
+          "state": "not_discussed",
+          "value": null
+        },
+        "Q4.2": {
+          "label": "Ownership follow-up",
+          "state": "not_discussed",
+          "value": null
+        },
+        "Q4.3": {
+          "label": "Email platform",
+          "state": "not_discussed",
+          "value": null
+        },
+        "Q4.4": {
+          "label": "Where files live",
+          "state": "not_discussed",
+          "value": null
+        },
+        "Q4.5": {
+          "label": "Approximate data volume",
+          "state": "not_discussed",
+          "value": null
+        },
+        "Q4.6": {
+          "label": "Irreplaceable data",
+          "state": "not_discussed",
+          "value": null
+        },
+        "Q4.7": {
+          "label": "Backup belief",
+          "state": "not_discussed",
+          "value": null
+        },
+        "Q5.1": {
+          "label": "Critical software",
+          "state": "not_sure",
+          "value": null
+        },
+        "Q6.1": {
+          "label": "MFA prompts",
+          "state": "not_discussed",
+          "value": null
+        },
+        "Q6.2": {
+          "label": "Shared passwords",
+          "state": "not_discussed",
+          "value": null
+        },
+        "Q6.3a": {
+          "label": "Security history",
+          "state": "not_discussed",
+          "value": null
+        },
+        "Q6.3b": {
+          "label": "Current concern",
+          "state": "not_discussed",
+          "value": null
+        },
+        "Q6.4": {
+          "label": "Internet/Wi-Fi",
+          "state": "not_discussed",
+          "value": null
+        },
+        "Q6.5": {
+          "label": "Network management knowledge",
+          "state": "not_discussed",
+          "value": null
+        },
+        "Q7.1": {
+          "label": "Regulatory / sensitive data",
+          "state": "not_discussed",
+          "value": null
+        },
+        "Q7.2": {
+          "label": "Desired timeframe",
+          "state": "not_sure",
+          "value": null
+        },
+        "Q7.3": {
+          "label": "Driving event",
+          "state": "not_discussed",
+          "value": null
+        },
+        "Q7.4": {
+          "label": "Downtime tolerance",
+          "state": "not_discussed",
+          "value": null
+        },
+        "Q8.1a": {
+          "label": "Project approver",
+          "state": "not_sure",
+          "value": null
+        },
+        "Q8.1b": {
+          "label": "Billing contact",
+          "state": "not_discussed",
+          "value": null
+        },
+        "Q8.2": {
+          "label": "Services of interest",
+          "state": "not_discussed",
+          "value": null
+        }
+      }
+    }
+  }
+}

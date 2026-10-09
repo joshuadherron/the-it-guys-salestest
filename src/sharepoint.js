@@ -135,6 +135,8 @@ export function payload(action, p, lane, options = {}) {
 function payloadData(action, p, lane, options) {
   if (!lanes.includes(lane)) throw new Error("Choose a service lane.");
   if (action === "CreateClient") {
+    if (p.client_id || p.relationship_type === "existing_client")
+      throw new Error("Existing or linked customers cannot create another SharePoint client.");
     validateBusinessName(p.business_name);
     if (
       !options.discovery ||
@@ -368,8 +370,8 @@ export class SharePoint {
     const rows = await this.clients();
     const matches = rows.filter(
       (row) =>
-        (p.client_id && row.fields[m["Client ID"].name] === p.client_id) ||
-        row.fields[m["Opportunity ID"].name] === p.opp,
+        (p.client_id ? row.fields[m["Client ID"].name] === p.client_id :
+          p.relationship_type !== "existing_client" && row.fields[m["Opportunity ID"].name] === p.opp),
     );
     if (matches.length > 1)
       throw new Error(

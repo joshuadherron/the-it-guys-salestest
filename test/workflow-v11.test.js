@@ -310,6 +310,7 @@ function routeHarness({
     cache: s,
     ready: () => s,
     requests: async () => [],
+    clients: async () => [],
     client: async () =>
       linked
         ? {

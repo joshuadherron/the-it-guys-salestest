@@ -1,3 +1,4 @@
+import { existingClientRoutes } from "./src/existing-clients.js";
 import { guidedRoutes } from "./src/guided-workflow.js";
 import "dotenv/config";
 import express from "express";
@@ -107,6 +108,7 @@ app.use(async (_req, _res, next) => {
   next();
 });
 pipelineRoutes(app);
+existingClientRoutes(app);
 guidedRoutes(app);
 discoveryRoutes(app);
 quotesRoutes(app);

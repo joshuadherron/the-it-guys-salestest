@@ -1,6 +1,6 @@
 <%- include('header') %>
 <h1><%= p.id?'Edit opportunity':'A new conversation' %></h1>
-<p>Start with the basic business information. Add the rest as you learn it.</p>
+<p>Start with the basic business information. Add the rest as you learn it. For an existing customer, save the opportunity, then use Customer relationship / Link existing client. Josh selects the existing SharePoint client before handoff.</p>
 <form method="post" action="/prospects<%= p.id?'/'+p.id:'' %>" class="card">
 <input type="hidden" name="_csrf" value="<%= csrf %>">
 

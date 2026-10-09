@@ -14,9 +14,10 @@
 <%= p.city||'' %><%= p.city&&p.state?', ':'' %><%= p.state||'' %><%= p.zip?' '+p.zip:'' %>
 </p>
 <% } %>
+<section class="card"><h2>Customer relationship</h2><p><%= p.relationship_type==='existing_client'?'Existing customer / additional service':'New customer' %><%= p.client_id?' - '+p.client_id:'' %></p><% if(user.role==='owner'){ %><a href="/prospects/<%= p.id %>/relationship">Customer relationship / Link existing client</a><% } %></section>
 <div data-workflow-panel="<%= p.id %>"><%- include('workflow-panel') %></div>
 <div class="row no-print">
-<a class="button" href="/prospects/<%= p.id %>/discovery/1">Business discovery</a>
+<a class="button" href="/prospects/<%= p.id %>/<%= p.relationship_type==='existing_client'?'additional-discovery':'discovery/1' %>"><%= p.relationship_type==='existing_client'?'Additional Service Discovery':'Business discovery' %></a>
 <a class="button secondary" href="/prospects/<%= p.id %>/quotes">BII worksheet</a>
 <a class="button secondary" href="/prospects/<%= p.id %>/handoff">SharePoint actions &amp; history</a>
 <a href="/prospects/<%= p.id %>/edit">Edit prospect</a>

@@ -3,11 +3,13 @@
 <% if(step.action?.href){ const external=/^https:\/\//i.test(step.action.href); %><a class="button" href="<%= step.action.href %>" <%= external?'target="_blank" rel="noopener noreferrer"':'' %>><%= step.action.label %></a><% } %>
 <% if(step.action?.form){ const form=step.action.form; const endpoint=form.endpoint||('/prospects/'+p.id+'/work-items'); const formAction=form.action||'AdvanceStage'; %><form method="post" action="<%= endpoint %>"><input type="hidden" name="_csrf" value="<%= csrf %>"><input type="hidden" name="action" value="<%= formAction %>"><% if(formAction==='AdvanceStage'){ %><input type="hidden" name="expectedStage" value="<%= currentStage %>"><% } %><button <%= error||pending.length||schema.workErrors?.length||(formAction==='AdvanceStage'&&actionErrors.AdvanceStage?.length)?'disabled':'' %>><%= step.action.label %></button></form><% } %>
 </section>
+<% if(p.relationship_type==='existing_client'){ %><section class="card"><h2>Additional Service Discovery</h2><p><%= p.additional_discovery_complete?'Complete':'Sales context needed' %></p><a class="button" href="/prospects/<%= p.id %>/additional-discovery">Open Additional Service Discovery</a></section><% }else{ %>
 <section class="card"><h2>Discovery</h2><p><%= p.hold?'On Hold':d.status %> · <%= completedGroups %> of 8 groups complete</p>
 <% const summary=p.hold||d.status==='Ready for Review'; const review=!summary&&completedGroups===8; %>
 <a class="button" href="/prospects/<%= p.id %>/discovery/<%= summary?'summary':review?'3':'1' %>"><%= summary?'View discovery summary':d.exists===false?'Start discovery':review?'Review & send to Josh':'Continue discovery' %></a>
 <% if(hasAnswers&&!summary){ %><a href="/prospects/<%= p.id %>/discovery/summary">View discovery summary</a><% } %>
 </section>
+<% } %>
 <% if(p.client_id){ const disabled=Boolean(error||pending.length||p.hold||schema.errors.length||schema.workErrors?.length); %>
 <section class="card" id="work-items"><h2>Client work items</h2>
 <p><%= p.client_id %> · <%= currentStage||'Stage unavailable' %> · <%= clientRecord?.['Stage Status']||'' %></p>

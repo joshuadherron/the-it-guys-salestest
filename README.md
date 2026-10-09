@@ -168,3 +168,8 @@ Apply migration 006 (acknowledged_at, acknowledged_by and target_item_id on sp_r
 To verify fallback user lookup IDs, Josh can open a Clients row's Client Owner and inspect the lookup ID in the URL, or use PnP `Get-PnPUser` and match the returned ID to the email. Set SP_JOSH_USER_LOOKUP_ID and SP_ALANNA_USER_LOOKUP_ID only after verification. The app first attempts the hidden User Information List; unresolved assignment never grants Alanna completion permission.
 
 Import Stage Gate v1.1 separately before using authoritative outcome flags. The app detects a successful Item Completed request containing outcomeFlags as evidence and otherwise displays an advisory notice. Signature Sent Date is optional and discovered by its display name; TIG_SignedDate supplies the signed date. No signature fields are written.
+
+
+## Existing customer opportunities
+
+Apply migration 008 before running this version. Josh can use **Customer relationship / Link existing client** on an opportunity to explicitly attach an existing SharePoint Client. Existing customers use Additional Service Discovery; the supported BII-to-Managed IT transition reuses the client through Start Stage. New-customer creation now checks live Clients for matching normalized company names and requires an explicit different-company confirmation for candidates. See [existing-client opportunities](docs/06-existing-client-opportunities.md) for migration, workflow limits and dryrun validation.

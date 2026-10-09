@@ -1,3 +1,4 @@
+import { isExisting, clientSummary, duplicateClients, assertExistingTransition, lockClientRequests } from "./existing-client-rules.js";
 import { discoverySnapshot } from "./discovery-export.js";
 import {
   businessNameError,
@@ -100,9 +101,12 @@ export async function refresh(
     }
   }
   const client = await sp.client(p);
-  if (!client) return null;
+  if (!client) {
+    if (isExisting(p)) fail("The linked SharePoint client no longer exists. Josh must resolve the existing-client link; no new client will be created.");
+    return null;
+  }
   return Object.fromEntries(
-    ["Client ID", "Current Stage", "Stage Status", "Next Action"].map((k) => [
+    ["Title", "Client ID", "Current Stage", "Stage Status", "Service Lanes", "Next Action"].map((k) => [
       k,
       client.fields[s.maps.clients[k].name] ?? "Not supplied",
     ]),
@@ -191,7 +195,19 @@ export function handoffRoutes(
     }
     const d = await discovery(p.id);
     const schema = sp.cache;
-    const missing = mvd(d.answers);
+    const missing = isExisting(p) ? [] : mvd(d.answers);
+    const [additional] = isExisting(p) ? await query("SELECT complete FROM additional_service_discoveries WHERE prospect_id=?", [p.id]) : [];
+    let duplicates = [];
+    if (!p.client_id && !isExisting(p)) {
+      try { duplicates = duplicateClients(p, await sp.clients(), sp.ready()); }
+      catch { error = "SharePoint client duplicate check is unavailable. Check the connection before creating a client."; }
+    }
+    req.session.duplicateReviews ||= {};
+    req.session.duplicateReviews[p.id] = duplicates.map(c => c["Client ID"]).sort();
+    let transitionError = null;
+    if (isExisting(p)) {
+      try { assertExistingTransition(p, client, additional?.complete); } catch (e) { transitionError = e.message; }
+    }
     const approved =
       (
         await query(
@@ -199,7 +215,7 @@ export function handoffRoutes(
           [p.id],
         )
       ).length > 0;
-    const ready = !schema.errors.length && !p.hold;
+    const ready = !schema.errors.length && !p.hold && !error;
     const expectedStage = client?.["Current Stage"];
     req.session.lostReviews ||= {};
     req.session.lostReviews[p.id] = expectedStage || null;
@@ -208,6 +224,8 @@ export function handoffRoutes(
     );
     res.render("handoff", {
       p,
+      duplicates,
+      transitionError,
       clientRecord: client,
       nameError: businessNameError(p.business_name),
       expectedStage,
@@ -249,6 +267,7 @@ export function handoffRoutes(
       const p = await prospect(req.params.id, c);
       if (p.hold) fail("On Hold — Pending Josh Review");
       schema = sp.ready();
+      await lockClientRequests(p, query, c);
       if (
         (
           await query(
@@ -272,6 +291,10 @@ export function handoffRoutes(
       const d = await discovery(p.id, c);
       const options = {};
       if (action === "CreateClient") {
+        if (isExisting(p)) fail("Existing-customer opportunities never create a SharePoint client.");
+        const duplicates = duplicateClients(p, await sp.clients(), schema).map(c => c["Client ID"]).sort();
+        if (duplicates.length && (req.body.confirm_different !== "yes" || JSON.stringify(duplicates) !== JSON.stringify(req.session.duplicateReviews?.[p.id])))
+          fail("Possible existing client found. Review the matches and select the existing client or explicitly confirm this is a different company.");
         if (p.client_id)
           fail("This opportunity already has a SharePoint client.");
         if (
@@ -358,7 +381,17 @@ export function handoffRoutes(
         options.prepareBaa = flags(d.answers).some(
           (flag) => flag.code === "FLAG-HEALTH-DATA",
         );
-      if (action === "TechnicalAssessment" && p.service_lane !== "Managed IT") {
+      if (isExisting(p) && action !== "CreateClient") {
+        const live = clientSummary(await sp.client(p), schema);
+        if (!live) fail("The linked SharePoint client is unavailable. No new client will be created.");
+        if (action === "TechnicalAssessment") {
+          const [additional] = await query("SELECT complete FROM additional_service_discoveries WHERE prospect_id=?", [p.id], c);
+          assertExistingTransition(p, live, additional?.complete);
+          const previous = await query("SELECT id FROM sp_requests WHERE prospect_id IN (SELECT id FROM prospects WHERE client_id=?) AND action='TechnicalAssessment' AND status='Done'", [p.client_id], c);
+          if (previous.length) fail("Managed IT transition was already requested. Refresh SharePoint before continuing.");
+        } else if (action === "Quoting") fail("Existing-client BII quoting is not supported yet.");
+      }
+      if (action === "TechnicalAssessment" && p.service_lane !== "Managed IT" && !isExisting(p)) {
         const client = await sp.client(p);
         const currentStage =
           client?.fields[schema.maps.clients["Current Stage"].name];

@@ -17,21 +17,30 @@ export function nextStep(p, d, quotes, client, items, pendingRequests, role) {
       owner ? link("Review discovery", root + "/discovery/summary") : null,
       "Josh",
     );
-  if (!d || (d.status === "Draft" && mvd(d.answers).length))
+  if (p.relationship_type === "existing_client") {
+    if (pendingRequests.some(r => ["Preparing", "Pending", "Processing", "Unknown"].includes(r.status)))
+      return result("A client request is active or needs confirmation", "Review SharePoint request history before continuing.", link("Review request history", root + "/handoff"), "Josh");
+    if (!p.client_id) return result("Link existing SharePoint client", "Select the operational client before continuing.", owner ? link("Select client", root + "/relationship") : null, "Josh");
+    if (!p.additional_discovery_complete) return result("Additional Service Discovery", "Capture the new service sales context.", link("Open Additional Service Discovery", root + "/additional-discovery"), "Alanna");
+    if (!client) return result("SharePoint status unavailable", "The linked client must be read before handoff.", owner ? link("Check SharePoint", root + "/handoff") : null, "Josh");
+    const activeLanes = Array.isArray(client["Service Lanes"]) ? client["Service Lanes"] : [client["Service Lanes"]];
+    if (!activeLanes.includes(p.service_lane)) return result("Start additional service", "Review the live client and start the supported Managed IT transition.", owner ? link("Review Managed IT transition", root + "/handoff") : null, "Josh");
+  }
+  if (p.relationship_type !== "existing_client" && (!d || (d.status === "Draft" && mvd(d.answers).length)))
     return result(
       d ? "Continue discovery" : "Start discovery",
       "Complete minimum viable discovery.",
       link(d ? "Continue discovery" : "Start discovery", root + "/discovery/1"),
       "Alanna",
     );
-  if (d.status === "Draft")
+  if (p.relationship_type !== "existing_client" && d.status === "Draft")
     return result(
       "Send to Josh",
       "All eight required groups are complete.",
       link("Review & send to Josh", root + "/discovery/3"),
       "Alanna",
     );
-  if (d.status === "Ready for Review" && !p.client_id)
+  if (p.relationship_type !== "existing_client" && d.status === "Ready for Review" && !p.client_id)
     return owner
       ? result(
           "Review discovery",
