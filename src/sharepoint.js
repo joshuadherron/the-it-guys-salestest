@@ -116,6 +116,8 @@ export function validateSchema(requestColumns, clientColumns) {
           else errors.push(`${kind}: ${name} is missing choice "${choice}".`);
         }
   }
+  const hipaa = clientColumns.filter((c) => c.displayName === "HIPAA" && c.boolean);
+  if (hipaa.length === 1) maps.clients.HIPAA = hipaa[0];
   const by = maps.requests["Requested By"];
   if (by && !by.text && !by.personOrGroup)
     errors.push("Requested By must be text or a single person column.");

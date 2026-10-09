@@ -10,6 +10,7 @@ export const outcomeFlags = [
   "Not quote-ready",
   "Separate project required",
   "Client Service Schedule required",
+  "BAA required",
 ];
 export const actionTypes = {
   ItemCompleted: "Item Completed",
@@ -113,6 +114,21 @@ export function availableFlags(definitions, lanes) {
     (d) =>
       d.triggerMode === "Outcome flag" && outcomeFlags.includes(d.triggerFlag),
   );
+}
+export function itemFlags(definitions, item) {
+  return availableFlags(definitions, [item.lane]).filter(
+    (d) => d.triggerFlag !== "BAA required" ||
+      (item.lane === "Managed IT" && item.workflowId === "MIT-05"),
+  );
+}
+export function completionFlags(definitions, choices, item, client, user, selected = []) {
+  const allowed = itemFlags(definitions, item)
+    .map((d) => d.triggerFlag).filter((f) => choices.includes(f));
+  for (const flag of selected) choice(flag, allowed);
+  const automatic = item.lane === "Managed IT" && item.workflowId === "MIT-05" && yes(client.HIPAA);
+  if (selected.includes("BAA required") && !automatic && user.role !== "owner")
+    fail("Only the owner can require a BAA manually.", 403);
+  return [...new Set([...selected, ...(automatic && allowed.includes("BAA required") ? ["BAA required"] : [])])];
 }
 export function normalizeDefinition(row) {
   const f = row.fields;

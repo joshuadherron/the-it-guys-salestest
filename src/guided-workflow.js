@@ -11,6 +11,8 @@ import {
   openItem,
   mayComplete,
   availableFlags,
+  completionFlags,
+  yes,
   definitionsFor,
 } from "./work-items.js";
 import { choice, integer, fail, ownerOnly } from "./security.js";
@@ -18,7 +20,7 @@ import { lanes } from "./config.js";
 
 export function clientData(row, schema) {
   if (!row) return null;
-  return Object.fromEntries(
+  return { HIPAA: yes(row.fields[schema.maps.clients.HIPAA?.name]), ...Object.fromEntries(
     [
       "Client ID",
       "Current Stage",
@@ -26,7 +28,7 @@ export function clientData(row, schema) {
       "Next Action",
       "Service Lanes",
     ].map((k) => [k, row.fields[schema.maps.clients[k].name]]),
-  );
+  ) };
 }
 export function clientLanes(client) {
   const value = client?.["Service Lanes"];
@@ -387,10 +389,10 @@ export async function executeWorkAction(
             : Array.isArray(input.outcomeFlags)
               ? input.outcomeFlags
               : [input.outcomeFlags];
-        const allowed = availableFlags(schema.definitions, clientLanes(client))
-          .map((d) => d.triggerFlag)
-          .filter((f) => schema.workChoices?.TIG_OutcomeFlags?.includes(f));
-        for (const flag of options.outcomeFlags) choice(flag, allowed);
+        options.outcomeFlags = completionFlags(
+          schema.definitions, schema.workChoices?.TIG_OutcomeFlags || [],
+          item, client, user, options.outcomeFlags,
+        );
       }
       if (action === "NotRequired" && input.confirm !== "yes")
         fail("Confirm that this item is not required.");

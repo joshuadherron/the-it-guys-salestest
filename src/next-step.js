@@ -170,9 +170,9 @@ export function nextStep(p, d, quotes, client, items, pendingRequests, role) {
     }
     const proposal = item.workflowId === "MIT-05";
     return result(
-      proposal ? "Get proposal accepted" : `Complete ${item.document}`,
+      proposal ? "Get quote accepted" : `Complete ${item.document}`,
       proposal
-        ? `Assigned to ${item.assignee}. Open the proposal to review/send it. After the client accepts it, return here and mark it won below.`
+        ? "Open the quote to review/send it. After the client accepts it in writing, save the acceptance in /Commercial, then mark it accepted below."
         : `Assigned to ${item.assignee}. Open and save the document, then return here and mark complete below.`,
       item.url
         ? link("Open document", item.url)
