@@ -35,8 +35,21 @@
 <p id="save-status" role="status" aria-live="polite">
 <%= readonly?'Read-only. Josh can reopen this discovery.':'Changes save automatically. Not discussed means the question was not reached.' %>
 </p>
+<% if(knownProspectFacts.length){ %>
+<section class="card">
+<h2>Already known from the prospect record</h2>
+<p>Discovery uses these saved details automatically. You do not need to ask for them again.</p>
+<dl>
+<% for(const [label,value] of knownProspectFacts){ %>
+<dt><strong><%= label %></strong></dt>
+<dd><%= value %></dd>
+<% } %>
+</dl>
+<p><a href="/prospects/<%= p.id %>/edit">Edit prospect information</a></p>
+</section>
+<% } %>
 <div id="discovery" data-id="<%= p.id %>" data-revision="<%= d.revision %>">
-<% for(const q of schema.filter(q=>sectionFor(q)===screen)){const cell=d.answers[q.id];const v=cell?.value;const state=cell?.state||'not_discussed';const selected=q.follow?v?.answer:v;const visible=!q.condition||q.condition.values.includes(answer(d.answers,q.condition.id)); %>
+<% for(const q of schema.filter(q=>sectionFor(q)===screen&&!inheritedQuestionIds.includes(q.id))){const cell=d.answers[q.id];const v=cell?.value;const state=cell?.state||'not_discussed';const selected=q.follow?v?.answer:v;const visible=!q.condition||q.condition.values.includes(answer(d.answers,q.condition.id)); %>
 <fieldset class="question" data-question="<%= q.id %>" data-type="<%= q.type %>" data-follow="<%= q.follow?.when||'' %>" <%= readonly?'disabled':'' %> <%= visible?'':'hidden' %>>
 <legend>
 <%= q.id %> <%= q.label %>
