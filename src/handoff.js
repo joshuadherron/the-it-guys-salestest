@@ -6,8 +6,8 @@ import {
   lostReasons,
 } from "./workflow-contract.js";
 import { graph } from "./graph.js";
+import { sp, lookupId } from "./sharepoint-runtime.js";
 import {
-  SharePoint,
   buildFields,
   assertNoPending,
   submitRequest,
@@ -19,13 +19,7 @@ import { discovery } from "./discovery.js";
 import { mvd, flags } from "./discovery-rules.js";
 import { ownerOnly, integer, choice, text, fail } from "./security.js";
 import { lanes } from "./config.js";
-export const sp = new SharePoint(graph);
-export const lookupId = (email) =>
-  email === "alanna@theitguys.us"
-    ? process.env.SP_ALANNA_USER_LOOKUP_ID
-    : email === "josh@theitguys.us"
-      ? process.env.SP_JOSH_USER_LOOKUP_ID
-      : undefined;
+export { sp, lookupId } from "./sharepoint-runtime.js";
 export async function refresh(
   p,
   dependencies = { sp, query, transaction, audit },
