@@ -27,6 +27,7 @@ import {
   reviewLane,
 } from "./sales-import.js";
 import { commitImport } from "./import-commit.js";
+import { dispatchProspectSync, syncStatus } from "./prospect-sync.js";
 export const fields = [
   ...pipelineFields.map(([key, label]) =>
     key === "likely_tier" ? ["likely_service", "Likely Service"] : [key, label],
@@ -259,6 +260,10 @@ export function pipelineRoutes(app) {
         c,
       ),
     );
+    const created = await prospect(id);
+    dispatchProspectSync(created, req.session.user).catch((error) =>
+      console.error("Prospect SharePoint sync failed:", error),
+    );
     res.redirect(`/prospects/${id}`);
   });
   app.get("/prospects/:id", async (req, res) => {
@@ -278,6 +283,7 @@ export function pipelineRoutes(app) {
       outcomes,
       structuredFields,
       notifications,
+      sync: await syncStatus(p.id),
       json,
     });
   });
@@ -324,6 +330,10 @@ export function pipelineRoutes(app) {
       );
       await audit(c, req.session.user, "update", "prospect", p.id);
     });
+    const updated = await prospect(req.params.id);
+    dispatchProspectSync(updated, req.session.user).catch((error) =>
+      console.error("Prospect SharePoint sync failed:", error),
+    );
     res.redirect(`/prospects/${req.params.id}`);
   });
   app.post("/prospects/:id/activities", async (req, res) => {
