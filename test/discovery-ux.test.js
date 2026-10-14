@@ -6,6 +6,7 @@ import { inferredState } from "../public/discovery-state.js";
 import { requiredProgress, sectionFor } from "../src/discovery-ui.js";
 import { schema, emptyAnswers, mvd, groups } from "../src/discovery-rules.js";
 import { validateAnswer } from "../src/discovery-validation.js";
+import { prospectDiscoveryPrefill, inheritedQuestionIds } from "../src/discovery-prefill.js";
 
 for (const [type, value, empty] of [
   ["text", "Example", ""],
@@ -184,4 +185,35 @@ test("invalid answers remain unsaved and block section navigation", async () => 
   await b.navigate();
   assert.equal(b.location.href, undefined);
   assert.equal(b.saved["Q1.1"].state, "not_discussed");
+});
+
+
+test("prospect basics are inherited into discovery instead of asked twice", () => {
+  const p = {
+    business_name: "Example Co",
+    contact_name: "Alex Owner",
+    phone: "409-555-0100",
+    email: "alex@example.com",
+    street_address: "123 Main St",
+    city: "Beaumont",
+    state: "TX",
+    zip: "77701",
+    employee_count: 18,
+  };
+  const a = prospectDiscoveryPrefill(p);
+  assert.equal(a["Q1.1"].value, "Example Co");
+  assert.equal(a["Q1.2a"].value, "Alex Owner");
+  assert.equal(a["Q1.3"].value, "409-555-0100");
+  assert.equal(a["Q1.4"].value, "alex@example.com");
+  assert.equal(a["Q1.5"].value, "123 Main St Beaumont, TX 77701");
+  assert.equal(a["Q2.1"].value, 18);
+  assert.deepEqual(inheritedQuestionIds, [
+    "Q1.1",
+    "Q1.2a",
+    "Q1.3",
+    "Q1.4",
+    "Q1.5",
+    "Q2.1",
+  ]);
+  assert.equal(mvd(a).includes("Company & contact"), false);
 });
