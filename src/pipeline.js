@@ -261,9 +261,7 @@ export function pipelineRoutes(app) {
       ),
     );
     const created = await prospect(id);
-    dispatchProspectSync(created, req.session.user).catch((error) =>
-      console.error("Prospect SharePoint sync failed:", error),
-    );
+    await dispatchProspectSync(created, req.session.user);
     res.redirect(`/prospects/${id}`);
   });
   app.get("/prospects/:id", async (req, res) => {
@@ -331,9 +329,7 @@ export function pipelineRoutes(app) {
       await audit(c, req.session.user, "update", "prospect", p.id);
     });
     const updated = await prospect(req.params.id);
-    dispatchProspectSync(updated, req.session.user).catch((error) =>
-      console.error("Prospect SharePoint sync failed:", error),
-    );
+    await dispatchProspectSync(updated, req.session.user);
     res.redirect(`/prospects/${req.params.id}`);
   });
   app.post("/prospects/:id/sync", async (req, res) => {
