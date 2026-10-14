@@ -14,6 +14,19 @@
 <%= p.city||'' %><%= p.city&&p.state?', ':'' %><%= p.state||'' %><%= p.zip?' '+p.zip:'' %>
 </p>
 <% } %>
+<section class="card">
+<h2>SharePoint prospect sync</h2>
+<% if(sync){ %>
+<p>Latest sync: <strong><%= sync.status %></strong> · <%= sync.created_at %></p>
+<% if(sync.result_message){ %><p class="error"><%= sync.result_message %></p><% } %>
+<% }else{ %>
+<p>No prospect sync has been attempted yet.</p>
+<% } %>
+<form method="post" action="/prospects/<%= p.id %>/sync">
+<input type="hidden" name="_csrf" value="<%= csrf %>">
+<button class="secondary">Sync prospect to SharePoint</button>
+</form>
+</section>
 <section class="card"><h2>Customer relationship</h2><p><%= p.relationship_type==='existing_client'?'Existing customer / additional service':'New customer' %><%= p.client_id?' - '+p.client_id:'' %></p><% if(user.role==='owner'){ %><a href="/prospects/<%= p.id %>/relationship">Customer relationship / Link existing client</a><% } %></section>
 <div data-workflow-panel="<%= p.id %>"><%- include('workflow-panel') %></div>
 <div class="row no-print">
