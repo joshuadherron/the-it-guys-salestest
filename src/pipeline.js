@@ -336,6 +336,11 @@ export function pipelineRoutes(app) {
     );
     res.redirect(`/prospects/${req.params.id}`);
   });
+  app.post("/prospects/:id/sync", async (req, res) => {
+    const p = await prospect(req.params.id);
+    await dispatchProspectSync(p, req.session.user);
+    res.redirect(`/prospects/${p.id}`);
+  });
   app.post("/prospects/:id/activities", async (req, res) => {
     const p = await prospect(req.params.id);
     await transaction(async (c) => {
