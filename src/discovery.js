@@ -13,6 +13,11 @@ import {
   answer,
 } from "./discovery-rules.js";
 import { validateAnswer } from "./discovery-validation.js";
+import {
+  prospectDiscoveryPrefill,
+  inheritedQuestionIds,
+  knownProspectFacts,
+} from "./discovery-prefill.js";
 import { integer, ownerOnly, text, fail } from "./security.js";
 import { queueNotice, deliverNotice } from "./notifications.js";
 export async function discovery(id, c) {
@@ -21,16 +26,24 @@ export async function discovery(id, c) {
     [id],
     c,
   );
-  return d
-    ? { ...d, exists: true, answers: json(d.answers), flags: json(d.flags) }
-    : {
-        exists: false,
-        prospect_id: id,
-        answers: emptyAnswers(),
-        status: "Draft",
-        revision: 0,
-        flags: [],
-      };
+  if (d) {
+    const p = await prospect(id, c);
+    return {
+      ...d,
+      exists: true,
+      answers: prospectDiscoveryPrefill(p, json(d.answers)),
+      flags: json(d.flags),
+    };
+  }
+  const p = await prospect(id, c);
+  return {
+    exists: false,
+    prospect_id: id,
+    answers: prospectDiscoveryPrefill(p, emptyAnswers()),
+    status: "Draft",
+    revision: 0,
+    flags: [],
+  };
 }
 export async function renderDiscoverySummary(
   req,
@@ -71,6 +84,8 @@ export function discoveryRoutes(app) {
       format,
       answer,
       majorFlagOrder,
+      inheritedQuestionIds,
+      knownProspectFacts: knownProspectFacts(p),
       notifications: await query(
         "SELECT kind,status FROM notifications WHERE prospect_id=? ORDER BY id DESC LIMIT 5",
         [p.id],
