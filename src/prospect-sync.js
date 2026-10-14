@@ -4,6 +4,9 @@ import { buildFields, submitRequest } from "./sharepoint.js";
 import { query, transaction, audit } from "./db.js";
 import { opportunity } from "./config.js";
 
+export const prospectSyncEnabled = () =>
+  String(process.env.PROSPECT_SYNC_ENABLED || "").toLowerCase() === "true";
+
 function withOpportunity(p) {
   return { ...p, opp: p.opp || opportunity(p.id) };
 }
@@ -14,6 +17,8 @@ export async function dispatchProspectSync(
   dependencies = { sp, graph, query, transaction, audit },
 ) {
   const { sp, graph, query, transaction, audit } = dependencies;
+  if (!prospectSyncEnabled())
+    return { ok: false, status: "Disabled", error: "Prospect sync is not enabled." };
   const p = withOpportunity(prospect);
   const mode = process.env.SHAREPOINT_WRITE_MODE || "dryrun";
   let body;
