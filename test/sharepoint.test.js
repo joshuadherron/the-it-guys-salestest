@@ -129,6 +129,55 @@ test("exact Create Client and Start Stage JSON", () => {
   assert.throws(() => payload("Quoting", p, "Managed IT"));
   assert.throws(() => payload("CreateClient", p, ""));
 });
+test("Upsert Prospect builds an idempotent prospect payload without a service lane", () => {
+  const prospect = {
+    id: 12,
+    opp: "OPP-0012",
+    business_name: "Prospect Co",
+    contact_name: "Pat Owner",
+    phone: "409-555-0100",
+    email: "pat@example.com",
+    street_address: "123 Main",
+    city: "Beaumont",
+    state: "TX",
+    zip: "77701",
+    employee_count: 14,
+    stage: "Prospecting",
+    status: "Active",
+    owner: "alanna@theitguys.us",
+    likely_service: "Managed IT",
+    current_it: "Break-fix",
+    key_dependency: "QuickBooks",
+    notes: "Initial visit",
+    first_contact: "2026-10-13",
+    follow_up: "2026-10-20",
+    next_action: "Call owner",
+    next_action_date: "2026-10-20",
+  };
+  const body = payload("UpsertProspect", prospect, null);
+  assert.equal(body.opportunityId, "OPP-0012");
+  assert.equal(body.salesAppRecordId, 12);
+  assert.equal(body.businessName, "Prospect Co");
+  assert.equal(body.stage, "Prospecting");
+  assert.equal(body.source, "Sales App");
+
+  const s = fixture();
+  const fields = buildFields(
+    s,
+    "UpsertProspect",
+    prospect,
+    null,
+    "alanna@theitguys.us",
+    new Date("2026-10-13T12:34:56Z"),
+  ).fields;
+  const m = s.maps.requests;
+  assert.equal(fields[m["Request Type"].name], "Upsert Prospect");
+  assert.equal(fields[m["Processing Status"].name], "Pending");
+  assert.equal(fields[m.Source.name], "Sales App");
+  assert.equal(fields[m["Service Lane"].name], undefined);
+  assert.deepEqual(JSON.parse(fields[m.Payload.name]).opportunityId, "OPP-0012");
+});
+
 test("maps exact internal names, title, source, actor, status and lookup ID", () => {
   const s = fixture();
   const body = buildFields(
