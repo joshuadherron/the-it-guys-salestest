@@ -23,6 +23,25 @@
 </details>
 </section>
 <section class="card">
+<h2>Sales Prospects sync</h2>
+<p>Prospects in Sales App: <strong><%= prospectCount %></strong></p>
+<p>Automatic prospect sync is <strong><%= prospectSyncEnabled?'enabled':'disabled' %></strong>.</p>
+<% if(prospectSyncSummary.length){ %>
+<p>Request history:
+<% for(const row of prospectSyncSummary){ %>
+<span class="pill"><%= row.status %>: <%= row.count %></span>
+<% } %>
+</p>
+<% } %>
+<form method="post" action="/admin/prospect-backfill">
+<input type="hidden" name="_csrf" value="<%= csrf %>">
+<button <%= prospectSyncEnabled?'':'disabled' %>>Backfill all prospects to SharePoint</button>
+</form>
+<% if(!prospectSyncEnabled){ %>
+<p class="muted">Create the Sales Prospects list and Upsert Prospect Power Automate handler first, then set PROSPECT_SYNC_ENABLED=true.</p>
+<% } %>
+</section>
+<section class="card">
 <h2>Prices & included amounts</h2>
 <p>Changing prices returns approved worksheets to Draft for review.</p>
 <% for(const price of prices){ %>
