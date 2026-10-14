@@ -34,6 +34,7 @@ export const requiredChoices = {
   requests: {
     "Request Type": [
       "Create Client",
+      "Upsert Prospect",
       "Start Stage",
       "Mark Lost",
       "Item Completed",
