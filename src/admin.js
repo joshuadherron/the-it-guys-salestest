@@ -2,6 +2,7 @@ import { lostReasons } from "./workflow-contract.js";
 import { query, transaction, audit } from "./db.js";
 import { ownerOnly, choice, text, integer, fail } from "./security.js";
 import { sp } from "./handoff.js";
+import { dispatchProspectSync, prospectSyncEnabled } from "./prospect-sync.js";
 export function adminRoutes(app) {
   app.get("/admin", ownerOnly, async (req, res) =>
     res.render("admin", {
@@ -14,8 +15,28 @@ export function adminRoutes(app) {
       allowlist: await query("SELECT * FROM allowlist ORDER BY email"),
       logs: await query("SELECT * FROM audit_log ORDER BY id DESC LIMIT 200"),
       schema: sp.cache,
+      prospectSyncEnabled: prospectSyncEnabled(),
+      prospectCount: (await query("SELECT COUNT(*) count FROM prospects"))[0].count,
+      prospectSyncSummary: await query(
+        "SELECT status,COUNT(*) count FROM sp_requests WHERE action='UpsertProspect' GROUP BY status ORDER BY status",
+      ),
     }),
   );
+  app.post("/admin/prospect-backfill", ownerOnly, async (req, res) => {
+    if (!prospectSyncEnabled())
+      fail("Prospect sync is disabled. Configure SharePoint, then set PROSPECT_SYNC_ENABLED=true.");
+    const prospects = await query("SELECT * FROM prospects ORDER BY id");
+    for (const p of prospects)
+      await dispatchProspectSync(p, req.session.user);
+    await audit(
+      undefined,
+      req.session.user,
+      "backfill prospects to SharePoint",
+      "prospect",
+      String(prospects.length),
+    );
+    res.redirect("/admin");
+  });
   app.post("/admin/lost-reasons", ownerOnly, async (req, res) => {
     const reason = choice(req.body.reason, lostReasons);
     await transaction(async (c) => {
