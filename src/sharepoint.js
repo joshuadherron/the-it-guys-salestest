@@ -65,7 +65,7 @@ export function validateSchema(requestColumns, clientColumns) {
   const errors = [];
   const maps = {};
   const actionErrors = Object.fromEntries(
-    ["MarkLost", ...Object.keys(actionTypes)].map((key) => [key, []]),
+    ["MarkLost", "UpsertProspect", ...Object.keys(actionTypes)].map((key) => [key, []]),
   );
   for (const [kind, columns] of [
     ["requests", requestColumns],
@@ -95,10 +95,12 @@ export function validateSchema(requestColumns, clientColumns) {
               "Request Exception",
               "Create Working Copy",
               "Advance Stage",
+              "Upsert Prospect",
             ].includes(choice)
           ) {
             for (const [key, type] of Object.entries({
               MarkLost: "Mark Lost",
+              UpsertProspect: "Upsert Prospect",
               ...actionTypes,
             }))
               if (type === choice)
@@ -133,6 +135,34 @@ export function payload(action, p, lane, options = {}) {
   return body;
 }
 function payloadData(action, p, lane, options) {
+  if (action === "UpsertProspect") {
+    return {
+      opportunityId: p.opp,
+      salesAppRecordId: p.id,
+      businessName: p.business_name,
+      contactName: p.contact_name || "",
+      phone: p.phone || "",
+      email: p.email || "",
+      streetAddress: p.street_address || "",
+      city: p.city || "",
+      state: p.state || "",
+      zip: p.zip || "",
+      employeeCount: p.employee_count ?? null,
+      stage: p.stage,
+      status: p.status || "Active",
+      owner: p.owner || "",
+      likelyService: p.likely_service || "",
+      currentIt: p.current_it || "",
+      keyDependency: p.key_dependency || "",
+      notes: p.notes || "",
+      firstContact: p.first_contact || null,
+      followUp: p.follow_up || null,
+      nextAction: p.next_action || "",
+      nextActionDate: p.next_action_date || null,
+      source: "Sales App",
+      syncedAt: new Date().toISOString(),
+    };
+  }
   if (!lanes.includes(lane)) throw new Error("Choose a service lane.");
   if (action === "CreateClient") {
     if (p.client_id || p.relationship_type === "existing_client")
@@ -200,11 +230,13 @@ export function buildFields(
         ? "Create Client"
         : action === "MarkLost"
           ? "Mark Lost"
-          : "Start Stage"),
+          : action === "UpsertProspect"
+            ? "Upsert Prospect"
+            : "Start Stage"),
   );
   put("Processing Status", "Pending");
   put("Source", "Sales App");
-  put("Service Lane", lane);
+  if (action !== "UpsertProspect") put("Service Lane", lane);
   put("Payload", serializePayload(body));
   if (map["Requested By"].personOrGroup) {
     if (!/^\d+$/.test(String(userLookupId)))
