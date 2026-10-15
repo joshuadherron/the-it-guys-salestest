@@ -52,6 +52,7 @@ export function buildBiiFill({quote,prospect,owner={},prices}){
  const calc=priceQuote(input,prices);
  if(calc.pending.length)throw new Error("Pricing review required: "+calc.pending.join("; "));
  if(Math.abs(Number(quote.total)-calc.total)>.005)throw new Error("Approved BII total differs from current pricing.");
+ if(calc.lines.some(l=>String(l.label).includes("OWNER ONE-OFF") || String(l.label).includes("Additional mirrored location")))throw new Error("BII quote has custom priced lines that require explicit owner line descriptions before document generation.");
  const devices=platforms.reduce((n,k)=>n+count(input,k),0);
  const cost=(qty,rate)=>qty?qty+" × "+money(rate)+" = "+money(qty*rate):"$0";
  const xusers=Math.max(0,count(input,"users")-Number(prices.included_users));
