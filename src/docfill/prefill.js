@@ -1,7 +1,7 @@
 import { DEFAULT_MANAGED_SUMMARY, deviceList } from "./managed-facts.js";
 // Prefill contractual document inputs from saved, already-known facts only.
 // Never infer legal entity names, signer authority, contractual exceptions, or scope.
-const text = value => typeof value === "string" ? value.trim() : "";
+const text = value => typeof value === "string" && !/^(none\.?|null|undefined|n\/a|unknown)$/i.test(value.trim()) ? value.trim() : "";
 export function documentPrefill(prospect, input, laneKey) {
   const p = prospect || {}, q = input || {};
   const address = [p.street_address, [p.city,p.state,p.zip].filter(Boolean).join(" ")].filter(Boolean).join(", ");
@@ -12,10 +12,10 @@ export function documentPrefill(prospect, input, laneKey) {
   const common = {
     // Business name is not necessarily the legal name; owner must verify.
     preparedFor:text(p.contact_name),
-    backupContact:"",
+    backupContact:text(p.backup_contact || p.secondary_contact || ""),
     domain:knownDomain,
     summary:"",
-    legalName:"",
+    // Business name is a suggestion, not proof of the registered legal entity.\n    legalName:text(p.business_name),
     exceptions:"",
     signer:""
   };
