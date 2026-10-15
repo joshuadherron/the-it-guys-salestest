@@ -343,7 +343,7 @@ export function quotesRoutes(app) {
       await audit(c, req.session.user, "approve", "quote", q.id);
     });
 
-    res.redirect(`/prospects/${pid}`);
+    res.redirect(`/prospects/${pid}/quotes?quote=${integer(req.params.id)}#selected-quote`);
   });
 
   app.get("/quotes/:id/print", async (req, res) => {
