@@ -1,7 +1,6 @@
-const form = document.querySelector("[data-quote-calculator]");
-if (form) {
-  const target = document.querySelector("#quote-calculation");
-  const status = document.querySelector("#quote-preview-status");
+document.querySelectorAll("[data-quote-calculator]").forEach((form) => {
+  const target = document.getElementById(form.dataset.previewTarget || "quote-calculation");
+  const status = document.getElementById(form.dataset.statusTarget || "quote-preview-status");
   const csrf = document.querySelector('meta[name="csrf-token"]')?.content;
   let timer = null;
   let controller = null;
@@ -46,4 +45,5 @@ if (form) {
 
   form.addEventListener("input", schedule);
   form.addEventListener("change", schedule);
-}
+  if (!form.disabled && !form.querySelector("fieldset:disabled")) schedule();
+});
