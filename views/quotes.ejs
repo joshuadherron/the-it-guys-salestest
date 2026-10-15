@@ -10,6 +10,44 @@
 <% if(p.hold){ %>
 <div class="hold">On Hold — Pending Josh Review. Quote actions are blocked.</div>
 <% } %>
+<% if(selected){ %>
+<section class="card" id="selected-quote">
+<h2><%= selected.quoteName %> #<%= selected.id %> · <%= selected.status %>
+</h2>
+<p>Approved by: <%= selected.approved_by||'Not approved' %> <%= selected.approved_at||'' %>
+</p>
+<a href="/quotes/<%= selected.id %>/print">Printable internal worksheet</a>
+<% if(user.role==="owner" && selected.status==="Approved"){ %>
+<a href="/quotes/<%= selected.id %>/document?lane=<%= selected.docInput.pricingMode==="managed_v20"?"COM-PRP":"BII-QSOW" %>">Prepare contractual Word quote</a>
+
+<% } %>
+<% if(user.role==='owner'&&selected.status==='Draft'){ %>
+<form method="post" action="/quotes/<%= selected.id %>/delete" data-confirm="Delete this draft quote? This cannot be undone.">
+<input type="hidden" name="_csrf" value="<%= csrf %>">
+<button type="submit">Delete draft</button>
+</form>
+<form method="post" action="/quotes/<%= selected.id %>/approve">
+<input type="hidden" name="_csrf" value="<%= csrf %>">
+<h3>Pre-quote stop conditions</h3>
+<p>Tick any condition that applies. Any tick blocks approval: targeted assessment first.</p>
+<% if(!input.confirmed){ %>
+<label>
+<input type="checkbox" name="confirm_counts" value="yes" required> I confirm the saved draft counts, including zero values and devices counted once.
+</label>
+<% } %>
+<% for(const stop of stops){ %>
+<label>
+<input type="checkbox" name="stop_<%= stop.id %>" value="yes"> <%= stop.label %> · <%= stop.status %>
+</label>
+<% } %>
+<label>
+<input type="checkbox" name="reviewed" value="yes" required> I reviewed every stop condition.</label>
+<button <%= p.hold?'disabled':'' %>>Approve pricing</button>
+</form>
+<% } %>
+</section>
+<% } %>
+
 <div class="quote-builder-layout"><div class="quote-builder-main">
 <details class="card" id="managed-services-section"><summary><strong>Managed Services</strong> <span id="managed-services-summary-total" aria-live="polite">Quote total: calculating…</span><span class="quote-summary-control" onclick="event.stopPropagation()"><label for="managed-tier-select">Service</label><select id="managed-tier-select" name="serviceTier" form="managed-pricing-form"><option value="none" <%= !managedInput.pricingMode ? "selected" : "" %>>No Managed Services</option><option value="managed" <%= managedInput.pricingMode && managedInput.serviceTier !== "monitoring" && managedInput.serviceTier !== "none" ? "selected" : "" %>>Managed IT — $125/user</option><option value="monitoring" <%= managedInput.serviceTier === "monitoring" && managedInput.pricingMode ? "selected" : "" %>>Monitoring-Only — $45/device</option></select></span></summary>
 <p>Managed IT includes SentinelOne EDR and Adlumin MDR. Monthly services and one-time onboarding are separate. No automatic volume discounts.</p>
@@ -97,43 +135,6 @@
 <p id="build-review" role="status">Calculating service estimates…</p>
 <p>Estimate only; excludes taxes, hardware, licenses and custom-priced services not yet entered. Owner approval required before a binding quote.</p>
 </section></aside></div>
-<% if(selected){ %>
-<section class="card" id="selected-quote">
-<h2><%= selected.quoteName %> #<%= selected.id %> · <%= selected.status %>
-</h2>
-<p>Approved by: <%= selected.approved_by||'Not approved' %> <%= selected.approved_at||'' %>
-</p>
-<a href="/quotes/<%= selected.id %>/print">Printable internal worksheet</a>
-<% if(user.role==="owner" && selected.status==="Approved"){ %>
-<a href="/quotes/<%= selected.id %>/document?lane=<%= selected.docInput.pricingMode==="managed_v20"?"COM-PRP":"BII-QSOW" %>">Prepare contractual Word quote</a>
-
-<% } %>
-<% if(user.role==='owner'&&selected.status==='Draft'){ %>
-<form method="post" action="/quotes/<%= selected.id %>/delete" data-confirm="Delete this draft quote? This cannot be undone.">
-<input type="hidden" name="_csrf" value="<%= csrf %>">
-<button type="submit">Delete draft</button>
-</form>
-<form method="post" action="/quotes/<%= selected.id %>/approve">
-<input type="hidden" name="_csrf" value="<%= csrf %>">
-<h3>Pre-quote stop conditions</h3>
-<p>Tick any condition that applies. Any tick blocks approval: targeted assessment first.</p>
-<% if(!input.confirmed){ %>
-<label>
-<input type="checkbox" name="confirm_counts" value="yes" required> I confirm the saved draft counts, including zero values and devices counted once.
-</label>
-<% } %>
-<% for(const stop of stops){ %>
-<label>
-<input type="checkbox" name="stop_<%= stop.id %>" value="yes"> <%= stop.label %> · <%= stop.status %>
-</label>
-<% } %>
-<label>
-<input type="checkbox" name="reviewed" value="yes" required> I reviewed every stop condition.</label>
-<button <%= p.hold?'disabled':'' %>>Approve pricing</button>
-</form>
-<% } %>
-</section>
-<% } %>
 <section class="card" id="quote-history">
 <h2>Quote History</h2>
 <p>Open a saved quote to review, approve, delete, or print it.</p>
