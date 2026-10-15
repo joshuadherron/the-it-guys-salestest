@@ -131,8 +131,13 @@ export function quotesRoutes(app) {
       : quotes[0];
     if (req.query.quote && !selected)
       fail("Quote not found for this prospect.", 404);
-    const input = selected ? json(selected.inputs) : prefill(d.answers);
-    const managedInput = {users:prefill(d.answers).users,computers:prefill(d.answers).unallocated,serviceTier:"managed",confirmed:false};
+    const savedInput = selected ? json(selected.inputs) : null;
+    const discoveryInput = prefill(d.answers);
+    // A managed quote does not contain BII platform fields; never render them as blank.
+    const input = savedInput?.pricingMode === "managed_v20" ? discoveryInput : (savedInput || discoveryInput);
+    const managedInput = savedInput?.pricingMode === "managed_v20"
+      ? savedInput
+      : {users:discoveryInput.users,computers:discoveryInput.unallocated,serviceTier:"managed",confirmed:false};
 
     res.render("quotes", {
       p,
