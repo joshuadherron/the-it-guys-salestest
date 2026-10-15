@@ -1,5 +1,5 @@
 <%- include('header') %>
-<link rel="stylesheet" href="/quote-layout.css?v=5">
+<link rel="stylesheet" href="/quote-layout.css?v=6">
 <div class="quote-page">
 <p>
 <a href="/prospects/<%= p.id %>">
@@ -32,8 +32,9 @@
 <div class="hold">On Hold — Pending Josh Review. Quote actions are blocked.</div>
 <% } %>
 <% if(selected){ %>
-<section class="card" id="selected-quote">
-<h2><%= selected.quoteName %> #<%= selected.id %> · <%= selected.status %>
+<section class="card" id="selected-quote" role="dialog" aria-modal="true" aria-labelledby="selected-quote-title" tabindex="-1">
+<div class="quote-review-header"><a class="button secondary quote-review-close" href="/prospects/<%= p.id %>/quotes#quote-history" aria-label="Close quote review and return to pricing worksheet">Close review ×</a></div>
+<h2 id="selected-quote-title"><%= selected.quoteName %> #<%= selected.id %> · <%= selected.status %>
 </h2>
 <p>Approved by: <%= selected.approved_by||'Not approved' %> <%= selected.approved_at||'' %>
 </p>
