@@ -14,7 +14,7 @@ BUSINESS RECORD · <%= p.opp %> · <%= p.stage %>
 <%= p.city||'' %><%= p.city&&p.state?', ':'' %><%= p.state||'' %><%= p.zip?' '+p.zip:'' %>
 </p>
 <% } %>
-<section class="card relationship-actions no-print"><h2>What would you like to do?</h2><p class="muted">Choose any action. You don't have to finish discovery before recording a conversation or planning your next contact.</p><div class="action-grid"><a class="button" href="#log-activity">Log a conversation</a><a class="button secondary" href="/prospects/<%= p.id %>/edit">Update business / follow-up</a><a class="button secondary" href="/prospects/<%= p.id %>/<%= p.relationship_type==='existing_client'?'additional-discovery':'discovery/1' %>">Add discovery details</a><a class="button secondary" href="/prospects/<%= p.id %>/quotes">Open pricing worksheet</a></div><p class="muted">Pricing and onboarding may still require approvals or completed information.</p></section>
+<section class="card relationship-actions no-print"><h2>What would you like to do?</h2><p class="muted">Choose any action. You don't have to finish discovery before recording a conversation or planning your next contact.</p><div class="action-grid"><a class="button" href="#log-activity">Log a conversation</a><a class="button secondary" href="/prospects/<%= p.id %>/edit">Edit business</a><a class="button secondary" href="/prospects/<%= p.id %>/<%= p.relationship_type==='existing_client'?'additional-discovery' :'discovery/resume' %>">Add discovery details</a><a class="button secondary" href="/prospects/<%= p.id %>/quotes">Open pricing worksheet</a></div><p class="muted">Pricing and onboarding may still require approvals or completed information.</p></section>
 <details class="card"><summary>SharePoint synchronization · technical details</summary>
 <% if(sync){ %>
 <p>Latest sync: <strong><%= sync.status %></strong> · <%= sync.created_at %></p>
@@ -30,7 +30,7 @@ BUSINESS RECORD · <%= p.opp %> · <%= p.stage %>
 <section class="card"><h2>Customer relationship</h2><p><%= p.relationship_type==='existing_client'?'Existing customer / additional service':'New customer' %><%= p.client_id?' - '+p.client_id:'' %></p><% if(user.role==='owner'){ %><a href="/prospects/<%= p.id %>/relationship">Customer relationship / Link existing client</a><% } %></section>
 <details class="card"><summary>Workflow guidance and operational steps</summary><div data-workflow-panel="<%= p.id %>"><%- include('workflow-panel') %></div></details>
 <div class="row no-print">
-<a class="button" href="/prospects/<%= p.id %>/<%= p.relationship_type==='existing_client'?'additional-discovery':'discovery/1' %>"><%= p.relationship_type==='existing_client'?'Additional Service Discovery':'Business discovery' %></a>
+<a class="button" href="/prospects/<%= p.id %>/<%= p.relationship_type==='existing_client'?'additional-discovery' :'discovery/resume' %>"><%= p.relationship_type==='existing_client'?'Additional Service Discovery':'Business discovery' %></a>
 <a class="button secondary" href="/prospects/<%= p.id %>/quotes">BII worksheet</a>
 <a class="button secondary" href="/prospects/<%= p.id %>/handoff">SharePoint actions &amp; history</a>
 <a href="/prospects/<%= p.id %>/edit">Edit prospect</a>
