@@ -1,3 +1,6 @@
+<% if(calculation.pricingMode === "managed_v20" && calculation.includeBiiSummary){ %>
+<p><strong>Monthly recurring:</strong> $<%= calculation.monthlyTotal.toFixed(2) %> · <strong>One-time BII:</strong> $<%= calculation.oneTimeTotal.toFixed(2) %></p>
+<% } %>
 <%- include('quote-lines',{lines:calculation.lines,total:calculation.total}) %>
 <% if(calculation.pending.length){ %>
 <p>Priced by Josh — amounts still required: <%= calculation.pending.join(', ') %>. Displayed total excludes these unresolved items.</p>
