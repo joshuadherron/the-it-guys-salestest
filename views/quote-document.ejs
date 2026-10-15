@@ -11,7 +11,7 @@
 <% for(const [key,label,type] of [['legalName','Client legal name','text'],['preparedName','Prepared for - Name','text'],['preparedTitle','Prepared for - Title','text'],['preparedEmail','Prepared for - Email','email'],['backupContact','Backup contact','text']]){ %>
 <label><%= label %><input name="<%= key %>" type="<%= type %>" maxlength="4000" value="<%= prefill[key] || '' %>"></label><% } %>
 <label>Number of sites<input type="number" name="siteCount" min="1" step="1" value="<%= prefill.siteCount ?? 1 %>"></label>
-<label>Site cities (optional; no street addresses)<input name="siteCities" value="<%= prefill.siteCities || '' %>" maxlength="4000"></label>
+<label>Site cities (only needed for multiple sites; names only)<input name="siteCities" value="<%= Number(prefill.siteCount ?? 1)>1 ? (prefill.siteCities || '') : '' %>" placeholder="Beaumont, Nederland" maxlength="4000"></label>
 <label>Email / Microsoft 365 domain<input name="domain" value="<%= prefill.domain || '' %>" placeholder="example.com" maxlength="253"></label></div>
 <fieldset><legend>Service start</legend><label><input type="radio" name="serviceStartMode" value="after_contracts" <%= prefill.serviceStartMode==='after_contracts'?'checked':'' %>>After contracts are signed</label><label><input type="radio" name="serviceStartMode" value="date" <%= prefill.serviceStartMode==='date'?'checked':'' %>>Choose a date</label><input type="date" name="serviceStartDate" value="<%= prefill.serviceStartDate || '' %>"></fieldset>
 <label>Service summary<textarea name="summary" minlength="40" maxlength="4000" rows="4"><%= prefill.summary || '' %></textarea></label><p>Use a complete summary of at least 40 characters. Josh may edit the standard sentence.</p>
