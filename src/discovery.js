@@ -63,6 +63,18 @@ export async function renderDiscoverySummary(
   });
 }
 export function discoveryRoutes(app) {
+  app.get("/prospects/:id/discovery/resume", async (req, res) => {
+    const p = await prospect(req.params.id);
+    const d = await discovery(p.id);
+    // Resume at the first unanswered visible question if no saved page exists.
+    const next = schema.find(q =>
+      !inheritedQuestionIds.includes(q.id) &&
+      (!q.condition || q.condition.values.includes(answer(d.answers, q.condition.id))) &&
+      (d.answers[q.id]?.state || "not_discussed") === "not_discussed"
+    );
+    const fallback = next ? sectionFor(next) : 3;
+    res.render("discovery-resume", { p, fallback });
+  });
   app.get("/prospects/:id/discovery/summary", (req, res) =>
     renderDiscoverySummary(req, res),
   );
