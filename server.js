@@ -144,7 +144,20 @@ app.use((err, req, res, _next) => {
     return res.json({ error: message });
   }
 
-  res.render("error", { message });
+  let returnUrl = "/";
+  const parts = req.path.split("/").filter(Boolean);
+  const numericId = parts[1] && /^[0-9]+$/.test(parts[1]);
+  if (parts[0] === "prospects" && numericId && parts[2] === "quotes") {
+    returnUrl = "/prospects/" + parts[1] + "/quotes";
+  } else if (parts[0] === "quotes" && numericId) {
+    try {
+      const rows = await query("SELECT prospect_id FROM quotes WHERE id=?", [Number(parts[1])]);
+      if (rows.length) returnUrl = "/prospects/" + rows[0].prospect_id + "/quotes?quote=" + parts[1] + "#selected-quote";
+    } catch (lookupError) {
+      console.error("Quote return URL lookup failed:", lookupError.message);
+    }
+  }
+  res.render("error", { message, returnUrl });
 });
 const port = Number(process.env.PORT || 3000);
 
