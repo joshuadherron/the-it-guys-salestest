@@ -56,35 +56,22 @@ try {
 <div id="discovery" data-id="<%= p.id %>" data-revision="<%= d.revision %>">
 <% for(const q of schema.filter(q=>sectionFor(q)===screen&&!inheritedQuestionIds.includes(q.id))){const cell=d.answers[q.id];const v=cell?.value;const state=cell?.state||'not_discussed';const selected=q.follow?v?.answer:v;const visible=!q.condition||q.condition.values.includes(answer(d.answers,q.condition.id)); %>
 <fieldset class="question" data-question="<%= q.id %>" data-type="<%= q.type %>" data-follow="<%= q.follow?.when||'' %>" <%= readonly?'disabled':'' %> <%= visible?'':'hidden' %>>
-<legend>
-<%= q.id %> <%= q.label %>
-</legend>
-<p>
-<%= q.prompt %>
-</p>
-<% if(q.helper){ %>
-<p class="muted">
-<%= q.helper %>
-</p>
-<% } %>
-<small>
-<%= q.required?'MVD REQUIRED':'DISCOVERY OPTIONAL' %>
-</small>
-<details>
-<summary>Question guidance</summary>
-<p>
-<%= q.wording %>
-</p>
-</details>
-<details class="answer-status-control">
-<summary>Change status</summary>
-<label>Answer state</label>
-<select class="answer-state">
-<option value="not_discussed" <%= state==='not_discussed'?'selected':'' %>>Not discussed</option>
-<option value="not_sure" <%= state==='not_sure'?'selected':'' %>>Not sure</option>
-<option value="answered" <%= state==='answered'?'selected':'' %>>Answered</option>
-</select>
-</details>
+<legend><%= q.id %> <%= q.label %></legend>
+<div class="discovery-question-head">
+  <p class="discovery-prompt"><%= q.prompt %></p>
+  <div class="discovery-question-tools">
+    <details class="discovery-tool"><summary>Question guidance</summary><p><%= q.wording %></p></details>
+    <details class="answer-status-control discovery-tool"><summary>Change status</summary>
+      <label>Answer state</label>
+      <select class="answer-state">
+        <option value="not_discussed" <%= state==='not_discussed'?'selected':'' %>>Not discussed</option>
+        <option value="not_sure" <%= state==='not_sure'?'selected':'' %>>Not sure</option>
+        <option value="answered" <%= state==='answered'?'selected':'' %>>Answered</option>
+      </select>
+    </details>
+  </div>
+</div>
+<% if(q.helper){ %><p class="muted discovery-helper"><%= q.helper %></p><% } %>
 <div class="answer-fields">
 <% if(q.type==='select'){ %>
 <label>
