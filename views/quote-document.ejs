@@ -1,30 +1,31 @@
 <%- include('header') %>
-<p><a href="/prospects/<%= p.id %>/quotes?quote=<%= q.id %>#selected-quote">← Back to approved quote</a></p>
-<h1>Generate <%= lane.label %> — Quote #<%= q.id %></h1>
-<p>Owner-only Word preview. This downloads a draft DOCX; it does not modify SharePoint or send a contract. Known prospect and approved quote details are prefilled. Verify each value; missing legal, scope, or signer details still require your input. Blank fields are left as editable placeholders for review.</p>
+<p><a href="/prospects/<%= p.id %>/quotes?quote=<%= q.id %>#selected-quote">Back to approved quote</a></p>
+<h1>Generate <%= lane.label %> - <%= q.quote_number || ('Quote #' + q.id) %></h1>
+<p>Owner-only draft Word download. Known facts are prefilled for review. Blank facts remain visible placeholders and are reported as unfilled. No SharePoint write or contract delivery occurs.</p>
 <form method="post" action="/quotes/<%= q.id %>/document" class="card">
-<input type="hidden" name="_csrf" value="<%= csrf %>">
-<input type="hidden" name="lane" value="<%= lane.key %>">
-<div class="grid">
-<% const fields = lane.key === "COM-PRP" ? [
-["legalName","Client legal name"],["preparedFor","Prepared for"],["backupContact","Backup contact"],["locations","Service locations"],["domain","Primary domain"],["serviceStart","Service start"],["summary","Service summary"],["deviceKinds","Device types"],["assignedDevices","Assigned devices"],["onboardingText","Onboarding scope"],["clientTerms","Client-specific terms"],["sizedFor","Sizing assumptions"]
-] : [
-["legalName","Client legal name"],["preparedFor","Prepared for"],["backupContact","Backup contact"],["location","Primary location"],["domain","Primary domain"],["targetTiming","Target timing"],["summary","Project summary"],["deviceTypes","Device types"],["exceptions","Exceptions"],["signer","Authorized signer name and title"]
-]; %>
-<% for(const [key,label] of fields){ %>
-<div><label for="field-<%= key %>"><%= label %></label>
-<textarea id="field-<%= key %>" name="<%= key %>" rows="2" maxlength="4000" required><%= prefill[key] || "" %></textarea></div>
-<% } %>
-</div>
-<% if(lane.key==="COM-PRP"){ %>
-<label><input type="checkbox" name="hipaa" value="yes"> HIPAA-related service terms apply</label>
-<% }else{ %>
-<h2>Optional project details</h2>
-<% for(const [key,label] of [["deviceNote","Device notes"],["hardwareText","Hardware scope"],["locationText","Additional location scope"],["regulatedText","Regulated-data scope"],["lobExclusion","Line-of-business application exclusions"],["extraExclusions","Additional exclusions"],["extraAssumption","Additional assumptions"]]){ %>
-<div><label for="field-<%= key %>"><%= label %></label><textarea id="field-<%= key %>" name="<%= key %>" rows="2" maxlength="4000"><%= prefill[key] || "" %></textarea></div>
-<% } %>
-<% } %>
-<p><strong>Review required:</strong> This preview may contain bracketed placeholders and is not ready for client signature until reviewed.</p>
-<button type="submit">Download draft Word document</button>
-</form>
-<%- include('footer') %>
+<input type="hidden" name="_csrf" value="<%= csrf %>"><input type="hidden" name="lane" value="<%= lane.key %>">
+<% if(lane.key === 'COM-PRP'){ %>
+<h2>Client and contact facts</h2><div class="grid">
+<% for(const [key,label,type] of [['legalName','Client legal name','text'],['preparedName','Prepared for - Name','text'],['preparedTitle','Prepared for - Title','text'],['preparedEmail','Prepared for - Email','email'],['backupContact','Backup contact','text']]){ %>
+<label><%= label %><input name="<%= key %>" type="<%= type %>" maxlength="4000" value="<%= prefill[key] || '' %>"></label><% } %>
+<label>Number of sites<input type="number" name="siteCount" min="1" step="1" value="<%= prefill.siteCount ?? 1 %>"></label>
+<label>Site cities (optional; no street addresses)<input name="siteCities" value="<%= prefill.siteCities || '' %>" maxlength="4000"></label>
+<label>Email / Microsoft 365 domain<input name="domain" value="<%= prefill.domain || '' %>" placeholder="example.com" maxlength="253"></label></div>
+<fieldset><legend>Service start</legend><label><input type="radio" name="serviceStartMode" value="after_contracts" <%= prefill.serviceStartMode==='after_contracts'?'checked':'' %>>After contracts are signed</label><label><input type="radio" name="serviceStartMode" value="date" <%= prefill.serviceStartMode==='date'?'checked':'' %>>Choose a date</label><input type="date" name="serviceStartDate" value="<%= prefill.serviceStartDate || '' %>"></fieldset>
+<label>Service summary<textarea name="summary" minlength="40" maxlength="4000" rows="4"><%= prefill.summary || '' %></textarea></label><p>Use a complete summary of at least 40 characters. Josh may edit the standard sentence.</p>
+<fieldset><legend>Covered device kinds</legend><% for(const kind of ['computers','phones','tablets']){ %><label><input type="checkbox" name="deviceKinds" value="<%= kind %>" <%= (prefill.deviceKinds||[]).includes(kind)?'checked':'' %>><%= kind[0].toUpperCase()+kind.slice(1) %></label><% } %></fieldset>
+<p>Assigned quantities from the approved worksheet: <strong><%= prefill.assignedSummary || 'No assigned company devices recorded' %></strong>. Separately billed shared devices: <%= prefill.quoteSharedDevices ?? 0 %>. Change device counts in the worksheet and save/approve a revised quote.</p>
+<label><input type="checkbox" name="noCompanyComputers" value="yes" <%= prefill.noCompanyComputers?'checked':'' %>>No company computers - users on shared devices only</label>
+<fieldset><legend>Onboarding scope</legend><label><input type="radio" name="onboardingMode" value="standard" <%= prefill.onboardingMode==='standard'?'checked':'' %>>Standard</label><label><input type="radio" name="onboardingMode" value="after_bii" <%= prefill.onboardingMode==='after_bii'?'checked':'' %>>After a Business IT Integration project</label></fieldset>
+<label>Onboarding fee ($300-$750 guidance)<input type="number" name="onboardingFee" min="0" step="0.01" value="<%= prefill.onboardingFee ?? '' %>" required></label>
+<p>The fee must match approved worksheet pricing. To change the fee, save and approve revised pricing first.</p>
+<label><input type="checkbox" name="waiveOnboarding" value="yes" <%= prefill.waiveOnboarding?'checked':'' %>>Waive onboarding (approved fee must be zero)</label><label>Waiver note<textarea name="waiverNote" rows="2" maxlength="4000"><%= prefill.waiverNote || '' %></textarea></label>
+<fieldset><legend>On-site</legend><label><input type="radio" name="onsiteMode" value="hourly" <%= prefill.onsiteMode==='hourly'?'checked':'' %>>Hourly (as needed)</label><label><input type="radio" name="onsiteMode" value="block" <%= prefill.onsiteMode==='block'?'checked':'' %>>Block</label><label>Block hours per month<input type="number" name="onsiteHours" min="0" step="1" value="<%= prefill.onsiteHours ?? 0 %>"></label><p>Block hours must match the approved worksheet. Hourly visits are $125/hour in 30-minute increments.</p></fieldset>
+<label>Client-specific terms<textarea name="clientTerms" maxlength="4000"><%= prefill.clientTerms || 'None.' %></textarea></label><p>One sentence per term; also goes into the Client Service Schedule.</p>
+<label>Sizing assumptions<select name="sizingMode"><% for(const [value,label] of [['today','your business as it is today'],['opening','your business as it opens'],['other','Other']]){ %><option value="<%= value %>" <%= prefill.sizingMode===value?'selected':'' %>><%= label %></option><% } %></select></label><label>Other sizing assumption<input name="sizingOther" maxlength="4000" value="<%= prefill.sizingOther || '' %>"></label><p>This plan is sized for ___.</p>
+<label>LOB prefix (optional, e.g. dental practice-management or other)<input name="lobPrefix" maxlength="4000" value="<%= prefill.lobPrefix || '' %>"></label><label>Extra exclusions (optional)<textarea name="extraExclusions" maxlength="4000"><%= prefill.extraExclusions || '' %></textarea></label>
+<label><input type="checkbox" name="hipaa" value="yes" <%= prefill.hipaa?'checked':'' %>>HIPAA-related service terms apply</label>
+<% }else{ %><div class="grid">
+<% for(const [key,label] of [['legalName','Client legal name'],['preparedFor','Prepared for'],['backupContact','Backup contact'],['location','Primary location'],['domain','Primary domain'],['targetTiming','Target timing'],['summary','Project summary'],['deviceTypes','Device types'],['exceptions','Exceptions'],['signer','Authorized signer name and title']]){ %><label><%= label %><textarea name="<%= key %>" rows="2" maxlength="4000" required><%= prefill[key] || '' %></textarea></label><% } %></div><h2>Optional project details</h2>
+<% for(const [key,label] of [['deviceNote','Device notes'],['hardwareText','Hardware scope'],['locationText','Additional location scope'],['regulatedText','Regulated-data scope'],['lobExclusion','Line-of-business application exclusions'],['extraExclusions','Additional exclusions'],['extraAssumption','Additional assumptions']]){ %><label><%= label %><textarea name="<%= key %>" rows="2" maxlength="4000"><%= prefill[key] || '' %></textarea></label><% } %><% } %>
+<p><strong>Review required:</strong> This preview may contain bracketed placeholders and is not ready for client use until reviewed.</p><button type="submit">Download draft Word document</button></form><%- include('footer') %>

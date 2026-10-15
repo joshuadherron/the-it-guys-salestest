@@ -1,3 +1,5 @@
+import { mitFields } from "./managed-reference.js";
+import { managedReferenceFacts } from "./managed-facts.js";
 import {priceManagedServices,priceQuote,platforms} from "../pricing.js";
 const money=n=>"$"+Number(n).toLocaleString("en-US",{minimumFractionDigits:Number(n)%1?2:0,maximumFractionDigits:2});
 const count=(o,k)=>Number(o[k]||0);
@@ -5,47 +7,27 @@ const required=(obj,key)=>{const v=obj?.[key];if(v===undefined||v===null||v===""
 const formatDate=d=>new Date(d).toLocaleDateString("en-US",{month:"long",day:"numeric",year:"numeric",timeZone:"UTC"});
 export function buildManagedFill({quote,prospect,owner={}}){
  const input=quote.inputs,calc=priceManagedServices(input);
- if(input.pricingMode!=="managed_v20"||input.serviceTier!=="managed")throw new Error("Managed IT document requires a Managed IT quote.");
+ if(input.pricingMode!=="managed_v20"||input.serviceTier!=="managed"||!input.users)throw new Error("Managed IT document requires a Managed IT quote with users.");
  if(calc.pending.length)throw new Error("Pricing review required: "+calc.pending.join("; "));
- const lines=quote.line_items;
- if(!Array.isArray(lines))throw new Error("Approved quote line items are required.");
- const monthly=lines.filter(x=>x.billing!=="one_time").reduce((sum,l)=>sum+Number(l.amount),0);
- if(Math.abs(monthly-calc.total)>.005)throw new Error("Approved Managed IT monthly pricing does not match the current pricing engine.");
- const users=count(input,"users"),extra=count(input,"extraDevices"),servers=count(input,"servers"),backup=count(input,"backupUsers"),hours=count(input,"onsiteHours"),computers=count(input,"computers");
+ if(!Array.isArray(quote.line_items))throw new Error("Approved quote line items are required.");
+ const monthly=quote.line_items.filter(x=>x.billing!=="one_time").reduce((sum,l)=>sum+Number(l.amount),0);
+ if(!Number.isFinite(monthly)||Math.abs(monthly-calc.total)>.005)throw new Error("Approved Managed IT monthly pricing does not match the current pricing engine.");
+ if(input.includeBii && !quote.line_items.some(x=>x.billing==="one_time" && String(x.label).includes("BII Integration")))throw new Error("Combined quote is missing its separately approved BII foundation line.");
  if(count(input,"workstationBackups")||count(input,"serverBackups"))throw new Error("System backups require explicit per-system owner pricing before document generation.");
- const fee=Math.max(3,users)*125,sharedFee=extra*15,serverFee=servers*75,backupFee=backup*5,onsiteFee=hours*115;
- const rates={"RATE.User":"$125/month","RATE.OnSiteBlock":"$115/hour","RATE.Shared":"$15/device/month","RATE.Server":"$75/server/month","RATE.M365Backup":"$5/user/month","RATE.Hourly":"$125/hour","RATE.AfterHours":"$187.50/hour"};
- if(input.includeBii && !lines.some(x=>x.billing==="one_time" && String(x.label).includes("BII Integration"))) throw new Error("Combined quote is missing its separately approved BII foundation line.");
- const fields={
-  "MIT.ClientShortName":prospect.business_name,"MIT.ClientLegalName":required(owner,"legalName"),"MIT.QuoteId":String(quote.id),
-  "MIT.PreparedFor":required(owner,"preparedFor"),"MIT.Date":formatDate(quote.approved_at||new Date().toISOString()),"MIT.BackupContact":required(owner,"backupContact"),
-  "MIT.Locations":required(owner,"locations"),"MIT.Domain":required(owner,"domain"),"MIT.ServiceStart":required(owner,"serviceStart"),
-  "MIT.MonthlyTotal":money(calc.total),"MIT.Breakdown":lines.filter(x=>x.billing!=="one_time").map(x=>x.label+" "+money(x.amount)).join("; "),
-  "MIT.Onboarding":money(calc.onboarding),"MIT.SummaryText":required(owner,"summary"),"MIT.Users":String(users),
-  "MIT.DevicesSummary":computers+" computers"+(extra?", "+extra+" shared devices":""),
-  "MIT.DeviceKinds":required(owner,"deviceKinds"),"MIT.M365BackupUsers":String(backup),"MIT.Servers":String(servers),"MIT.OnSiteHours":String(hours),
-  "MIT.BackupExclusion":backup?"Backup of any system not listed in the pricing table":"Backup, unless added later",
-  "MIT.OnSiteExclusion":hours?"On-site time beyond your monthly block (billed hourly)":"On-site visits (billed hourly)",
-  "MIT.IntegrationNote":input.includeBii?" as set up in your Business IT Integration project":"",
-  "MIT.UsersCalc":users+" × $125"+(users<3?" (3-user minimum applies)":""),
-  "MIT.UsersFee":money(fee),"MIT.AssignedDevices":required(owner,"assignedDevices"),
-  "MIT.SharedCalc":extra?extra+" shared devices × $15":"None","MIT.SharedFee":money(sharedFee),
-  "MIT.ServersCalc":servers?servers+" × $75":"None","MIT.ServersFee":money(serverFee),
-  "MIT.M365BackupCalc":backup?backup+" users × $5":"Not selected","MIT.M365BackupFee":backup?money(backupFee):"Not included",
-  "MIT.OnSiteCalc":hours+" hours × $115","MIT.OnSiteFee":money(onsiteFee),
-  "MIT.DevicesCoveredNote":computers?"; your "+computers+" computers are covered within that allowance":"",
-  "MIT.SharedNote":extra?", so your "+extra+" shared devices are "+money(sharedFee)+"/month":"",
-  "MIT.OnboardingText":required(owner,"onboardingText"),
-  "MIT.OnSiteText":hours?"Your plan includes "+hours+" prepaid on-site hours each month at $115/hour. Unused hours do not roll over; additional time is $125/hour.":"On-site visits are billed at $125/hour.",
-  "MIT.M365Pool":"("+backup+" TB at "+backup+" users)",
-  "MIT.ComputerBackupNote":" Computers are not backed up separately; keep work files in OneDrive.",
-  "MIT.BAANote":owner.hipaa&&input.includeBii?" Your existing Business Associate Agreement covers the integration project only.":"",
-  "MIT.ClientTerms":required(owner,"clientTerms"),"MIT.SizedFor":required(owner,"sizedFor"),
-  "MIT.LOBPrefix":owner.lobPrefix||"","MIT.ExtraExclusions":owner.extraExclusions?"; "+owner.extraExclusions:"",
-  "MIT.BAAAccept":owner.hipaa?" and Business Associate Agreement":""
- };
- return {fields,flags:{"IF.M365Backup":!!backup,"IF.Servers":!!servers,"IF.SystemBackup":false,"IF.OnSiteBlock":!!hours,"IF.HIPAA":!!owner.hipaa},
- repeats:{"REPEAT.SystemBackup":[]},rates};
+ const {facts,owner:clean,assigned}=managedReferenceFacts(quote,prospect,owner);
+ const result=mitFields(facts);
+ if(Math.abs(result.total-calc.total)>.005)throw new Error("Reference formatting disagrees with approved Managed IT pricing.");
+ // Assigned and shared devices must never describe the same quantities.
+ result.fields["MIT.DevicesSummary"]=assigned || (clean.noCompanyComputers ? "Users on shared devices only" : undefined);
+ result.fields["MIT.AssignedDevices"]=assigned || (clean.noCompanyComputers ? "Users on shared devices only" : undefined);
+ result.fields["MIT.DevicesCoveredNote"]=assigned ? "; your " + assigned + (Number(input.computers||0)+Number(input.assignedPhones||0)+Number(input.assignedTablets||0)===1?" is":" are") + " covered within that allowance" : "";
+ if(clean.waiveOnboarding)result.fields["MIT.Onboarding"]="Waived";
+ // Required facts stay unresolved when blank. The reference defaults must not hide missing facts.
+ for(const [tag,value] of [["MIT.ClientShortName",facts.clientShortName],["MIT.ClientLegalName",facts.clientLegalName],["MIT.PreparedFor",facts.preparedFor],["MIT.BackupContact",facts.backupContact],["MIT.Locations",facts.locations],["MIT.Domain",facts.domain],["MIT.ServiceStart",facts.serviceStart],["MIT.SummaryText",facts.summaryText],["MIT.DeviceKinds",facts.deviceKinds]])
+   if(value===undefined)delete result.fields[tag];
+ if(!clean.onboardingMode)delete result.fields["MIT.OnboardingText"];
+ if(clean.sizingMode==="other"&&!clean.sizingOther)delete result.fields["MIT.SizedFor"];
+ return result;
 }
 export function buildBiiFill({quote,prospect,owner={},prices}){
  const input=quote.inputs;

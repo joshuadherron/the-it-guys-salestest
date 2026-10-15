@@ -1,3 +1,4 @@
+import { managedOwnerFacts, formattedQuoteNumber } from "./managed-facts.js";
 import {readFile} from "node:fs/promises";
 import {fileURLToPath} from "node:url";
 import {dirname,join} from "node:path";
@@ -21,7 +22,8 @@ function cleanOwner(body){
  owner.hipaa=body.hipaa==="yes";
  return owner;
 }
-export function quoteDocumentRoutes(app){
+export function quoteDocumentRoutes(app,dependencies={query,audit,json,transaction,prospect,priceConfig}){
+ const {query,audit,json,transaction,prospect,priceConfig}=dependencies;
  app.get("/quotes/:id/document",ownerOnly,async(req,res)=>{
   if(quoteFillMode()==="off")fail("Document fill is disabled.",403);
   const [q]=await query("SELECT * FROM quotes WHERE id=?",[integer(req.params.id)]);
@@ -29,9 +31,10 @@ export function quoteDocumentRoutes(app){
   if(q.status!=="Approved")fail("Only approved quotes can generate contractual documents.");
   const p=await prospect(q.prospect_id);
   if(p.hold)fail("Prospect is on hold.");
+  if(!q.quote_number){q.quote_number=formattedQuoteNumber(q);await query("UPDATE quotes SET quote_number=? WHERE id=? AND quote_number IS NULL",[q.quote_number,q.id]);}
   const input=json(q.inputs);
   const lane=quoteLane(input,req.query.lane);
-  res.render("quote-document",{q,p,lane,prefill:documentPrefill(p,input,lane.key),csrf:res.locals.csrf});
+  res.render("quote-document",{q,p,lane,prefill:{...documentPrefill(p,input,lane.key),...(q.document_facts?json(q.document_facts):{})},csrf:res.locals.csrf});
  });
  app.post("/quotes/:id/document",ownerOnly,async(req,res)=>{
   const mode=quoteFillMode();
@@ -43,9 +46,10 @@ export function quoteDocumentRoutes(app){
   if(q.status!=="Approved")fail("Only approved quotes can generate contractual documents.");
   const p=await prospect(q.prospect_id);
   if(p.hold)fail("Prospect is on hold.");
+  if(!q.quote_number){q.quote_number=formattedQuoteNumber(q);await query("UPDATE quotes SET quote_number=? WHERE id=? AND quote_number IS NULL",[q.quote_number,q.id]);}
   const input=json(q.inputs);
   const lane=quoteLane(input,req.body.lane);
-  const owner=cleanOwner(req.body);
+  const owner=lane.key==="COM-PRP"?managedOwnerFacts(req.body):cleanOwner(req.body);
   const quote={...q,inputs:input,line_items:json(q.line_items)};
   const prices=await priceConfig();
   const data=lane.key==="COM-PRP"?
@@ -63,7 +67,14 @@ export function quoteDocumentRoutes(app){
   const {listTags,fillDocx}=await import("./fill-docx.js");
   assertTagset(lane.key,await listTags(template));
   const {buffer,report}=await fillDocx(template,data);
-  await transaction(async c=>{await audit(c,req.session.user,"dryrun quote document "+lane.key,"quote",q.id)});
+  await transaction(async c=>{
+    const currentProspect=await prospect(q.prospect_id,c);
+    const [current]=await query("SELECT * FROM quotes WHERE id=? FOR UPDATE",[q.id],c);
+    if(currentProspect.hold||current?.status!=="Approved"||JSON.stringify(json(current.inputs))!==JSON.stringify(input)||JSON.stringify(json(current.line_items))!==JSON.stringify(quote.line_items))
+      fail("Quote approval or quantities changed. Reload the quote before generating.",409);
+    await query("UPDATE quotes SET document_facts=? WHERE id=?",[JSON.stringify(owner),q.id],c);
+    await audit(c,req.session.user,"dryrun quote document "+lane.key,"quote",q.id);
+  });
   res.set("Cache-Control","no-store");
   res.set("Content-Type","application/vnd.openxmlformats-officedocument.wordprocessingml.document");
   res.set("Content-Disposition",'attachment; filename="TIG-'+lane.key+'-Quote-'+q.id+'-DRAFT.docx"');

@@ -1,3 +1,4 @@
+import { DEFAULT_MANAGED_SUMMARY, deviceList } from "./managed-facts.js";
 // Prefill contractual document inputs from saved, already-known facts only.
 // Never infer legal entity names, signer authority, contractual exceptions, or scope.
 const text = value => typeof value === "string" ? value.trim() : "";
@@ -19,8 +20,17 @@ export function documentPrefill(prospect, input, laneKey) {
     signer:""
   };
   if (laneKey === "COM-PRP") {
-    const kinds = [Number(q.computers)>0?`${q.computers} business computers`:"",Number(q.extraDevices)>0?`${q.extraDevices} additional/shared devices`:"",Number(q.servers)>0?`${q.servers} servers`:""].filter(Boolean).join("; ");
-    return {...common,locations:address,deviceKinds:kinds,assignedDevices:kinds,serviceStart:"",onboardingText:"",clientTerms:"",sizedFor:""};
+    return {...common,
+      preparedName: text(p.contact_name), preparedTitle: text(p.contact_title), preparedEmail: text(p.email),
+      siteCount: 1, siteCities: text(p.city), summary: DEFAULT_MANAGED_SUMMARY,
+      deviceKinds: ["computers", "phones", "tablets"],
+      assignedSummary: deviceList(Number(q.computers || 0), Number(q.assignedPhones || 0), Number(q.assignedTablets || 0)),
+      quoteComputers: Number(q.computers || 0), quoteAssignedPhones: Number(q.assignedPhones || 0), quoteAssignedTablets: Number(q.assignedTablets || 0), quoteSharedDevices: Number(q.extraDevices || 0),
+      serviceStartMode: "after_contracts", serviceStartDate: "", onboardingMode: "standard",
+      clientTerms: "None.", sizingMode: "today", sizingOther: "", onboardingFee: Number(q.onboarding || 0),
+      onsiteMode: Number(q.onsiteHours)>0 ? "block" : "hourly", onsiteHours: Number(q.onsiteHours || 0),
+      waiveOnboarding: false, waiverNote: "", noCompanyComputers: false, lobPrefix: "", extraExclusions: "",
+    };
   }
   const types = [["windows","Windows"],["mac","Mac"],["ios","iOS"],["android","Android"],["unallocated","Platform not yet assigned"]]
     .filter(([key])=>Number(q[key])>0).map(([key,label])=>`${q[key]} ${label}`).join("; ");

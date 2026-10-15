@@ -16,6 +16,7 @@ test("Never infer a business domain from public mail or an authorized signer",()
  const fields=documentPrefill({business_name:"ABC",email:"owner@gmail.com"},{users:5,computers:5},"COM-PRP");
  assert.equal(fields.domain,"");
  assert.equal(fields.legalName,"");
- assert.equal(fields.assignedDevices,"5 business computers");
- assert.equal(fields.serviceStart,"");
+ assert.equal(fields.assignedSummary,"5 computers");
+ assert.deepEqual(fields.deviceKinds,["computers","phones","tablets"]);
+ assert.equal(fields.serviceStartMode,"after_contracts");
 });

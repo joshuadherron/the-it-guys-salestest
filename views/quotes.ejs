@@ -43,7 +43,7 @@
 <p class="muted">This is the saved snapshot for quote #<%= selected.id %>, not the live estimate from the editors below.</p>
 <div class="grid">
 <% for(const [key,label] of (selected.docInput.pricingMode==="managed_v20"
- ? [["serviceTier","Service tier"],["users","Managed users"],["computers","Business computers"],["monitoringDevices","Monitoring-only devices"],["servers","Managed servers"],["extraDevices","Additional/shared devices"],["backupUsers","M365 backup users"],["onsiteHours","Monthly on-site hours"],["onboarding","One-time onboarding"],["includeBii","BII included"]]
+ ? [["serviceTier","Service tier"],["users","Managed users"],["computers","Business computers"],["assignedPhones","Assigned company phones"],["assignedTablets","Assigned company tablets"],["monitoringDevices","Monitoring-only devices"],["servers","Managed servers"],["extraDevices","Additional/shared devices"],["backupUsers","M365 backup users"],["onsiteHours","Monthly on-site hours"],["onboarding","One-time onboarding"],["includeBii","BII included"]]
  : [["users","Integration users"],["windows","Windows devices"],["mac","Mac devices"],["ios","Company iOS devices"],["android","Company Android devices"],["unallocated","Unassigned-platform devices"],["mailboxes","Mailbox migrations"],["dell","Dell deployments"],["phones","Personal/BYOD phones"],["locations","Locations"],["includeBii","BII included"]])){ %>
 <div><strong><%= label %></strong><p><%= typeof selected.docInput[key]==="boolean"?(selected.docInput[key]?"Yes":"No"):(selected.docInput[key]??"Not specified") %></p></div>
 <% } %>
@@ -113,7 +113,9 @@
 <div><label>Shared/additional devices ($15/month, Managed IT)</label><input type="number" name="extraDevices" min="0" required value="<%= managedInput.extraDevices ?? 0 %>"></div>
 <div><label>Microsoft 365 backup users ($5/month)</label><input type="number" name="backupUsers" min="0" required value="<%= managedInput.backupUsers ?? 0 %>"></div>
 <div><label>Monthly on-site block hours ($115/hour)</label><input type="number" name="onsiteHours" min="0" required value="<%= managedInput.onsiteHours ?? 0 %>"></div>
-<div><label>Business computers (owner review above 2/user)</label><input type="number" name="computers" min="0" required value="<%= managedInput.computers ?? 0 %>"></div>
+<div><label>Business computers (owner review above 3 assigned devices/user)</label><input type="number" name="computers" min="0" required value="<%= managedInput.computers ?? 0 %>"></div>
+<div><label>Assigned company phones (included allowance)</label><input type="number" name="assignedPhones" min="0" value="<%= managedInput.assignedPhones ?? 0 %>"></div>
+<div><label>Assigned company tablets (included allowance)</label><input type="number" name="assignedTablets" min="0" value="<%= managedInput.assignedTablets ?? 0 %>"></div>
 <div><label>Workstations requiring custom backup quote</label><input type="number" name="workstationBackups" min="0" required value="<%= managedInput.workstationBackups ?? 0 %>"></div>
 <div><label>Servers requiring custom backup quote</label><input type="number" name="serverBackups" min="0" required value="<%= managedInput.serverBackups ?? 0 %>"></div>
 <p>For BII implementation, use the BII Services section below. Its charges are added to the build total once.</p>

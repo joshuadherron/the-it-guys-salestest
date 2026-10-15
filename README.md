@@ -173,3 +173,8 @@ Import Stage Gate v1.1 separately before using authoritative outcome flags. The 
 ## Existing customer opportunities
 
 Apply migration 008 before running this version. Josh can use **Customer relationship / Link existing client** on an opportunity to explicitly attach an existing SharePoint Client. Existing customers use Additional Service Discovery; the supported BII-to-Managed IT transition reuses the client through Start Stage. New-customer creation now checks live Clients for matching normalized company names and requires an explicit different-company confirmation for candidates. See [existing-client opportunities](docs/06-existing-client-opportunities.md) for migration, workflow limits and dryrun validation.
+
+
+## Managed IT quote review update
+
+Apply migration 009 before deploying this version. It stores formatted quote numbers and the owner document facts. The Managed IT Word form now captures structured contact, site, device, onboarding and on-site facts and uses the v1.1 approved reference wording. See [quote review corrections](docs/QUOTE-FILL-REVIEW-1.md) for validation and compatibility details.

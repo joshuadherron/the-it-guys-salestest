@@ -97,7 +97,7 @@ export function validateInputs(body) {
 
 export function validateManagedInputs(body) {
   const input = {pricingMode:"managed_v20",serviceTier:body.serviceTier==="none"?"none":body.serviceTier==="monitoring"?"monitoring":"managed",confirmed:body.confirmed==="yes"};
-  for (const key of ["users","monitoringDevices","servers","extraDevices","backupUsers","onsiteHours","computers","workstationBackups","serverBackups"]) {
+  for (const key of ["users","monitoringDevices","servers","extraDevices","backupUsers","onsiteHours","computers","assignedPhones","assignedTablets","workstationBackups","serverBackups"]) {
     input[key] = integer(body[key] || "0");
   }
   const onboarding = String(body.onboarding || "0");
@@ -176,6 +176,7 @@ export function quotesRoutes(app) {
       const calculation = combinedManagedQuote(input,await priceConfig(c));
       await query("UPDATE quotes SET status='Draft',approved_by=NULL,approved_at=NULL WHERE prospect_id=? AND status='Approved'",[p.id],c);
       const result = await query("INSERT INTO quotes (prospect_id,inputs,line_items,total) VALUES (?,?,?,?)",[p.id,JSON.stringify(input),JSON.stringify(calculation.lines),calculation.total],c);
+      await query("UPDATE quotes SET quote_number=CONCAT('Q-',YEAR(created_at),'-',LPAD(id,GREATEST(3,CHAR_LENGTH(id)),'0')) WHERE id=?",[result.insertId],c);
       await audit(c,req.session.user,"create managed services v20 draft","quote",result.insertId);
     });
     res.redirect(`/prospects/${req.params.id}/quotes`);
@@ -227,6 +228,7 @@ export function quotesRoutes(app) {
         c,
       );
 
+      await query("UPDATE quotes SET quote_number=CONCAT('Q-',YEAR(created_at),'-',LPAD(id,GREATEST(3,CHAR_LENGTH(id)),'0')) WHERE id=?",[r.insertId],c);
       await audit(c, req.session.user, "create draft", "quote", r.insertId);
     });
 

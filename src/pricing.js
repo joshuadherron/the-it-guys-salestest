@@ -140,7 +140,7 @@ export function priceManagedServices(input) {
     add("Managed IT users (minimum $375)", Math.max(3,users),125);
     if (extra) add("Shared/additional devices",extra,15);
     if (onsiteHours) add("Monthly on-site support block",onsiteHours,115);
-    if (users && qty("computers") > 2*users) pending.push("Owner review required: more than 2 computers per user");
+    if (users && qty("computers") + qty("assignedPhones") + qty("assignedTablets") > 3*users) pending.push("Owner review required: more than 3 assigned devices per user");
   } else if (tier === "monitoring" && devices > 0) {
     add("Monitoring-only managed devices",devices,45);
     if (extra || onsiteHours) pending.push("Additional devices / on-site blocks require Managed IT or separate owner approval");

@@ -4,7 +4,7 @@ import {quoteLane,quoteFillMode} from "../src/docfill/policy.js";
 import {buildManagedFill,buildBiiFill} from "../src/docfill/quote-fields.js";
 
 const managedInput={pricingMode:"managed_v20",serviceTier:"managed",users:3,computers:3,servers:1,extraDevices:1,backupUsers:2,onsiteHours:0,onboarding:350,workstationBackups:0,serverBackups:0,includeBii:false};
-const managedOwner={legalName:"Example LLC",preparedFor:"Owner",backupContact:"Owner",locations:"1 office",domain:"example.test",serviceStart:"On signing",summary:"Managed IT coverage",deviceKinds:"Windows",assignedDevices:"3 Windows computers",onboardingText:"Initial setup",clientTerms:"Standard",sizedFor:"3 users"};
+const managedOwner={legalName:"Example LLC",preparedName:"Owner",preparedTitle:"Director",preparedEmail:"owner@example.test",backupContact:"Administrator",siteCount:1,domain:"example.test",serviceStartMode:"after_contracts",summary:"The IT Guys will support the selected staff and protect the listed business devices.",deviceKinds:["computers","phones","tablets"],onboardingMode:"standard",onboardingFee:350,onsiteMode:"hourly",onsiteHours:0,clientTerms:"None.",sizingMode:"today"};
 test("Managed quote fields reconcile and use saved approved totals",()=>{
  const q={id:12,status:"Approved",inputs:managedInput,line_items:[
  {label:"Managed IT users (minimum $375)",amount:375},

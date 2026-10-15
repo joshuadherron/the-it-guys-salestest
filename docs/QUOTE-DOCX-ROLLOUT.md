@@ -33,3 +33,8 @@ The preview route never invokes Graph mutation. The server must not expose an ar
 - The BII master contains a valid XML byte-order mark. The filler removes it from the parser input only, without changing either approved master, its tags, or fixed contract text. Integration tests check all generated XML parts, ZIP integrity, unchanged non-content package parts, filled totals, rate mismatch rejection and absence of remaining content controls.
 - Existing regression fixtures were brought up to date with the current workflow labels, inherited discovery fields and separate BII approval policy. Discovery's resume storage was moved from an inline script blocked by Helmet CSP into the existing same-origin browser module. No pricing rules or contractual clauses were changed.
 - No production configuration was modified, and no live SharePoint write was enabled or executed. Server deployment and a real approved-quote browser download have not been performed here. The separate live integration gates below remain required before any future working-copy overwrite.
+
+
+## Managed IT review follow-up
+
+The Managed IT master/reference are now sourced from package v1.1 with the same 62 tags and the revised How to accept wording. Apply migration 009 for stored quote numbers and document facts before deploying the structured generation form. See [review corrections](QUOTE-FILL-REVIEW-1.md). The existing standalone sample generator and BII regression checks remain available.
