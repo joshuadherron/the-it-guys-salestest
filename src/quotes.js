@@ -136,23 +136,29 @@ export function quotesRoutes(app) {
       q.billingLabel = qi.pricingMode === "managed_v20" ? "saved pricing total" : "one-time";
     }
 
+    const editing = req.query.edit ? quotes.find(q=>Number(q.id)===integer(req.query.edit)) : null;
+    if(req.query.edit && !editing) fail("Quote not found for this prospect.",404);
+    if(editing && req.session.user.role!=="owner") fail("Owner access required.",403);
     const selected = req.query.quote
       ? quotes.find((q) => Number(q.id) === integer(req.query.quote))
       : null;
     if (req.query.quote && !selected)
       fail("Quote not found for this prospect.", 404);
     const savedInput = selected ? json(selected.inputs) : null;
+    const editingInput = editing ? json(editing.inputs) : null;
+    const worksheetInput = editingInput || savedInput;
     const discoveryInput = prefill(d.answers);
     // A managed quote does not contain BII platform fields; never render them as blank.
-    const input = savedInput?.pricingMode === "managed_v20" ? discoveryInput : (savedInput || discoveryInput);
-    const managedInput = savedInput?.pricingMode === "managed_v20"
-      ? savedInput
+    const input = worksheetInput?.pricingMode === "managed_v20" ? discoveryInput : (worksheetInput || discoveryInput);
+    const managedInput = worksheetInput?.pricingMode === "managed_v20"
+      ? worksheetInput
       : {users:discoveryInput.users,computers:discoveryInput.unallocated,serviceTier:"managed",confirmed:false};
 
     res.render("quotes", {
       p,
       quotes,
       selected,
+      editing,
       input,
       managedInput,
       calculation: selected ? (savedInput?.pricingMode==="managed_v20" ? combinedManagedQuote(savedInput, await priceConfig()) : priceQuote(savedInput, await priceConfig())) : null,
