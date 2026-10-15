@@ -5,7 +5,7 @@ const {DOMParser,XMLSerializer}=require("@xmldom/xmldom");
 const W="http://schemas.openxmlformats.org/wordprocessingml/2006/main";
 const PARTS=/^word\/(document|header\d*|footer\d*)\.xml$/;
 export class FillError extends Error {}
-const kids=(el,local)=>Array.from(el.childNodes).filter(n=>n.nodeType===1&&n.namespaceURI===W&&(!local||n.localName===local));
+const kids=(el,local)=>Array.from(el?.childNodes||[]).filter(n=>n.nodeType===1&&n.namespaceURI===W&&(!local||n.localName===local));
 const child=(el,local)=>kids(el,local)[0]||null;
 const all=(el,local)=>Array.from(el.getElementsByTagNameNS(W,local));
 const tagOf=s=>child(child(s,"sdtPr"),"tag")?.getAttributeNS(W,"val")||"";
