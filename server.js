@@ -116,7 +116,7 @@ quotesRoutes(app);
 quoteDocumentRoutes(app);
 handoffRoutes(app);
 adminRoutes(app);
-app.use((err, req, res, _next) => {
+app.use(async (err, req, res, _next) => {
   const status = err.status || 500;
 
   if (status >= 500) {
