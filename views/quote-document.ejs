@@ -1,0 +1,30 @@
+<%- include('header') %>
+<p><a href="/prospects/<%= p.id %>/quotes?quote=<%= q.id %>#selected-quote">← Back to approved quote</a></p>
+<h1>Generate <%= lane.label %> — Quote #<%= q.id %></h1>
+<p>Owner-only Word preview. This downloads a draft DOCX; it does not modify SharePoint or send a contract. Enter client-specific scope carefully. Blank fields are left as editable placeholders for review.</p>
+<form method="post" action="/quotes/<%= q.id %>/document" class="card">
+<input type="hidden" name="_csrf" value="<%= csrf %>">
+<input type="hidden" name="lane" value="<%= lane.key %>">
+<div class="grid">
+<% const fields = lane.key === "COM-PRP" ? [
+["legalName","Client legal name"],["preparedFor","Prepared for"],["backupContact","Backup contact"],["locations","Service locations"],["domain","Primary domain"],["serviceStart","Service start"],["summary","Service summary"],["deviceKinds","Device types"],["assignedDevices","Assigned devices"],["onboardingText","Onboarding scope"],["clientTerms","Client-specific terms"],["sizedFor","Sizing assumptions"]
+] : [
+["legalName","Client legal name"],["preparedFor","Prepared for"],["backupContact","Backup contact"],["location","Primary location"],["domain","Primary domain"],["targetTiming","Target timing"],["summary","Project summary"],["deviceTypes","Device types"],["exceptions","Exceptions"],["signer","Authorized signer name and title"]
+]; %>
+<% for(const [key,label] of fields){ %>
+<div><label for="field-<%= key %>"><%= label %></label>
+<textarea id="field-<%= key %>" name="<%= key %>" rows="2" maxlength="4000" required></textarea></div>
+<% } %>
+</div>
+<% if(lane.key==="COM-PRP"){ %>
+<label><input type="checkbox" name="hipaa" value="yes"> HIPAA-related service terms apply</label>
+<% }else{ %>
+<h2>Optional project details</h2>
+<% for(const [key,label] of [["deviceNote","Device notes"],["hardwareText","Hardware scope"],["locationText","Additional location scope"],["regulatedText","Regulated-data scope"],["lobExclusion","Line-of-business application exclusions"],["extraExclusions","Additional exclusions"],["extraAssumption","Additional assumptions"]]){ %>
+<div><label for="field-<%= key %>"><%= label %></label><textarea id="field-<%= key %>" name="<%= key %>" rows="2" maxlength="4000"></textarea></div>
+<% } %>
+<% } %>
+<p><strong>Review required:</strong> This preview may contain bracketed placeholders and is not ready for client signature until reviewed.</p>
+<button type="submit">Download draft Word document</button>
+</form>
+<%- include('footer') %>
