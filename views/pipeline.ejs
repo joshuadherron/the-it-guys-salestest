@@ -28,8 +28,12 @@
 <button>Search</button>
 </div>
 </form>
-<% const due=rows.filter(p=>p.follow_up && String(p.follow_up).slice(0,10)<=new Date().toISOString().slice(0,10)); const upcoming=rows.filter(p=>p.follow_up && String(p.follow_up).slice(0,10)>new Date().toISOString().slice(0,10)); const unscheduled=rows.filter(p=>!p.follow_up); %><% if(today){ %><div class="dashboard-stats"><div><strong><%= rows.length %></strong><span>Businesses</span></div><div><strong><%= due.length %></strong><span>Due for follow-up</span></div><div><strong><%= unscheduled.length %></strong><span>No follow-up set</span></div></div><% } %><% const groups=today?[{name:'Needs follow-up',rows:due},{name:'Upcoming conversations',rows:upcoming},{name:'No follow-up scheduled',rows:unscheduled}]:[{name:'Businesses',rows}];for(const group of groups){ %>
-<section class="card">
+<% const due=rows.filter(p=>p.follow_up && String(p.follow_up).slice(0,10)<=new Date().toISOString().slice(0,10)); const upcoming=rows.filter(p=>p.follow_up && String(p.follow_up).slice(0,10)>new Date().toISOString().slice(0,10)); const unscheduled=rows.filter(p=>!p.follow_up); %><% if(today){ %><div class="dashboard-stats" aria-label="Sales dashboard shortcuts">
+<a class="dashboard-stat" href="/pipeline"><strong><%= rows.length %></strong><span>Businesses</span><span class="stat-action">View all businesses →</span></a>
+<a class="dashboard-stat" href="#needs-follow-up"><strong><%= due.length %></strong><span>Due for follow-up</span><span class="stat-action">View follow-ups →</span></a>
+<a class="dashboard-stat" href="#no-follow-up"><strong><%= unscheduled.length %></strong><span>No follow-up set</span><span class="stat-action">Schedule follow-ups →</span></a>
+</div><% } %><% const groups=today?[{name:'Needs follow-up',rows:due},{name:'Upcoming conversations',rows:upcoming},{name:'No follow-up scheduled',rows:unscheduled}]:[{name:'Businesses',rows}];for(const group of groups){ %>
+<section class="card" id="<%= group.name==='Needs follow-up'?'needs-follow-up':group.name==='No follow-up scheduled'?'no-follow-up':'upcoming-conversations' %>">
 <h2>
 <%= group.name %> <span class="pill">
 <%= group.rows.length %>
