@@ -3,3 +3,27 @@
 
 /* Horizontal CRM-style quote history */
 .quote-history-scroll{width:100%;overflow-x:auto}.quote-history-table{width:100%;border-collapse:collapse;min-width:620px}.quote-history-table th,.quote-history-table td{padding:12px 14px;text-align:left;border-bottom:1px solid #dce5ea;vertical-align:middle}.quote-history-table th{font-size:.88rem;color:#526b7c;white-space:nowrap}.quote-history-table tbody tr:last-child td{border-bottom:0}.quote-history-table tbody tr:hover{background:#f4f8fa}.quote-history-amount{font-variant-numeric:tabular-nums;white-space:nowrap}.quote-history-actions{white-space:nowrap}.quote-history-actions a+a{margin-left:16px}
+
+/* Compact quote workspace: scoped to quoting, without shrinking the rest of the CRM. */
+.quote-page{font-size:.9rem;line-height:1.35}
+.quote-page h1{font-size:1.55rem;margin:8px 0}
+.quote-page h2{font-size:1.1rem;margin:8px 0}
+.quote-page h3{font-size:1rem;margin:12px 0 6px}
+.quote-page p{margin:7px 0}
+.quote-page .card,.quote-page fieldset{padding:14px 16px;margin:10px 0;border-radius:9px}
+.quote-page .grid{grid-template-columns:repeat(auto-fit,minmax(175px,1fr));gap:9px 14px}
+.quote-page label{margin:6px 0 3px}
+.quote-page input,.quote-page select,.quote-page textarea,.quote-page button{min-height:35px;padding:6px 9px;font-size:inherit}
+.quote-page input[type=checkbox]{min-height:16px;width:16px}
+.quote-page button{padding:8px 12px}
+.quote-page .quote-builder-layout{grid-template-columns:minmax(0,1fr) 270px;gap:14px}
+.quote-page .quote-builder-sidebar .grid>div{padding:5px 0}
+.quote-page .quote-builder-sidebar .grid h2{font-size:1.05rem;margin:3px 0}
+.quote-page .quote-history-table th,.quote-page .quote-history-table td,.quote-page .saved-quote-review th,.quote-page .saved-quote-review td{padding:7px 9px}
+.quote-page .saved-quote-review{margin:10px 0;padding:10px 12px;border:1px solid #dce5ea;border-radius:8px}
+.quote-page .saved-quote-review .grid{grid-template-columns:repeat(auto-fit,minmax(135px,1fr));gap:4px 12px}
+.quote-page .saved-quote-review .grid p{margin:2px 0 5px}
+.quote-page .saved-quote-review .grid strong{font-size:.83rem}
+.quote-page .saved-quote-review .table-wrap{margin-top:8px}
+@media(max-width:900px){.quote-page .quote-builder-layout{display:flex;flex-direction:column}}
+@media(max-width:600px){.quote-page .card,.quote-page fieldset{padding:12px}.quote-page .grid{grid-template-columns:repeat(auto-fit,minmax(140px,1fr))}.quote-page .saved-quote-review .grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
