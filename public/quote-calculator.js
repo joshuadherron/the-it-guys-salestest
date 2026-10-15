@@ -83,4 +83,5 @@ document.querySelectorAll("[data-quote-calculator]").forEach((form) => {
   if (form.dataset.previewTarget === "quote-calculation") form.querySelector('[name="onboarding"]')?.addEventListener("input",updateBuildTotal);
   if (!form.disabled && !form.querySelector("fieldset:disabled")) schedule();
 });
-\nupdateBuildTotal();\n
+
+updateBuildTotal();
