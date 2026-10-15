@@ -1,7 +1,7 @@
 <%- include('header') %>
 <p><a href="/prospects/<%= p.id %>/quotes?quote=<%= q.id %>#selected-quote">← Back to approved quote</a></p>
 <h1>Generate <%= lane.label %> — Quote #<%= q.id %></h1>
-<p>Owner-only Word preview. This downloads a draft DOCX; it does not modify SharePoint or send a contract. Enter client-specific scope carefully. Blank fields are left as editable placeholders for review.</p>
+<p>Owner-only Word preview. This downloads a draft DOCX; it does not modify SharePoint or send a contract. Known prospect and approved quote details are prefilled. Verify each value; missing legal, scope, or signer details still require your input. Blank fields are left as editable placeholders for review.</p>
 <form method="post" action="/quotes/<%= q.id %>/document" class="card">
 <input type="hidden" name="_csrf" value="<%= csrf %>">
 <input type="hidden" name="lane" value="<%= lane.key %>">
@@ -13,7 +13,7 @@
 ]; %>
 <% for(const [key,label] of fields){ %>
 <div><label for="field-<%= key %>"><%= label %></label>
-<textarea id="field-<%= key %>" name="<%= key %>" rows="2" maxlength="4000" required></textarea></div>
+<textarea id="field-<%= key %>" name="<%= key %>" rows="2" maxlength="4000" required><%= prefill[key] || "" %></textarea></div>
 <% } %>
 </div>
 <% if(lane.key==="COM-PRP"){ %>
@@ -21,7 +21,7 @@
 <% }else{ %>
 <h2>Optional project details</h2>
 <% for(const [key,label] of [["deviceNote","Device notes"],["hardwareText","Hardware scope"],["locationText","Additional location scope"],["regulatedText","Regulated-data scope"],["lobExclusion","Line-of-business application exclusions"],["extraExclusions","Additional exclusions"],["extraAssumption","Additional assumptions"]]){ %>
-<div><label for="field-<%= key %>"><%= label %></label><textarea id="field-<%= key %>" name="<%= key %>" rows="2" maxlength="4000"></textarea></div>
+<div><label for="field-<%= key %>"><%= label %></label><textarea id="field-<%= key %>" name="<%= key %>" rows="2" maxlength="4000"><%= prefill[key] || "" %></textarea></div>
 <% } %>
 <% } %>
 <p><strong>Review required:</strong> This preview may contain bracketed placeholders and is not ready for client signature until reviewed.</p>
