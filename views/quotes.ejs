@@ -73,7 +73,7 @@
 <div class="quote-review-edit-buttons"><button type="submit"><%= selected.status==="Approved"?"Save New Draft Revision":"Save Changes" %></button><button type="button" id="quote-review-edit-cancel" class="secondary">Cancel Editing</button></div>
 </form>
 <% } %>
-<div class="saved-quote-review" aria-label="Saved quote details">
+<div class="saved-quote-review" id="quote-review-snapshot" aria-label="Saved quote details">
 <h3>Saved quote — scope and pricing</h3>
 <p class="muted">This is the saved snapshot for quote #<%= selected.id %>, not the live estimate from the editors below.</p>
 <div class="grid">
@@ -231,22 +231,7 @@ document.addEventListener("DOMContentLoaded",()=>{
 });
 </script>
 <% } %>
-<script>
-document.addEventListener("DOMContentLoaded",()=>{
- const toggle=document.getElementById("quote-review-edit-toggle");
- const form=document.getElementById("quote-review-edit-form");
- const cancel=document.getElementById("quote-review-edit-cancel");
- if(!toggle||!form||!cancel)return;
- function setEditing(active){
-   form.hidden=!active;
-   toggle.hidden=active;
-   toggle.setAttribute("aria-expanded",String(active));
-   if(active)form.querySelector("input,select")?.focus();
- }
- toggle.addEventListener("click",()=>setEditing(true));
- cancel.addEventListener("click",()=>setEditing(false));
-});
-</script>
+<script src="/quote-review-edit.js?v=1" defer></script>
 <script src="/quote-calculator.js?v=20261015-10" defer></script>
 </div>
 <%- include('footer') %>
