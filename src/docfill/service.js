@@ -26,7 +26,8 @@ export async function prepareQuoteDocument({
     throw new Error("The approved master document does not match this quote lane.");
   assertTagset(expectedKey,await listTags(master.content));
   const {buffer,report}=await fillDocx(master.content,data);
-  if(report.unfilled.length) throw new Error("Quote document contains unfilled fields: "+report.unfilled.join(", "));
+  // In dryrun, preserve owner-editable bracketed narrative placeholders and report them.
+  // In live mode the caller must reject unresolved fields before overwriting SharePoint.
   return {buffer,report,master,working,quoteId:quote.id,documentKey:expectedKey};
 }
 
@@ -35,6 +36,8 @@ export async function deliverQuoteDocument({prepared,graph,env=process.env}) {
   const mode=quoteFillMode(env);
   if(mode==="off") throw new Error("Quote document generation is disabled.");
   if(mode==="dryrun") return {mode,buffer:prepared.buffer,report:prepared.report};
+  if(prepared.report.unfilled.length)
+    throw new Error("Complete the remaining owner fields before SharePoint delivery: "+prepared.report.unfilled.join(", "));
   const w=prepared.working;
   if(!w.driveId||!w.itemId||!w.eTag)
     throw new Error("Working copy is missing a resolved drive, item ID or eTag.");
