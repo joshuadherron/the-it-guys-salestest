@@ -17,7 +17,7 @@
 <input type="hidden" name="_csrf" value="<%= csrf %>">
 <fieldset <%= p.hold?'disabled':'' %>>
 <div class="grid">
-<div><label>Service</label><select name="serviceTier"><option value="managed">Managed IT — $125/user</option><option value="monitoring">Monitoring-Only — $45/device</option></select></div>
+<div><label>Service</label><select name="serviceTier"><option value="none" <%= !managedInput.pricingMode ? "selected" : "" %>>No Managed Services</option><option value="managed" <%= managedInput.pricingMode && managedInput.serviceTier !== "monitoring" && managedInput.serviceTier !== "none" ? "selected" : "" %>>Managed IT — $125/user</option><option value="monitoring" <%= managedInput.serviceTier === "monitoring" && managedInput.pricingMode ? "selected" : "" %>>Monitoring-Only — $45/device</option></select></div>
 <div><label>Managed users</label><input type="number" name="users" min="0" required value="<%= managedInput.users ?? 0 %>"></div>
 <div><label>Monitoring-only devices</label><input type="number" name="monitoringDevices" min="0" required value="<%= managedInput.monitoringDevices ?? 0 %>"></div>
 <div><label>Managed servers ($75/month)</label><input type="number" name="servers" min="0" required value="<%= managedInput.servers ?? 0 %>"></div>
@@ -146,5 +146,5 @@
 </p>
 <% } %>
 </details>
-<script src="/quote-calculator.js?v=20261015-8" defer></script>
+<script src="/quote-calculator.js?v=20261015-9" defer></script>
 <%- include('footer') %>
