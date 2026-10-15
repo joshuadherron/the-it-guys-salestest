@@ -299,3 +299,9 @@ footer {
 .question .question-status{margin:8px 0 0;font-size:.88rem;color:#587080}
 .question .discovery-helper{margin:4px 0 8px;font-size:.9rem}
 @media(max-width:700px){.question{padding:14px}.discovery-question-tools{gap:12px}}
+
+/* Custom BII one-off currency fields */
+.currency-input { position:relative; width:100%; }
+.currency-input .currency-prefix { position:absolute; left:14px; top:50%; transform:translateY(-50%); font-weight:700; pointer-events:none; }
+.currency-input input { padding-left:32px; width:100%; box-sizing:border-box; }
+.currency-input input::placeholder { opacity:.65; }
