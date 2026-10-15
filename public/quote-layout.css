@@ -113,3 +113,6 @@ body:has(#selected-quote[role="dialog"]){overflow:hidden}
 .quote-page .quote-review-edit-form input[type=number],.quote-page .quote-review-edit-form select{width:100%;min-width:0}
 .quote-page .quote-review-edit-form input[type=checkbox]{width:16px;height:16px;vertical-align:middle}
 .quote-page .quote-review-edit-buttons{display:flex;gap:9px;flex-wrap:wrap;margin-top:10px}
+
+.quote-page #quote-review-snapshot[hidden]{display:none!important}
+.quote-page #quote-review-edit-toggle[hidden]{display:none!important}
