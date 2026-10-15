@@ -126,6 +126,14 @@ export function quotesRoutes(app) {
       [p.id],
     );
 
+    for (const q of quotes) {
+      const qi = json(q.inputs);
+      q.quoteName = qi.pricingMode === "managed_v20"
+        ? (qi.serviceTier === "monitoring" ? "Monitoring-Only Quote" : "Managed IT Quote")
+        : "BII Quote";
+      q.billingLabel = qi.pricingMode === "managed_v20" ? "saved pricing total" : "one-time";
+    }
+
     const selected = req.query.quote
       ? quotes.find((q) => Number(q.id) === integer(req.query.quote))
       : null;
