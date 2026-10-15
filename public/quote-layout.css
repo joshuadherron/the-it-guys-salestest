@@ -27,3 +27,19 @@
 .quote-page .saved-quote-review .table-wrap{margin-top:8px}
 @media(max-width:900px){.quote-page .quote-builder-layout{display:flex;flex-direction:column}}
 @media(max-width:600px){.quote-page .card,.quote-page fieldset{padding:12px}.quote-page .grid{grid-template-columns:repeat(auto-fit,minmax(140px,1fr))}.quote-page .saved-quote-review .grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+/* Quote review is a self-contained scroll surface, not another section of the worksheet. */
+body:has(#selected-quote[role="dialog"]){overflow:hidden}
+.quote-page #selected-quote[role="dialog"]{
+ position:fixed;z-index:1000;inset:clamp(12px,4vh,40px) max(12px,calc((100vw - 1150px)/2));
+ width:auto;max-width:none;height:auto;max-height:none;overflow-y:auto;overscroll-behavior:contain;
+ margin:0;padding:18px 22px;background:#fff;border:1px solid #a9c0ca;border-radius:12px;
+ box-shadow:0 0 0 100vmax rgba(12,30,42,.68),0 20px 65px rgba(12,30,42,.24);
+}
+.quote-page .quote-review-header{display:flex;justify-content:flex-end;position:sticky;top:-18px;z-index:2;padding:8px 0;background:#fff}
+.quote-page .quote-review-close{min-height:34px;padding:6px 12px;font-size:.9rem}
+.quote-page #selected-quote[role="dialog"] .saved-quote-review{margin-top:8px}
+@media(max-width:600px){
+ .quote-page #selected-quote[role="dialog"]{inset:8px;padding:12px}
+ .quote-page .quote-review-header{top:-12px}
+}
