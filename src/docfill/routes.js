@@ -34,7 +34,7 @@ export function quoteDocumentRoutes(app,dependencies={query,audit,json,transacti
   if(!q.quote_number){q.quote_number=formattedQuoteNumber(q);await query("UPDATE quotes SET quote_number=? WHERE id=? AND quote_number IS NULL",[q.quote_number,q.id]);}
   const input=json(q.inputs);
   const lane=quoteLane(input,req.query.lane);
-  res.render("quote-document",{q,p,lane,prefill:{...documentPrefill(p,input,lane.key),...(q.document_facts?json(q.document_facts):{}),onboardingFee:Number(input.onboarding||0),onsiteHours:Number(input.onsiteHours||0),quoteComputers:Number(input.computers||0)},csrf:res.locals.csrf});
+  res.render("quote-document",{q,p,lane,prefill:{...documentPrefill(p,input,lane.key),...Object.fromEntries(Object.entries(q.document_facts?json(q.document_facts):{}).filter(([,v])=>v!=="" && v!==null && v!==undefined && !(typeof v==="string" && /^(none\\.?|null|undefined|n\\/a|unknown)$/i.test(v.trim())))),onboardingFee:Number(input.onboarding||0),onsiteHours:Number(input.onsiteHours||0),quoteComputers:Number(input.computers||0)},csrf:res.locals.csrf});
  });
  app.post("/quotes/:id/document",ownerOnly,async(req,res)=>{
   const mode=quoteFillMode();
