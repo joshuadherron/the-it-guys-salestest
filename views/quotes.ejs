@@ -16,6 +16,35 @@
 </h2>
 <p>Approved by: <%= selected.approved_by||'Not approved' %> <%= selected.approved_at||'' %>
 </p>
+<div class="saved-quote-review" aria-label="Saved quote details">
+<h3>Saved quote — scope and pricing</h3>
+<p class="muted">This is the saved snapshot for quote #<%= selected.id %>, not the live estimate from the editors below.</p>
+<div class="grid">
+<% for(const [key,label] of (selected.docInput.pricingMode==="managed_v20"
+ ? [["serviceTier","Service tier"],["users","Managed users"],["computers","Business computers"],["monitoringDevices","Monitoring-only devices"],["servers","Managed servers"],["extraDevices","Additional/shared devices"],["backupUsers","M365 backup users"],["onsiteHours","Monthly on-site hours"],["onboarding","One-time onboarding"],["includeBii","BII included"]]
+ : [["users","Integration users"],["windows","Windows devices"],["mac","Mac devices"],["ios","Company iOS devices"],["android","Company Android devices"],["unallocated","Unassigned-platform devices"],["mailboxes","Mailbox migrations"],["dell","Dell deployments"],["phones","Personal/BYOD phones"],["locations","Locations"],["includeBii","BII included"]])){ %>
+<div><strong><%= label %></strong><p><%= typeof selected.docInput[key]==="boolean"?(selected.docInput[key]?"Yes":"No"):(selected.docInput[key]??"Not specified") %></p></div>
+<% } %>
+</div>
+<% const savedLines=JSON.parse(selected.line_items||"[]"); %>
+<div class="table-wrap">
+<table><thead><tr><th>Saved line item</th><th>Quantity</th><th>Unit price</th><th>Amount</th><th>Billing</th></tr></thead>
+<tbody>
+<% for(const line of savedLines){ %>
+<tr><td><%= line.label %></td><td><%= line.quantity??"—" %></td><td><%= line.unit===undefined?"—":"$"+Number(line.unit).toFixed(2) %></td><td>$<%= Number(line.amount).toFixed(2) %></td><td><%= line.billing==="one_time"?"One-time":"Monthly" %></td></tr>
+<% } %>
+</tbody></table>
+</div>
+<p><strong>Saved quote total: $<%= Number(selected.total).toFixed(2) %></strong> <span class="muted">(<%= selected.docInput.pricingMode==="managed_v20"?"includes the saved monthly pricing and any one-time items":"one-time BII pricing" %>)</span></p>
+<% if(selected.docInput.pricingMode==="managed_v20"){ %>
+<p><strong>Monthly recurring: $<%= savedLines.filter(l=>l.billing!=="one_time").reduce((n,l)=>n+Number(l.amount),0).toFixed(2) %></strong> · <strong>One-time line items: $<%= savedLines.filter(l=>l.billing==="one_time").reduce((n,l)=>n+Number(l.amount),0).toFixed(2) %></strong></p>
+<% } %>
+<% const selectedOneOffs=Object.entries(selected.docInput.oneOff||{}).filter(([,item])=>item.selected); %>
+<% if(selectedOneOffs.length){ %>
+<h4>Owner-priced custom scope</h4>
+<% for(const [label,item] of selectedOneOffs){ %><p><%= label %>: <%= item.amount===null?"Pending owner price":"$"+Number(item.amount).toFixed(2) %></p><% } %>
+<% } %>
+</div>
 <a href="/quotes/<%= selected.id %>/print">Printable internal worksheet</a>
 <% if(user.role==="owner" && selected.status==="Approved"){ %>
 <a href="/quotes/<%= selected.id %>/document?lane=<%= selected.docInput.pricingMode==="managed_v20"?"COM-PRP":"BII-QSOW" %>">Prepare contractual Word quote</a>
