@@ -12,7 +12,7 @@
 <section class="card">
 <h2>Monthly services · Pricing v20</h2>
 <p>Managed IT includes SentinelOne EDR and Adlumin MDR. Monthly services and one-time onboarding are separate. No automatic volume discounts.</p>
-<form method="post" action="/prospects/<%= p.id %>/quotes/managed" data-quote-calculator data-calculate-url="/prospects/<%= p.id %>/quotes/managed/calculate">
+<form method="post" action="/prospects/<%= p.id %>/quotes/managed" data-quote-calculator data-calculate-url="/prospects/<%= p.id %>/quotes/managed/calculate" data-preview-target="quote-calculation" data-status-target="quote-preview-status">
 <input type="hidden" name="_csrf" value="<%= csrf %>">
 <fieldset <%= user.role!=='owner'||p.hold?'disabled':'' %>>
 <div class="grid">
@@ -35,8 +35,9 @@
 <p>On-site as needed: $125/hr subscribed, billed separately. Additional locations are scoped individually; no standard recurring location fee.</p>
 </section>
 <details class="card"><summary>Managed services estimate preview</summary><p>Adjust the fields above to preview monthly charges.</p><div id="quote-calculation"></div><p id="quote-preview-status" role="status"></p></details>
-<details class="card"><summary>Legacy BII implementation worksheet</summary>
-<form method="post" action="/prospects/<%= p.id %>/quotes" class="card">
+<details class="card" open><summary>BII implementation pricing · one-time project</summary>
+<p>BII foundation, included allowances and additional-unit rates are calculated from the existing centrally configured BII prices. This is a one-time implementation estimate, not part of the monthly Managed IT total.</p>
+<form method="post" action="/prospects/<%= p.id %>/quotes" class="card" data-quote-calculator data-calculate-url="/prospects/<%= p.id %>/quotes/calculate" data-preview-target="bii-quote-calculation" data-status-target="bii-preview-status">
 <input type="hidden" name="_csrf" value="<%= csrf %>">
 <fieldset <%= user.role!=='owner'||p.hold?'disabled':'' %>>
 <legend>Counts — Josh confirms these before approval</legend>
@@ -78,6 +79,7 @@
 <%= user.role==='owner'?'Save new draft':'Create draft from discovery for Josh' %>
 </button>
 </form>
+<h3>BII project estimate preview</h3><div id="bii-quote-calculation"></div><p id="bii-preview-status" role="status"></p>
 </details>
 <section class="card">
 <h2>Saved quote calculation</h2>
