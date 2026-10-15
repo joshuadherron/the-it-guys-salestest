@@ -128,6 +128,7 @@ export function quotesRoutes(app) {
 
     for (const q of quotes) {
       const qi = json(q.inputs);
+      q.docInput = qi;
       q.quoteName = qi.pricingMode === "managed_v20"
         ? (qi.serviceTier === "monitoring" ? "Monitoring-Only Quote" : "Managed IT Quote")
         : "BII Quote";
