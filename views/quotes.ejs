@@ -171,7 +171,7 @@
 <input type="checkbox" name="confirmed" value="yes" <%= input.confirmed?'checked':'' %> <%= user.role==='owner'?'required':'' %>> I have confirmed all counts, including zero values and devices counted once.</label>
 </fieldset>
 <button <%= p.hold?'disabled':'' %>>
-<%= user.role==='owner'?'Save new draft':'Create draft from discovery for Josh' %>
+<%= editing && editing.docInput.pricingMode!=='managed_v20'?(editing.status==='Approved'?'Save new draft revision':'Save changes to draft'):(user.role==='owner'?'Save new draft':'Create draft from discovery for Josh') %>
 </button>
 </form>
 <h3>BII project estimate preview</h3><div id="bii-quote-calculation"></div><p id="bii-preview-status" role="status"></p>
@@ -189,6 +189,14 @@
 <p id="build-review" role="status">Calculating service estimates…</p>
 <p>Estimate only; excludes taxes, hardware, licenses and custom-priced services not yet entered. Owner approval required before a binding quote.</p>
 </section></aside></div>
+<% if(editing){ %>
+<script>
+document.addEventListener("DOMContentLoaded",()=>{
+ const section=document.getElementById("<%= editing.docInput.pricingMode==="managed_v20"?"managed-services-section":"bii-services-section" %>");
+ if(section){section.open=true;section.scrollIntoView({block:"nearest"});}
+});
+</script>
+<% } %>
 <script src="/quote-calculator.js?v=20261015-10" defer></script>
 </div>
 <%- include('footer') %>
