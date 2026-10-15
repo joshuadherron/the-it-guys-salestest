@@ -1,0 +1,13 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Resume discovery</title></head>
+<body><p>Opening saved discovery…</p><script>
+(function () {
+  var fallback = <%= fallback %>;
+  var screen = fallback;
+  try {
+    var saved = Number(localStorage.getItem('tig-discovery-last-<%= p.id %>'));
+    if (Number.isInteger(saved) && saved >= 1 && saved <= 3) screen = saved;
+  } catch (_) {}
+  window.location.replace('/prospects/<%= p.id %>/discovery/' + screen);
+})();
+</script><noscript><a href="/prospects/<%= p.id %>/discovery/<%= fallback %>">Continue discovery</a></noscript></body></html>
