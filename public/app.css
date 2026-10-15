@@ -305,3 +305,14 @@ footer {
 .currency-input .currency-prefix { position:absolute; left:14px; top:50%; transform:translateY(-50%); font-weight:700; pointer-events:none; }
 .currency-input input { padding-left:32px; width:100%; box-sizing:border-box; }
 .currency-input input::placeholder { opacity:.65; }
+
+/* Reduced desktop chrome to give the workspaces more usable height. */
+@media(min-width:901px){
+ .mode{padding:5px 12px;line-height:1.2;font-size:.76rem}
+ header{padding-top:11px;padding-bottom:11px;min-height:68px;gap:18px}
+ header .brand span{margin-top:2px;font-size:.72rem}
+ header nav{gap:14px}
+ header nav a{font-size:.93rem}
+ header nav button{min-height:34px;padding:7px 13px;font-size:.9rem}
+ main{margin-top:15px;margin-bottom:15px}
+}
