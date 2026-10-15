@@ -111,7 +111,7 @@ function combinedManagedQuote(input, prices) {
   const foundation = Number(prices.foundation);
   if (!Number.isFinite(foundation) || foundation < 0) fail("BII foundation price is not configured.");
   const line = {label:"Standard BII Integration — one-time",quantity:1,unit:foundation,amount:foundation,billing:"one_time"};
-  return {...managed,lines:[...managed.lines,line],total:managed.total+foundation,monthlyTotal:managed.total,oneTimeTotal:foundation};
+  return {...managed,lines:[...managed.lines,line],total:managed.total+foundation,monthlyTotal:managed.total,oneTimeTotal:foundation,includeBiiSummary:true};
 }
 
 export function quotesRoutes(app) {
