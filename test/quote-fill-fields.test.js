@@ -24,7 +24,7 @@ test("Managed quote refuses mismatch with approved line items",()=>{
 test("Combined quote has two independently selectable contractual lanes",()=>{
  const combined={...managedInput,includeBii:true};
  assert.equal(quoteLane(combined,"COM-PRP").key,"COM-PRP");
- assert.equal(quoteLane(combined,"BII-QSOW").key,"BII-QSOW");
+ assert.throws(()=>quoteLane(combined,"BII-QSOW"),/separately approved/);
 });
 test("BII generation from a combined managed quote refuses unpriced scope",()=>{
  assert.throws(()=>buildBiiFill({quote:{inputs:{...managedInput,includeBii:true}},prospect:{business_name:"Example"},prices:{}}),/separately priced/);
@@ -32,4 +32,8 @@ test("BII generation from a combined managed quote refuses unpriced scope",()=>{
 test("Live delivery requires both explicit environment gates",()=>{
  assert.equal(quoteFillMode({QUOTE_FILL_MODE:"live",SHAREPOINT_WRITE_MODE:"dryrun"}),"dryrun");
  assert.equal(quoteFillMode({QUOTE_FILL_MODE:"live",SHAREPOINT_WRITE_MODE:"live"}),"live");
+});
+
+test("BII-only quote cannot be routed into Managed IT template",()=>{
+ assert.throws(()=>quoteLane({includeBii:true,users:2},"COM-PRP"),/requires a Managed IT quote/);
 });
