@@ -1,0 +1,18 @@
+/* Compact document preparation, scoped to this page. */
+.quote-document-page{font-size:.9rem;line-height:1.3}
+.quote-document-page>p{margin:7px 0}
+.quote-document-page h1{font-size:1.45rem;margin:8px 0 10px}
+.quote-document-page h2{font-size:1.05rem;margin:10px 0 6px}
+.quote-document-form{margin:10px 0;padding:14px 18px}
+.quote-document-fields{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px 13px}
+.quote-document-page label{display:block;font-size:.84rem;margin:0 0 4px}
+.quote-document-page textarea{width:100%;min-height:42px;height:42px;resize:vertical;padding:7px 9px;font-size:.88rem;line-height:1.25}
+.quote-document-page .quote-document-optional{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px 13px}
+.quote-document-page .quote-document-optional>div{min-width:0}
+.quote-document-page .quote-document-optional textarea{min-height:42px}
+.quote-document-page .quote-document-form>p{margin:9px 0}
+.quote-document-page button{min-height:36px;padding:7px 12px;font-size:.88rem}
+.quote-document-page input[type=checkbox]{min-height:16px;width:16px}
+@media(max-width:1050px){.quote-document-fields{grid-template-columns:repeat(3,minmax(0,1fr))}.quote-document-page .quote-document-optional{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:700px){.quote-document-fields,.quote-document-page .quote-document-optional{grid-template-columns:repeat(2,minmax(0,1fr))}.quote-document-form{padding:12px}}
+@media(max-width:480px){.quote-document-fields,.quote-document-page .quote-document-optional{grid-template-columns:1fr}}
