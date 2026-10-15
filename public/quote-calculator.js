@@ -5,7 +5,7 @@ function updateBuildTotal() {
   const bii = quoteEstimateState.bii;
   const managedForm = document.querySelector('[data-preview-target="quote-calculation"]');
   const onboardingField = managedForm?.querySelector('[name="onboarding"]');
-  const onboarding = managedForm?.querySelector('[name="serviceTier"]')?.value === "none" ? 0 : Number(onboardingField?.value || 0);
+  const onboarding = document.getElementById('managed-tier-select')?.value === "none" ? 0 : Number(onboardingField?.value || 0);
   const validOnboarding = Number.isFinite(onboarding) && onboarding >= 0;
   const monthly = managed?.monthly ?? 0;
   const biiAmount = bii?.onetime ?? 0;
@@ -80,6 +80,7 @@ document.querySelectorAll("[data-quote-calculator]").forEach((form) => {
 
   form.addEventListener("input", schedule);
   form.addEventListener("change", schedule);
+  document.querySelectorAll(`[form="${form.id}"]`).forEach(control => {control.addEventListener("input",schedule);control.addEventListener("change",schedule);});
   if (form.dataset.previewTarget === "quote-calculation") form.querySelector('[name="onboarding"]')?.addEventListener("input",updateBuildTotal);
   if (!form.disabled && !form.querySelector("fieldset:disabled")) schedule();
 });
