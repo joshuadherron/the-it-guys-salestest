@@ -101,7 +101,7 @@ export function validateManagedInputs(body) {
     input[key] = integer(body[key] || "0");
   }
   const onboarding = String(body.onboarding || "0");
-  if (!/^\\d+(\\.\\d{1,2})?$/.test(onboarding)) fail("Enter a valid onboarding amount.");
+  if (!/^\d+(\.\d{1,2})?$/.test(onboarding)) fail("Enter a valid onboarding amount.");
   input.onboarding = Number(onboarding);
   input.includeBii = body.includeBii === "yes";
   return input;
