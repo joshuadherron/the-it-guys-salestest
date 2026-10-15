@@ -10,6 +10,7 @@ import { csrf, requireUser } from "./src/security.js";
 import { handoffRoutes, sp } from "./src/handoff.js";
 import { adminRoutes } from "./src/admin.js";
 import { quotesRoutes } from "./src/quotes.js";
+import { quoteDocumentRoutes } from "./src/docfill/routes.js";
 import { discoveryRoutes } from "./src/discovery.js";
 import { pipelineRoutes } from "./src/pipeline.js";
 import { authRoutes } from "./src/auth.js";
@@ -112,6 +113,7 @@ existingClientRoutes(app);
 guidedRoutes(app);
 discoveryRoutes(app);
 quotesRoutes(app);
+quoteDocumentRoutes(app);
 handoffRoutes(app);
 adminRoutes(app);
 app.use((err, req, res, _next) => {
