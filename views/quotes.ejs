@@ -26,7 +26,7 @@
 <div><strong><%= label %></strong><p><%= typeof selected.docInput[key]==="boolean"?(selected.docInput[key]?"Yes":"No"):(selected.docInput[key]??"Not specified") %></p></div>
 <% } %>
 </div>
-<% const savedLines=JSON.parse(selected.line_items||"[]"); %>
+<% const savedLines=selected.savedLines; %>
 <div class="table-wrap">
 <table><thead><tr><th>Saved line item</th><th>Quantity</th><th>Unit price</th><th>Amount</th><th>Billing</th></tr></thead>
 <tbody>
@@ -59,7 +59,7 @@
 <input type="hidden" name="_csrf" value="<%= csrf %>">
 <h3>Pre-quote stop conditions</h3>
 <p>Tick any condition that applies. Any tick blocks approval: targeted assessment first.</p>
-<% if(!input.confirmed){ %>
+<% if(!selected.docInput.confirmed){ %>
 <label>
 <input type="checkbox" name="confirm_counts" value="yes" required> I confirm the saved draft counts, including zero values and devices counted once.
 </label>
