@@ -134,12 +134,20 @@
 <h2>Quote History</h2>
 <p>Open a saved quote to review, approve, delete, or print it.</p>
 <% if(!quotes.length){ %><p>No quotes saved yet.</p><% } %>
+<div class="quote-history-scroll" role="region" aria-label="Saved quote history" tabindex="0">
+<table class="quote-history-table">
+<thead><tr><th>Quote</th><th>Status</th><th>Amount</th><th>Billing</th><th>Actions</th></tr></thead>
+<tbody>
 <% for(const q of quotes){ %>
-<div class="quote-history-item">
-<div><strong><%= q.quoteName %> #<%= q.id %></strong> · <%= q.status %><p>$<%= Number(q.total).toFixed(2) %> <%= q.billingLabel %></p></div>
-<div><a href="/prospects/<%= p.id %>/quotes?quote=<%= q.id %>#selected-quote">Review</a> · <a href="/quotes/<%= q.id %>/print">Print</a></div>
-</div>
+<tr>
+<td><strong><%= q.quoteName %> #<%= q.id %></strong></td>
+<td><%= q.status %></td>
+<td class="quote-history-amount">$<%= Number(q.total).toFixed(2) %></td>
+<td><%= q.billingLabel %></td>
+<td class="quote-history-actions"><a href="/prospects/<%= p.id %>/quotes?quote=<%= q.id %>#selected-quote">Review</a><a href="/quotes/<%= q.id %>/print">Print</a></td>
+</tr>
 <% } %>
+</tbody></table></div>
 </section>
 <script src="/quote-calculator.js?v=20261015-10" defer></script>
 <%- include('footer') %>
