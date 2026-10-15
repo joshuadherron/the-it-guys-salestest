@@ -6,6 +6,26 @@
 <%= p.opp %> · <%= p.business_name %>
 </a>
 </p>
+<% if(quotes.length){ %>
+<section class="card" id="quote-history">
+<h2>Quote History</h2>
+<p>Open a saved quote to review, approve, delete, or print it.</p>
+<div class="quote-history-scroll" role="region" aria-label="Saved quote history" tabindex="0">
+<table class="quote-history-table">
+<thead><tr><th>Quote</th><th>Status</th><th>Amount</th><th>Billing</th><th>Actions</th></tr></thead>
+<tbody>
+<% for(const q of quotes){ %>
+<tr>
+<td><strong><%= q.quoteName %> #<%= q.id %></strong></td>
+<td><%= q.status %></td>
+<td class="quote-history-amount">$<%= Number(q.total).toFixed(2) %></td>
+<td><%= q.billingLabel %></td>
+<td class="quote-history-actions"><a href="/prospects/<%= p.id %>/quotes?quote=<%= q.id %>#selected-quote">Review</a><a href="/quotes/<%= q.id %>/print">Print</a></td>
+</tr>
+<% } %>
+</tbody></table></div>
+</section>
+ <% } %>
 <h1>Pricing worksheet</h1>
 <p>Josh-approved commercial worksheet. Hardware quoted separately. All personal phones count as zero managed business devices.</p>
 <% if(p.hold){ %>
@@ -165,25 +185,6 @@
 <p id="build-review" role="status">Calculating service estimates…</p>
 <p>Estimate only; excludes taxes, hardware, licenses and custom-priced services not yet entered. Owner approval required before a binding quote.</p>
 </section></aside></div>
-<section class="card" id="quote-history">
-<h2>Quote History</h2>
-<p>Open a saved quote to review, approve, delete, or print it.</p>
-<% if(!quotes.length){ %><p>No quotes saved yet.</p><% } %>
-<div class="quote-history-scroll" role="region" aria-label="Saved quote history" tabindex="0">
-<table class="quote-history-table">
-<thead><tr><th>Quote</th><th>Status</th><th>Amount</th><th>Billing</th><th>Actions</th></tr></thead>
-<tbody>
-<% for(const q of quotes){ %>
-<tr>
-<td><strong><%= q.quoteName %> #<%= q.id %></strong></td>
-<td><%= q.status %></td>
-<td class="quote-history-amount">$<%= Number(q.total).toFixed(2) %></td>
-<td><%= q.billingLabel %></td>
-<td class="quote-history-actions"><a href="/prospects/<%= p.id %>/quotes?quote=<%= q.id %>#selected-quote">Review</a><a href="/quotes/<%= q.id %>/print">Print</a></td>
-</tr>
-<% } %>
-</tbody></table></div>
-</section>
 <script src="/quote-calculator.js?v=20261015-10" defer></script>
 </div>
 <%- include('footer') %>
