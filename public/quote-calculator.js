@@ -5,7 +5,7 @@ function updateBuildTotal() {
   const bii = quoteEstimateState.bii;
   const managedForm = document.querySelector('[data-preview-target="quote-calculation"]');
   const onboardingField = managedForm?.querySelector('[name="onboarding"]');
-  const onboarding = Number(onboardingField?.value || 0);
+  const onboarding = managedForm?.querySelector('[name="serviceTier"]')?.value === "none" ? 0 : Number(onboardingField?.value || 0);
   const validOnboarding = Number.isFinite(onboarding) && onboarding >= 0;
   const monthly = managed?.monthly ?? 0;
   const biiAmount = bii?.onetime ?? 0;
