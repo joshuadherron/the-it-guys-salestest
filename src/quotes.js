@@ -96,7 +96,7 @@ export function validateInputs(body) {
 }
 
 export function validateManagedInputs(body) {
-  const input = {pricingMode:"managed_v20",serviceTier:body.serviceTier==="monitoring"?"monitoring":"managed",confirmed:body.confirmed==="yes"};
+  const input = {pricingMode:"managed_v20",serviceTier:body.serviceTier==="none"?"none":body.serviceTier==="monitoring"?"monitoring":"managed",confirmed:body.confirmed==="yes"};
   for (const key of ["users","monitoringDevices","servers","extraDevices","backupUsers","onsiteHours","computers","workstationBackups","serverBackups"]) {
     input[key] = integer(body[key] || "0");
   }
