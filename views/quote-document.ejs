@@ -17,7 +17,15 @@
 <label>Service summary<textarea name="summary" minlength="40" maxlength="4000" rows="4"><%= prefill.summary || '' %></textarea></label><p>Use a complete summary of at least 40 characters. Josh may edit the standard sentence.</p>
 <fieldset><legend>Covered device kinds</legend><% for(const kind of ['computers','phones','tablets']){ %><label><input type="checkbox" name="deviceKinds" value="<%= kind %>" <%= (prefill.deviceKinds||[]).includes(kind)?'checked':'' %>><%= kind[0].toUpperCase()+kind.slice(1) %></label><% } %></fieldset>
 <p>Assigned quantities from the approved worksheet: <strong><%= prefill.assignedSummary || 'No assigned company devices recorded' %></strong>. Separately billed shared devices: <%= prefill.quoteSharedDevices ?? 0 %>. Change device counts in the worksheet and save/approve a revised quote.</p>
+<% if(prefill.quoteComputers === 0){ %>
+<div class="quote-document-confirmation" id="device-confirmation">
+<strong>Device confirmation required</strong>
+<p>This approved quote records zero company computers. Confirm that users work on shared devices only. If this is incorrect, return to the worksheet, correct the quantities, and approve a revised quote.</p>
+<label><input type="checkbox" name="noCompanyComputers" value="yes" id="no-company-computers" <%= prefill.noCompanyComputers?'checked':'' %> required>No company computers — users on shared devices only</label>
+</div>
+<% }else{ %>
 <label><input type="checkbox" name="noCompanyComputers" value="yes" <%= prefill.noCompanyComputers?'checked':'' %>>No company computers - users on shared devices only</label>
+<% } %>
 <fieldset><legend>Onboarding scope</legend><label><input type="radio" name="onboardingMode" value="standard" <%= prefill.onboardingMode==='standard'?'checked':'' %>>Standard</label><label><input type="radio" name="onboardingMode" value="after_bii" <%= prefill.onboardingMode==='after_bii'?'checked':'' %>>After a Business IT Integration project</label></fieldset>
 <label>Onboarding fee ($300-$750 guidance)<input type="number" name="onboardingFee" min="0" step="0.01" value="<%= prefill.onboardingFee ?? '' %>" required></label>
 <p>The fee must match approved worksheet pricing. To change the fee, save and approve revised pricing first.</p>
