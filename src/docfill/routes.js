@@ -7,6 +7,7 @@ import {prospect} from "../pipeline.js";
 import {priceConfig} from "../quotes.js";
 import {quoteLane,quoteFillMode} from "./policy.js";
 import {buildManagedFill,buildBiiFill} from "./quote-fields.js";
+import {documentPrefill} from "./prefill.js";
 
 const root=join(dirname(fileURLToPath(import.meta.url)),"../..");
 const templateNames={"COM-PRP":"COM-PRP-v1.8.docx","BII-QSOW":"BII-QSOW-v1.6.docx"};
@@ -30,7 +31,7 @@ export function quoteDocumentRoutes(app){
   if(p.hold)fail("Prospect is on hold.");
   const input=json(q.inputs);
   const lane=quoteLane(input,req.query.lane);
-  res.render("quote-document",{q,p,lane,csrf:res.locals.csrf});
+  res.render("quote-document",{q,p,lane,prefill:documentPrefill(p,input,lane.key),csrf:res.locals.csrf});
  });
  app.post("/quotes/:id/document",ownerOnly,async(req,res)=>{
   const mode=quoteFillMode();
