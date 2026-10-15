@@ -101,7 +101,17 @@ export function validateManagedInputs(body) {
   const onboarding = String(body.onboarding || "0");
   if (!/^\\d+(\\.\\d{1,2})?$/.test(onboarding)) fail("Enter a valid onboarding amount.");
   input.onboarding = Number(onboarding);
+  input.includeBii = body.includeBii === "yes";
   return input;
+}
+
+function combinedManagedQuote(input, prices) {
+  const managed = priceManagedServices(input);
+  if (!input.includeBii) return managed;
+  const foundation = Number(prices.foundation);
+  if (!Number.isFinite(foundation) || foundation < 0) fail("BII foundation price is not configured.");
+  const line = {label:"Standard BII Integration — one-time",quantity:1,unit:foundation,amount:foundation,billing:"one_time"};
+  return {...managed,lines:[...managed.lines,line],total:managed.total+foundation,monthlyTotal:managed.total,oneTimeTotal:foundation};
 }
 
 export function quotesRoutes(app) {
@@ -128,7 +138,7 @@ export function quotesRoutes(app) {
       selected,
       input,
       managedInput,
-      calculation: input.pricingMode==="managed_v20" ? priceManagedServices(input) : priceQuote(input, await priceConfig()),
+      calculation: input.pricingMode==="managed_v20" ? combinedManagedQuote(input, await priceConfig()) : priceQuote(input, await priceConfig()),
       platforms,
       oneOffItems,
       stops: await query("SELECT * FROM config_stop_conditions ORDER BY id"),
@@ -139,7 +149,7 @@ export function quotesRoutes(app) {
     const p = await prospect(req.params.id);
     if (p.hold) fail("On Hold — Pending Josh Review.");
     if (req.session.user.role !== "owner") fail("Owner access required.",403);
-    res.render("quote-calculation",{calculation:priceManagedServices(validateManagedInputs(req.body))});
+    res.render("quote-calculation",{calculation:combinedManagedQuote(validateManagedInputs(req.body),await priceConfig())});
   });
   app.post("/prospects/:id/quotes/managed", async (req,res) => {
     if (req.session.user.role !== "owner") fail("Owner access required.",403);
@@ -147,7 +157,7 @@ export function quotesRoutes(app) {
       const p = await prospect(req.params.id,c);
       if (p.hold) fail("On Hold — Pending Josh Review.");
       const input = validateManagedInputs(req.body);
-      const calculation = priceManagedServices(input);
+      const calculation = combinedManagedQuote(input,await priceConfig(c));
       await query("UPDATE quotes SET status='Draft',approved_by=NULL,approved_at=NULL WHERE prospect_id=? AND status='Approved'",[p.id],c);
       const result = await query("INSERT INTO quotes (prospect_id,inputs,line_items,total) VALUES (?,?,?,?)",[p.id,JSON.stringify(input),JSON.stringify(calculation.lines),calculation.total],c);
       await audit(c,req.session.user,"create managed services v20 draft","quote",result.insertId);
@@ -290,7 +300,7 @@ export function quotesRoutes(app) {
           "Targeted assessment first. A selected stop condition blocks approval.",
         );
 
-      const calc = input.pricingMode==="managed_v20" ? priceManagedServices(input) : priceQuote(input, await priceConfig(c));
+      const calc = input.pricingMode==="managed_v20" ? combinedManagedQuote(input,await priceConfig(c)) : priceQuote(input, await priceConfig(c));
 
       if (calc.pending.length)
         fail("Pricing review required: " + calc.pending.join("; "));
