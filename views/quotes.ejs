@@ -39,6 +39,40 @@
 </h2>
 <p>Approved by: <%= selected.approved_by||'Not approved' %> <%= selected.approved_at||'' %>
 </p>
+<% if(user.role==="owner" && !p.hold){ %>
+<div class="quote-review-edit-actions">
+<button type="button" id="quote-review-edit-toggle" aria-expanded="false" aria-controls="quote-review-edit-form">Enable Editing</button>
+</div>
+<form id="quote-review-edit-form" class="quote-review-edit-form" method="post" action="/quotes/<%= selected.id %>/edit" hidden>
+<input type="hidden" name="_csrf" value="<%= csrf %>">
+<h3>Edit saved quote #<%= selected.id %></h3>
+<p><%= selected.status==="Approved"?"Saving creates a new draft revision. The approved quote remains unchanged.":"Saving updates this draft in place." %></p>
+<div class="grid">
+<% if(selected.docInput.pricingMode==="managed_v20"){ %>
+<div><label>Service tier</label><select name="serviceTier"><% for(const [value,label] of [["managed","Managed IT"],["monitoring","Monitoring-only"],["none","No Managed Services"]]){ %><option value="<%= value %>" <%= selected.docInput.serviceTier===value?"selected":"" %>><%= label %></option><% } %></select></div>
+<% for(const [key,label] of [["users","Managed users"],["computers","Business computers"],["assignedPhones","Assigned company phones"],["assignedTablets","Assigned company tablets"],["monitoringDevices","Monitoring-only devices"],["servers","Managed servers"],["extraDevices","Additional/shared devices"],["backupUsers","M365 backup users"],["onsiteHours","Monthly on-site hours"],["onboarding","One-time onboarding"],["workstationBackups","Workstation backups"],["serverBackups","Server backups"]]){ %>
+<div><label for="review-edit-<%= key %>"><%= label %></label><input id="review-edit-<%= key %>" type="number" name="<%= key %>" min="0" step="<%= key==="onboarding"?"0.01":"1" %>" required value="<%= selected.docInput[key]??0 %>"></div>
+<% } %>
+<% }else{ %>
+<% for(const [key,label] of [["users","Integration users"],["windows","Windows devices"],["mac","Mac devices"],["ios","Company iOS devices"],["android","Company Android devices"],["unallocated","Unassigned-platform devices"],["mailboxes","Mailbox migrations"],["dell","Dell deployments"],["phones","Personal/BYOD phones"],["locations","Locations"]]){ %>
+<div><label for="review-edit-<%= key %>"><%= label %></label><input id="review-edit-<%= key %>" type="number" name="<%= key %>" min="0" step="1" required value="<%= selected.docInput[key]??0 %>"></div>
+<% } %>
+<div><label for="review-edit-locationLaborBase">Additional-location labor base</label><input id="review-edit-locationLaborBase" type="number" name="locationLaborBase" min="0" step="0.01" value="<%= selected.docInput.locationLaborBase??"" %>"></div>
+<% } %>
+</div>
+<% if(selected.docInput.pricingMode!=="managed_v20"){ %>
+<h4>Custom BII scope</h4>
+<div class="grid">
+<% for(const [i,label] of oneOffItems.entries()){const item=selected.docInput.oneOff?.[label]||{}; %>
+<div><label><input type="checkbox" name="oneoff_<%= i %>" value="yes" <%= item.selected?"checked":"" %>> <%= label %></label><input type="number" name="amount_<%= i %>" min="0" step="0.01" aria-label="<%= label %> custom price" value="<%= item.amount??"" %>" placeholder="Owner price"></div>
+<% } %>
+</div>
+<% } %>
+<label><input type="checkbox" name="includeBii" value="yes" <%= selected.docInput.includeBii?"checked":"" %>> Include BII integration</label>
+<label><input type="checkbox" name="confirmed" value="yes" required> I verified the revised counts, scope and pricing inputs.</label>
+<div class="quote-review-edit-buttons"><button type="submit"><%= selected.status==="Approved"?"Save New Draft Revision":"Save Changes" %></button><button type="button" id="quote-review-edit-cancel" class="secondary">Cancel Editing</button></div>
+</form>
+<% } %>
 <div class="saved-quote-review" aria-label="Saved quote details">
 <h3>Saved quote — scope and pricing</h3>
 <p class="muted">This is the saved snapshot for quote #<%= selected.id %>, not the live estimate from the editors below.</p>
@@ -197,6 +231,22 @@ document.addEventListener("DOMContentLoaded",()=>{
 });
 </script>
 <% } %>
+<script>
+document.addEventListener("DOMContentLoaded",()=>{
+ const toggle=document.getElementById("quote-review-edit-toggle");
+ const form=document.getElementById("quote-review-edit-form");
+ const cancel=document.getElementById("quote-review-edit-cancel");
+ if(!toggle||!form||!cancel)return;
+ function setEditing(active){
+   form.hidden=!active;
+   toggle.hidden=active;
+   toggle.setAttribute("aria-expanded",String(active));
+   if(active)form.querySelector("input,select")?.focus();
+ }
+ toggle.addEventListener("click",()=>setEditing(true));
+ cancel.addEventListener("click",()=>setEditing(false));
+});
+</script>
 <script src="/quote-calculator.js?v=20261015-10" defer></script>
 </div>
 <%- include('footer') %>
