@@ -116,3 +116,11 @@ body:has(#selected-quote[role="dialog"]){overflow:hidden}
 
 .quote-page #quote-review-snapshot[hidden]{display:none!important}
 .quote-page #quote-review-edit-toggle[hidden]{display:none!important}
+
+/* Onboarding guidance remains compact and advisory. */
+.quote-page .onboarding-guidance-field{min-width:0}
+.quote-page .onboarding-guidance-field #onboarding-guidance{font-size:.84rem;line-height:1.35;margin:7px 0;padding:8px 10px;border-left:3px solid #7c9eb1;background:#f4f8fa}
+.quote-page .onboarding-guidance-field select{width:100%;min-width:0}
+.quote-page .onboarding-guidance-field small{display:block;font-size:.76rem;margin-top:5px}
+.quote-page .onboarding-guidance-field button{margin-top:7px}
+.quote-page .onboarding-guidance-field button[hidden]{display:none!important}
