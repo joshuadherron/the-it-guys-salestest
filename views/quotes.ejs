@@ -99,7 +99,7 @@
 </section></aside></div>
 <% if(selected){ %>
 <section class="card" id="selected-quote">
-<h2><%= JSON.parse(selected.inputs).pricingMode === "managed_v20" ? "Managed IT Quote" : "BII Quote" %> #<%= selected.id %> · <%= selected.status %>
+<h2><%= JSON.parse(selected.inputs).pricingMode === "managed_v20" ? (JSON.parse(selected.inputs).serviceTier === "monitoring" ? "Monitoring-Only Quote" : "Managed IT Quote") : "BII Quote" %> #<%= selected.id %> · <%= selected.status %>
 </h2>
 <p>Approved by: <%= selected.approved_by||'Not approved' %> <%= selected.approved_at||'' %>
 </p>
@@ -136,7 +136,7 @@
 <% if(!quotes.length){ %><p>No quotes saved yet.</p><% } %>
 <% for(const q of quotes){ const qi = JSON.parse(q.inputs); const quoteName = qi.pricingMode === 'managed_v20' ? (qi.serviceTier === 'monitoring' ? 'Monitoring-Only Quote' : 'Managed IT Quote') : 'BII Quote'; %>
 <div class="quote-history-item">
-<div><strong><%= quoteName %> #<%= q.id %></strong> · <%= q.status %><p>$<%= Number(q.total).toFixed(2) %> <%= qi.pricingMode === 'managed_v20' ? 'monthly (one-time charges separate)' : 'one-time' %></p></div>
+<div><strong><%= quoteName %> #<%= q.id %></strong> · <%= q.status %><p>$<%= Number(q.total).toFixed(2) %> <%= qi.pricingMode === 'managed_v20' ? 'saved pricing total' : 'one-time' %></p></div>
 <div><a href="/prospects/<%= p.id %>/quotes?quote=<%= q.id %>#selected-quote">Review</a> · <a href="/quotes/<%= q.id %>/print">Print</a></div>
 </div>
 <% } %>
