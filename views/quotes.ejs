@@ -13,7 +13,7 @@
 <p>Managed IT includes SentinelOne EDR and Adlumin MDR. Monthly services and one-time onboarding are separate. No automatic volume discounts.</p>
 <form method="post" action="/prospects/<%= p.id %>/quotes/managed" data-quote-calculator data-calculate-url="/prospects/<%= p.id %>/quotes/managed/calculate" data-preview-target="quote-calculation" data-status-target="quote-preview-status">
 <input type="hidden" name="_csrf" value="<%= csrf %>">
-<fieldset <%= user.role!=='owner'||p.hold?'disabled':'' %>>
+<fieldset <%= p.hold?'disabled':'' %>>
 <div class="grid">
 <div><label>Service</label><select name="serviceTier"><option value="managed">Managed IT — $125/user</option><option value="monitoring">Monitoring-Only — $45/device</option></select></div>
 <div><label>Managed users</label><input type="number" name="users" min="0" required value="<%= managedInput.users||0 %>"></div>
@@ -25,7 +25,7 @@
 <div><label>Business computers (owner review above 2/user)</label><input type="number" name="computers" min="0" required value="<%= managedInput.computers||0 %>"></div>
 <div><label>Workstations requiring custom backup quote</label><input type="number" name="workstationBackups" min="0" required value="0"></div>
 <div><label>Servers requiring custom backup quote</label><input type="number" name="serverBackups" min="0" required value="0"></div>
-<div><label><input type="checkbox" name="includeBii" value="yes"> Include Standard BII Integration (one-time; configured foundation price)</label></div>
+<p>For BII implementation, use the BII Services section below. Its charges are added to the build total once.</p>
 <div><label>One-time onboarding ($300–$750 guided)</label><input type="number" name="onboarding" min="0" step="0.01" value="0"></div>
 </div>
 <label><input type="checkbox" name="confirmed" value="yes" required> I confirmed quantities, scope, and custom-price items.</label>
@@ -82,6 +82,19 @@
 </form>
 <h3>BII project estimate preview</h3><div id="bii-quote-calculation"></div><p id="bii-preview-status" role="status"></p>
 </details>
+<section class="card" id="build-total" aria-live="polite">
+<h2>Build Total</h2>
+<p>Live estimate from the selected Managed Services and BII Services above. No need to save a draft to see pricing.</p>
+<div class="grid">
+<div><p>Managed Services</p><h2 id="build-monthly">$0.00 / month</h2></div>
+<div><p>BII Implementation</p><h2 id="build-bii">$0.00 one-time</h2></div>
+<div><p>Managed IT Onboarding</p><h2 id="build-onboarding">$0.00 one-time</h2></div>
+<div><p>Total one-time investment</p><h2 id="build-onetime">$0.00</h2></div>
+</div>
+<p id="build-first-month"><strong>Estimated first month plus one-time charges:</strong> Calculating…</p>
+<p id="build-review" role="status">Calculating service estimates…</p>
+<p>Estimate only; excludes taxes, hardware, licenses and custom-priced services not yet entered. Owner approval required before a binding quote.</p>
+</section>
 <section class="card">
 <h2>Saved quote calculation</h2>
 <p>Saved draft or approved quote; live estimates are shown inside each service section.</p>
@@ -131,5 +144,5 @@
 </p>
 <% } %>
 </details>
-<script src="/quote-calculator.js?v=20261015-5" defer></script>
+<script src="/quote-calculator.js?v=20261015-6" defer></script>
 <%- include('footer') %>
