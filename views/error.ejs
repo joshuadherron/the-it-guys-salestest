@@ -4,6 +4,6 @@
 <p>
 <%= message %>
 </p>
-<a href="/">Return to workspace</a>
+<a href="<%= returnUrl || '/' %>"><%= returnUrl && returnUrl !== '/' ? 'Return to client quotes' : 'Return to workspace' %></a>
 </section>
 <%- include('footer') %>
