@@ -129,6 +129,7 @@ export function quotesRoutes(app) {
     for (const q of quotes) {
       const qi = json(q.inputs);
       q.docInput = qi;
+      q.savedLines = json(q.line_items) || [];
       q.quoteName = qi.pricingMode === "managed_v20"
         ? (qi.serviceTier === "monitoring" ? "Monitoring-Only Quote" : "Managed IT Quote")
         : "BII Quote";
@@ -154,7 +155,7 @@ export function quotesRoutes(app) {
       selected,
       input,
       managedInput,
-      calculation: selected ? (input.pricingMode==="managed_v20" ? combinedManagedQuote(input, await priceConfig()) : priceQuote(input, await priceConfig())) : null,
+      calculation: selected ? (savedInput?.pricingMode==="managed_v20" ? combinedManagedQuote(savedInput, await priceConfig()) : priceQuote(savedInput, await priceConfig())) : null,
       platforms,
       oneOffItems,
       stops: await query("SELECT * FROM config_stop_conditions ORDER BY id"),
