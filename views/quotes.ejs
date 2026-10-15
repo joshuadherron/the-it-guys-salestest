@@ -69,7 +69,7 @@
 </label>
 <div>
 <label>Priced by Josh — amount</label>
-<input type="number" step="0.01" min="0" name="amount_<%= i %>" value="<%= input.oneOff?.[label]?.amount??'' %>">
+<div class="currency-input"><span class="currency-prefix" aria-hidden="true">$</span><input type="number" step="0.01" min="0" name="amount_<%= i %>" placeholder="0.00" aria-label="<%= label %> dollar amount" value="<%= input.oneOff?.[label]?.amount??'' %>"></div>
 </div>
 </div>
 <% } %>
