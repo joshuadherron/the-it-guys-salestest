@@ -128,7 +128,7 @@ export function quotesRoutes(app) {
 
     const selected = req.query.quote
       ? quotes.find((q) => Number(q.id) === integer(req.query.quote))
-      : quotes[0];
+      : null;
     if (req.query.quote && !selected)
       fail("Quote not found for this prospect.", 404);
     const savedInput = selected ? json(selected.inputs) : null;
