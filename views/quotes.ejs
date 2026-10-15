@@ -97,16 +97,9 @@
 <p id="build-review" role="status">Calculating service estimates…</p>
 <p>Estimate only; excludes taxes, hardware, licenses and custom-priced services not yet entered. Owner approval required before a binding quote.</p>
 </section></aside></div>
-<section class="card">
-<h2>Saved quote calculation</h2>
-<p>Saved draft or approved quote; live estimates are shown inside each service section.</p>
-<div>
-<% if(calculation){ %><%- include('quote-calculation',{calculation}) %><% } else { %><p>No saved quote yet. Select services and save a draft to see the saved calculation.</p><% } %>
-</div>
-</section>
 <% if(selected){ %>
-<section class="card">
-<h2>Quote #<%= selected.id %> · <%= selected.status %>
+<section class="card" id="selected-quote">
+<h2><%= JSON.parse(selected.inputs).pricingMode === "managed_v20" ? "Managed IT Quote" : "BII Quote" %> #<%= selected.id %> · <%= selected.status %>
 </h2>
 <p>Approved by: <%= selected.approved_by||'Not approved' %> <%= selected.approved_at||'' %>
 </p>
@@ -137,14 +130,16 @@
 <% } %>
 </section>
 <% } %>
-<details class="card">
-<summary>Quote history</summary>
-<% for(const q of quotes){ %>
-<p>
-<a href="/quotes/<%= q.id %>/print">#<%= q.id %> · <%= q.status %> · $<%= Number(q.total).toFixed(2) %>
-</a>
-</p>
+<section class="card" id="quote-history">
+<h2>Quote History</h2>
+<p>Open a saved quote to review, approve, delete, or print it.</p>
+<% if(!quotes.length){ %><p>No quotes saved yet.</p><% } %>
+<% for(const q of quotes){ const qi = JSON.parse(q.inputs); const quoteName = qi.pricingMode === 'managed_v20' ? (qi.serviceTier === 'monitoring' ? 'Monitoring-Only Quote' : 'Managed IT Quote') : 'BII Quote'; %>
+<div class="quote-history-item">
+<div><strong><%= quoteName %> #<%= q.id %></strong> · <%= q.status %><p>$<%= Number(q.total).toFixed(2) %> <%= qi.pricingMode === 'managed_v20' ? 'monthly (one-time charges separate)' : 'one-time' %></p></div>
+<div><a href="/prospects/<%= p.id %>/quotes?quote=<%= q.id %>#selected-quote">Review</a> · <a href="/quotes/<%= q.id %>/print">Print</a></div>
+</div>
 <% } %>
-</details>
+</section>
 <script src="/quote-calculator.js?v=20261015-10" defer></script>
 <%- include('footer') %>
