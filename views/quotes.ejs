@@ -4,12 +4,39 @@
 <%= p.opp %> · <%= p.business_name %>
 </a>
 </p>
-<h1>BII internal worksheet</h1>
+<h1>Pricing worksheet</h1>
 <p>Josh-approved commercial worksheet. Hardware quoted separately. All personal phones count as zero managed business devices.</p>
 <% if(p.hold){ %>
 <div class="hold">On Hold — Pending Josh Review. Quote actions are blocked.</div>
 <% } %>
-<form method="post" action="/prospects/<%= p.id %>/quotes" class="card" data-quote-calculator data-calculate-url="/prospects/<%= p.id %>/quotes/calculate">
+<section class="card">
+<h2>Monthly services · Pricing v20</h2>
+<p>Managed IT includes SentinelOne EDR and Adlumin MDR. Monthly services and one-time onboarding are separate. No automatic volume discounts.</p>
+<form method="post" action="/prospects/<%= p.id %>/quotes/managed" data-quote-calculator data-calculate-url="/prospects/<%= p.id %>/quotes/managed/calculate">
+<input type="hidden" name="_csrf" value="<%= csrf %>">
+<fieldset <%= user.role!=='owner'||p.hold?'disabled':'' %>>
+<div class="grid">
+<div><label>Service</label><select name="serviceTier"><option value="managed">Managed IT — $125/user</option><option value="monitoring">Monitoring-Only — $45/device</option></select></div>
+<div><label>Managed users</label><input type="number" name="users" min="0" required value="<%= managedInput.users||0 %>"></div>
+<div><label>Monitoring-only devices</label><input type="number" name="monitoringDevices" min="0" required value="0"></div>
+<div><label>Managed servers ($75/month)</label><input type="number" name="servers" min="0" required value="0"></div>
+<div><label>Shared/additional devices ($15/month, Managed IT)</label><input type="number" name="extraDevices" min="0" required value="0"></div>
+<div><label>Microsoft 365 backup users ($5/month)</label><input type="number" name="backupUsers" min="0" required value="0"></div>
+<div><label>Monthly on-site block hours ($115/hour)</label><input type="number" name="onsiteHours" min="0" required value="0"></div>
+<div><label>Business computers (owner review above 2/user)</label><input type="number" name="computers" min="0" required value="<%= managedInput.computers||0 %>"></div>
+<div><label>Workstations requiring custom backup quote</label><input type="number" name="workstationBackups" min="0" required value="0"></div>
+<div><label>Servers requiring custom backup quote</label><input type="number" name="serverBackups" min="0" required value="0"></div>
+<div><label>One-time onboarding ($300–$750 guided)</label><input type="number" name="onboarding" min="0" step="0.01" value="0"></div>
+</div>
+<label><input type="checkbox" name="confirmed" value="yes" required> I confirmed quantities, scope, and custom-price items.</label>
+</fieldset>
+<button <%= user.role!=='owner'||p.hold?'disabled':'' %>>Save managed services draft</button>
+</form>
+<p>On-site as needed: $125/hr subscribed, billed separately. Additional locations are scoped individually; no standard recurring location fee.</p>
+</section>
+<details class="card"><summary>Managed services estimate preview</summary><p>Adjust the fields above to preview monthly charges.</p><div id="quote-calculation"></div><p id="quote-preview-status" role="status"></p></details>
+<details class="card"><summary>Legacy BII implementation worksheet</summary>
+<form method="post" action="/prospects/<%= p.id %>/quotes" class="card">
 <input type="hidden" name="_csrf" value="<%= csrf %>">
 <fieldset <%= user.role!=='owner'||p.hold?'disabled':'' %>>
 <legend>Counts — Josh confirms these before approval</legend>
@@ -51,10 +78,11 @@
 <%= user.role==='owner'?'Save new draft':'Create draft from discovery for Josh' %>
 </button>
 </form>
+</details>
 <section class="card">
-<h2>Current calculation</h2>
-<p id="quote-preview-status" aria-live="polite">Updates as counts and one-off amounts change.</p>
-<div id="quote-calculation">
+<h2>Saved quote calculation</h2>
+<p>Saved quote calculation (legacy implementation or managed services).</p>
+<div>
 <%- include('quote-calculation',{calculation}) %>
 </div>
 </section>
