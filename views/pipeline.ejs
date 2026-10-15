@@ -1,16 +1,16 @@
 <%- include('header') %>
 <div class="row">
 <div>
-<p class="muted">RELATIONSHIPS → OPPORTUNITIES</p>
+<p class="muted">YOUR SALES WORKSPACE</p>
 <h1>
-<%= today?'Your next conversations':'Sales pipeline' %>
+<%= today?'Your sales dashboard':'All businesses' %>
 </h1>
 <p>
-<%= today?'Follow-ups, earliest first. Keep the next step clear.':'Track each opportunity from first contact to decision.' %>
+<%= today?'See who needs attention, record conversations, and keep relationships moving.':'Find and manage every business relationship in one place.' %>
 </p>
 </div>
 <div>
-<a class="button" href="/prospects/new">+ Quick-add prospect</a>
+<a class="button" href="/prospects/new">+ Add business</a>
 </div>
 </div>
 <% if(today){ if(user.role==='owner'){ %>
@@ -28,7 +28,7 @@
 <button>Search</button>
 </div>
 </form>
-<% const groups=today?[{name:'Follow-ups',rows}]:stages.map(s=>({name:s.name,rows:rows.filter(p=>p.stage===s.name)}));for(const group of groups){ %>
+<% if(today){ const due=rows.filter(p=>p.follow_up && String(p.follow_up).slice(0,10)<=new Date().toISOString().slice(0,10)); const upcoming=rows.filter(p=>p.follow_up && String(p.follow_up).slice(0,10)>new Date().toISOString().slice(0,10)); const unscheduled=rows.filter(p=>!p.follow_up); %><div class="dashboard-stats"><div><strong><%= rows.length %></strong><span>Businesses</span></div><div><strong><%= due.length %></strong><span>Due for follow-up</span></div><div><strong><%= unscheduled.length %></strong><span>No follow-up set</span></div></div><% } %><% const groups=today?[{name:'Needs follow-up',rows:due},{name:'Upcoming conversations',rows:upcoming},{name:'No follow-up scheduled',rows:unscheduled}]:[{name:'Businesses',rows}];for(const group of groups){ %>
 <section class="card">
 <h2>
 <%= group.name %> <span class="pill">
@@ -60,7 +60,7 @@
 <% if(p.status){ %><p class="pill">Status: <%= p.status %></p><% } %>
 <% if(p.legacy_stage){ %><p class="muted">Source stage: <%= p.legacy_stage %></p><% } %>
 <% if(p.next_action){ %><p><%= p.next_action %> · <%= p.next_action_date||'' %> <%= p.next_action_time||'' %> <%= p.next_action_method||'' %></p><% } %>
-<p>Likely Service: <%= p.likely_service||'Unset' %></p>
+<p>Interest: <%= p.likely_service||'Not specified' %></p>
 <p>Follow-up: <%= p.follow_up||'Not scheduled' %>
 </p>
 <% if(p.hold){ %>
