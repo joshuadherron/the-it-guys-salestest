@@ -103,3 +103,13 @@ body:has(#selected-quote[role="dialog"]){overflow:hidden}
   margin:0;padding:5px 12px 7px;font-size:.78rem;line-height:1.2;
  }
 }
+
+/* Inline quote editing stays inside the focused review window. */
+.quote-page .quote-review-edit-actions{margin:8px 0}
+.quote-page .quote-review-edit-form{padding:12px 14px;margin:10px 0;border:1px solid #9bb9c8;border-radius:8px;background:#f7fafc}
+.quote-page .quote-review-edit-form[hidden]{display:none!important}
+.quote-page .quote-review-edit-form .grid{grid-template-columns:repeat(auto-fit,minmax(165px,1fr));gap:8px 12px}
+.quote-page .quote-review-edit-form label{display:block;font-size:.84rem;margin:3px 0}
+.quote-page .quote-review-edit-form input[type=number],.quote-page .quote-review-edit-form select{width:100%;min-width:0}
+.quote-page .quote-review-edit-form input[type=checkbox]{width:16px;height:16px;vertical-align:middle}
+.quote-page .quote-review-edit-buttons{display:flex;gap:9px;flex-wrap:wrap;margin-top:10px}
