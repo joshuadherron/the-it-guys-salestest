@@ -4,8 +4,11 @@ export const quoteFillMode = (env = process.env) => {
   if (!["off", "dryrun", "live"].includes(mode)) throw new Error("Invalid QUOTE_FILL_MODE; expected off, dryrun or live.");
   return mode === "live" && env.SHAREPOINT_WRITE_MODE === "live" ? "live" : mode === "off" ? "off" : "dryrun";
 };
-export const quoteLane = (input) => {
-  if (input?.pricingMode === "managed_v20") {
+export const quoteLane = (input, requestedKey) => {
+  if (requestedKey && !["COM-PRP", "BII-QSOW"].includes(requestedKey)) throw new Error("Unsupported quote document key.");
+  if (requestedKey === "BII-QSOW" && input?.includeBii === true) return { key:"BII-QSOW", workflow:"BII-05", label:"BII Quote & SOW", template:"v1.6" };
+  if (requestedKey === "BII-QSOW") throw new Error("This quote does not include BII.");
+  if (input?.pricingMode === "managed_v20" && requestedKey !== "BII-QSOW") {
     if (input.serviceTier !== "managed") throw new Error("Only Managed IT quotes are supported by the Managed IT document template.");
     return { key:"COM-PRP", workflow:"MIT-05", label:"Managed IT Quote", template:"v1.8" };
   }
