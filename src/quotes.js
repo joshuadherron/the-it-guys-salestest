@@ -150,7 +150,6 @@ export function quotesRoutes(app) {
   app.post("/prospects/:id/quotes/managed/calculate", async (req,res) => {
     const p = await prospect(req.params.id);
     if (p.hold) fail("On Hold — Pending Josh Review.");
-    if (req.session.user.role !== "owner") fail("Owner access required.",403);
     res.render("quote-calculation",{calculation:combinedManagedQuote(validateManagedInputs(req.body),await priceConfig())});
   });
   app.post("/prospects/:id/quotes/managed", async (req,res) => {
@@ -169,7 +168,6 @@ export function quotesRoutes(app) {
   app.post("/prospects/:id/quotes/calculate", async (req, res) => {
     const p = await prospect(req.params.id);
     if (p.hold) fail("On Hold — Pending Josh Review. Pricing is blocked.");
-    if (req.session.user.role !== "owner") fail("Owner access required.", 403);
     const input = validateInputs(req.body);
     res.render("quote-calculation", {
       calculation: input.includeBii ? priceQuote(input, await priceConfig()) : {lines:[],pending:[],total:0},
