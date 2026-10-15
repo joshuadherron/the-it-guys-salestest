@@ -41,6 +41,7 @@ export function prefill(a) {
     locationLaborBase: null,
     oneOff: {},
     confirmed: false,
+    includeBii: false,
   };
 }
 
@@ -58,6 +59,7 @@ export function validateInputs(body) {
     input[k] = integer(body[k]);
 
   input.confirmed = body.confirmed === "yes";
+  input.includeBii = body.includeBii === "yes";
 
   const locationLaborBase = body.locationLaborBase;
   if (
@@ -138,7 +140,7 @@ export function quotesRoutes(app) {
       selected,
       input,
       managedInput,
-      calculation: input.pricingMode==="managed_v20" ? combinedManagedQuote(input, await priceConfig()) : priceQuote(input, await priceConfig()),
+      calculation: selected ? (input.pricingMode==="managed_v20" ? combinedManagedQuote(input, await priceConfig()) : priceQuote(input, await priceConfig())) : null,
       platforms,
       oneOffItems,
       stops: await query("SELECT * FROM config_stop_conditions ORDER BY id"),
@@ -170,7 +172,7 @@ export function quotesRoutes(app) {
     if (req.session.user.role !== "owner") fail("Owner access required.", 403);
     const input = validateInputs(req.body);
     res.render("quote-calculation", {
-      calculation: priceQuote(input, await priceConfig()),
+      calculation: input.includeBii ? priceQuote(input, await priceConfig()) : {lines:[],pending:[],total:0},
     });
   });
 
@@ -193,7 +195,7 @@ export function quotesRoutes(app) {
           ? validateInputs(req.body)
           : prefill(d.answers);
 
-      const calculation = priceQuote(input, await priceConfig(c));
+      const calculation = input.includeBii ? priceQuote(input, await priceConfig(c)) : {lines:[],pending:[],total:0};
 
       await query(
         "UPDATE quotes SET status='Draft',approved_by=NULL,approved_at=NULL WHERE prospect_id=? AND status='Approved'",
