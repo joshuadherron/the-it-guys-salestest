@@ -7,6 +7,8 @@ test("requires both flags for live writes",()=>assert.equal(quoteFillMode({QUOTE
 test("routes approved lanes to separate contractual documents",()=>{
  assert.equal(quoteLane({includeBii:true}).key,"BII-QSOW");
  assert.equal(quoteLane({pricingMode:"managed_v20",serviceTier:"managed"}).key,"COM-PRP");
+ assert.equal(quoteLane({pricingMode:"managed_v20",serviceTier:"managed",includeBii:true},"BII-QSOW").key,"BII-QSOW");
+ assert.throws(()=>quoteLane({pricingMode:"managed_v20",serviceTier:"managed",includeBii:false},"BII-QSOW"));
  assert.throws(()=>quoteLane({pricingMode:"managed_v20",serviceTier:"monitoring"}));
 });
 test("requires owner approval and exactly one open copy",()=>{
