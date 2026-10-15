@@ -8,12 +8,14 @@ export function buildManagedFill({quote,prospect,owner={},prices={}}){
  if(input.pricingMode!=="managed_v20"||input.serviceTier!=="managed")throw new Error("Managed IT document requires a Managed IT quote.");
  if(calc.pending.length)throw new Error("Pricing review required: "+calc.pending.join("; "));
  const lines=quote.line_items;
+ if(!Array.isArray(lines))throw new Error("Approved quote line items are required.");
  const monthly=lines.filter(x=>x.billing!=="one_time").reduce((sum,l)=>sum+Number(l.amount),0);
  if(Math.abs(monthly-calc.total)>.005)throw new Error("Approved Managed IT monthly pricing does not match the current pricing engine.");
  const users=count(input,"users"),extra=count(input,"extraDevices"),servers=count(input,"servers"),backup=count(input,"backupUsers"),hours=count(input,"onsiteHours"),computers=count(input,"computers");
  if(count(input,"workstationBackups")||count(input,"serverBackups"))throw new Error("System backups require explicit per-system owner pricing before document generation.");
  const fee=Math.max(3,users)*125,sharedFee=extra*15,serverFee=servers*75,backupFee=backup*5,onsiteFee=hours*115;
  const rates={"RATE.User":"$125/month","RATE.OnSiteBlock":"$115/hour","RATE.Shared":"$15/device/month","RATE.Server":"$75/server/month","RATE.M365Backup":"$5/user/month","RATE.Hourly":"$125/hour","RATE.AfterHours":"$187.50/hour"};
+ if(input.includeBii && !lines.some(x=>x.billing==="one_time" && String(x.label).includes("BII Integration"))) throw new Error("Combined quote is missing its separately approved BII foundation line.");
  const fields={
   "MIT.ClientShortName":prospect.business_name,"MIT.ClientLegalName":required(owner,"legalName"),"MIT.QuoteId":String(quote.id),
   "MIT.PreparedFor":required(owner,"preparedFor"),"MIT.Date":formatDate(quote.approved_at||new Date().toISOString()),"MIT.BackupContact":required(owner,"backupContact"),
