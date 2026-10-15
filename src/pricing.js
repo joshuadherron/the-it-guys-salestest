@@ -115,3 +115,46 @@ export function priceQuote(input, prices) {
     total: lines.reduce((n, l) => n + Math.round(l.amount * 100), 0) / 100,
   };
 }
+
+/**
+ * Managed service estimates from The IT Guys Pricing Sheet v20.
+ * Legacy BII implementation quotes continue through priceQuote().
+ */
+export function priceManagedServices(input) {
+  const qty = (key) => {
+    const n = Number(input[key] ?? 0);
+    if (!Number.isSafeInteger(n) || n < 0 || n > 100000) throw new Error("Invalid count: " + key);
+    return n;
+  };
+  const money = (key) => {
+    const n = Number(input[key] ?? 0);
+    if (!Number.isFinite(n) || n < 0 || n > 10000000) throw new Error("Invalid amount: " + key);
+    return n;
+  };
+  const tier = input.serviceTier === "monitoring" ? "monitoring" : "managed";
+  const users = qty("users"), devices = qty("monitoringDevices"), servers = qty("servers");
+  const extra = qty("extraDevices"), backupUsers = qty("backupUsers"), onsiteHours = qty("onsiteHours");
+  const monthly = [], pending = [];
+  const add = (label, quantity, unit) => monthly.push({label,quantity,unit,amount:Math.round(quantity*unit*100)/100});
+  if (tier === "managed") {
+    add("Managed IT users (minimum $375)", Math.max(3,users),125);
+    if (extra) add("Shared/additional devices",extra,15);
+    if (onsiteHours) add("Monthly on-site support block",onsiteHours,115);
+    if (users && qty("computers") > 2*users) pending.push("Owner review required: more than 2 computers per user");
+  } else {
+    add("Monitoring-only managed devices",devices,45);
+    if (extra || onsiteHours) pending.push("Additional devices / on-site blocks require Managed IT or separate owner approval");
+  }
+  if (servers) add("Managed servers",servers,75);
+  if (backupUsers) add("Microsoft 365 backup users",backupUsers,5);
+  if (qty("workstationBackups") || qty("serverBackups")) pending.push("Workstation/server backup: custom price required");
+  let total = monthly.reduce((sum,l)=>sum+l.amount,0);
+  if (tier==="monitoring" && total<225) {
+    add("Monitoring-only minimum adjustment",1,225-total);
+    total=225;
+  }
+  const onboarding=money("onboarding");
+  if (tier==="managed" && onboarding && (onboarding<300 || onboarding>750)) pending.push("Onboarding outside $300–$750: owner review");
+  if (input.discountPercent && money("discountPercent")>0) pending.push("Volume discount requires discretionary owner approval and profitability review");
+  return {lines:monthly,pending,total:Math.round(total*100)/100,onboarding,pricingMode:"managed_v20"};
+}
