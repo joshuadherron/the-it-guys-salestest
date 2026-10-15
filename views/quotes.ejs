@@ -20,13 +20,14 @@
 <td><%= q.status %></td>
 <td class="quote-history-amount">$<%= Number(q.total).toFixed(2) %></td>
 <td><%= q.billingLabel %></td>
-<td class="quote-history-actions"><a href="/prospects/<%= p.id %>/quotes?quote=<%= q.id %>#selected-quote">Review</a><a href="/quotes/<%= q.id %>/print">Print</a></td>
+<td class="quote-history-actions"><a href="/prospects/<%= p.id %>/quotes?quote=<%= q.id %>#selected-quote">Review</a><% if(user.role==="owner"){ %><a href="/prospects/<%= p.id %>/quotes?edit=<%= q.id %>#<%= q.docInput.pricingMode==="managed_v20"?"managed-services-section":"bii-services-section" %>">Edit</a><% } %><a href="/quotes/<%= q.id %>/print">Print</a></td>
 </tr>
 <% } %>
 </tbody></table></div>
 </details>
  <% } %>
 <h1>Pricing worksheet</h1>
+<% if(editing){ %><p class="quote-edit-notice"><strong>Editing <%= editing.quoteName %> #<%= editing.id %>:</strong> <%= editing.status==="Approved"?"The approved quote is preserved. Saving creates a new draft revision for approval.":"Saving updates this draft quote." %> <a href="/prospects/<%= p.id %>/quotes">Cancel editing</a></p><% } %>
 <p>Josh-approved commercial worksheet. Hardware quoted separately. All personal phones count as zero managed business devices.</p>
 <% if(p.hold){ %>
 <div class="hold">On Hold — Pending Josh Review. Quote actions are blocked.</div>
@@ -102,7 +103,7 @@
 <div class="quote-builder-layout"><div class="quote-builder-main">
 <details class="card" id="managed-services-section"><summary><strong>Managed Services</strong> <span id="managed-services-summary-total" aria-live="polite">Quote total: calculating…</span><span class="quote-summary-control" onclick="event.stopPropagation()"><label for="managed-tier-select">Service</label><select id="managed-tier-select" name="serviceTier" form="managed-pricing-form"><option value="none" <%= !managedInput.pricingMode ? "selected" : "" %>>No Managed Services</option><option value="managed" <%= managedInput.pricingMode && managedInput.serviceTier !== "monitoring" && managedInput.serviceTier !== "none" ? "selected" : "" %>>Managed IT — $125/user</option><option value="monitoring" <%= managedInput.serviceTier === "monitoring" && managedInput.pricingMode ? "selected" : "" %>>Monitoring-Only — $45/device</option></select></span></summary>
 <p>Managed IT includes SentinelOne EDR and Adlumin MDR. Monthly services and one-time onboarding are separate. No automatic volume discounts.</p>
-<form id="managed-pricing-form" method="post" action="/prospects/<%= p.id %>/quotes/managed" data-quote-calculator data-calculate-url="/prospects/<%= p.id %>/quotes/managed/calculate" data-preview-target="quote-calculation" data-status-target="quote-preview-status">
+<form id="managed-pricing-form" method="post" action="<%= editing?.docInput.pricingMode==="managed_v20"?"/quotes/"+editing.id+"/edit":"/prospects/"+p.id+"/quotes/managed" %>" data-quote-calculator data-calculate-url="/prospects/<%= p.id %>/quotes/managed/calculate" data-preview-target="quote-calculation" data-status-target="quote-preview-status">
 <input type="hidden" name="_csrf" value="<%= csrf %>">
 <fieldset <%= p.hold?'disabled':'' %>>
 <div class="grid">
@@ -123,14 +124,14 @@
 </div>
 <label><input type="checkbox" name="confirmed" value="yes" required> I confirmed quantities, scope, and custom-price items.</label>
 </fieldset>
-<button <%= user.role!=='owner'||p.hold?'disabled':'' %>>Save managed services draft</button>
+<button <%= user.role!=='owner'||p.hold?'disabled':'' %>><%= editing?.docInput.pricingMode==="managed_v20"?(editing.status==="Approved"?"Save new draft revision":"Save changes to draft"):"Save managed services draft" %></button>
 </form>
 <p>On-site as needed: $125/hr subscribed, billed separately. Additional locations are scoped individually; no standard recurring location fee.</p>
 <div><h3>Managed Services estimate</h3><div id="quote-calculation"></div><p id="quote-preview-status" role="status"></p></div>
 </details>
 <details class="card" id="bii-services-section"><summary><strong>BII Services</strong> · One-time implementation <span class="quote-summary-control" onclick="event.stopPropagation()"><label><input type="checkbox" name="includeBii" value="yes" form="bii-pricing-form" <%= input.includeBii ? "checked" : "" %>> Include Standard BII Integration</label></span></summary>
 <p>BII foundation, included allowances and additional-unit rates are calculated from the existing centrally configured BII prices. This is a one-time implementation estimate, not part of the monthly Managed IT total.</p>
-<form id="bii-pricing-form" method="post" action="/prospects/<%= p.id %>/quotes" class="card" data-quote-calculator data-calculate-url="/prospects/<%= p.id %>/quotes/calculate" data-preview-target="bii-quote-calculation" data-status-target="bii-preview-status">
+<form id="bii-pricing-form" method="post" action="<%= editing && editing.docInput.pricingMode!=="managed_v20"?"/quotes/"+editing.id+"/edit":"/prospects/"+p.id+"/quotes" %>" class="card" data-quote-calculator data-calculate-url="/prospects/<%= p.id %>/quotes/calculate" data-preview-target="bii-quote-calculation" data-status-target="bii-preview-status">
 <input type="hidden" name="_csrf" value="<%= csrf %>">
 <fieldset <%= p.hold?'disabled':'' %>>
 <legend>BII scope — Josh confirms these before approval</legend>
