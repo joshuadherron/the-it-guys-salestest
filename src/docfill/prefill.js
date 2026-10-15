@@ -15,6 +15,7 @@ export function documentPrefill(prospect, input, laneKey) {
     backupContact:text(p.backup_contact || p.secondary_contact || ""),
     domain:knownDomain,
     summary:"",
+    legalName:text(p.business_name),
     // Business name is a suggestion, not proof of the registered legal entity.\n    legalName: text(p.business_name),
     exceptions:"",
     signer:""
