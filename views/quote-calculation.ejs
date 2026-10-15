@@ -1,3 +1,4 @@
+<div class="quote-preview-data" data-estimate-total="<%= Number(calculation.total || 0).toFixed(2) %>" data-estimate-pending="<%= calculation.pending.length %>" data-estimate-monthly="<%= calculation.pricingMode === 'managed_v20' ? Number(calculation.monthlyTotal ?? calculation.total).toFixed(2) : '0.00' %>" data-estimate-onetime="<%= calculation.pricingMode === 'managed_v20' ? Number(calculation.oneTimeTotal || 0).toFixed(2) : Number(calculation.total || 0).toFixed(2) %>">
 <% if(calculation.pricingMode === "managed_v20" && calculation.includeBiiSummary){ %>
 <p><strong>Monthly recurring:</strong> $<%= calculation.monthlyTotal.toFixed(2) %> · <strong>One-time BII:</strong> $<%= calculation.oneTimeTotal.toFixed(2) %></p>
 <% } %>
@@ -5,3 +6,4 @@
 <% if(calculation.pending.length){ %>
 <p>Priced by Josh — amounts still required: <%= calculation.pending.join(', ') %>. Displayed total excludes these unresolved items.</p>
 <% } %>
+</div>
