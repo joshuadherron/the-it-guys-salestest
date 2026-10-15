@@ -78,7 +78,10 @@ export function managedReferenceFacts(quote, prospect, raw) {
   const assigned = deviceList(computers, phones, tablets);
   const kinds = owner.deviceKinds;
   const deviceKinds = kinds.length < 2 ? kinds[0] : kinds.length === 2 ? kinds.join(" and ") : kinds.slice(0, -1).join(", ") + " and " + kinds.at(-1);
-  if(owner.siteCities && /[0-9\r\n]/.test(owner.siteCities)) fail("Enter site cities only, without street addresses.");
+  // A single site is represented as "Single office"; its optional city field
+  // does not enter the document and should not block the download.
+  if(owner.siteCount > 1 && owner.siteCities && /[0-9\r\n]/.test(owner.siteCities))
+    fail("For multiple sites, enter city names only (for example, Beaumont, Nederland), without street addresses.");
   const sites = owner.siteCount;
   return { owner, facts: {
     clientShortName: factText(prospect.business_name, "business name"), clientLegalName: owner.legalName,
