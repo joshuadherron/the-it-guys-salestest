@@ -16,3 +16,9 @@
 @media(max-width:1050px){.quote-document-fields{grid-template-columns:repeat(3,minmax(0,1fr))}.quote-document-page .quote-document-optional{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:700px){.quote-document-fields,.quote-document-page .quote-document-optional{grid-template-columns:repeat(2,minmax(0,1fr))}.quote-document-form{padding:12px}}
 @media(max-width:480px){.quote-document-fields,.quote-document-page .quote-document-optional{grid-template-columns:1fr}}
+
+.quote-document-confirmation{margin:10px 0;padding:10px 14px;border:1px solid #a6b9c5;border-radius:7px;background:#f5f8fa}
+.quote-document-confirmation strong{display:block;margin-bottom:3px}
+.quote-document-confirmation p{margin:4px 0 7px;font-size:.85rem}
+.quote-document-confirmation label{display:flex;align-items:center;gap:9px;margin:0;font-weight:650}
+.quote-document-confirmation input[type=checkbox]{flex:none;width:18px;height:18px;min-height:18px}
