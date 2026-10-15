@@ -3,7 +3,7 @@ import { ownerOnly, integer, fail } from "./security.js";
 import { prospect } from "./pipeline.js";
 import { discovery } from "./discovery.js";
 import { answer, value } from "./discovery-rules.js";
-import { platforms, oneOffItems, priceQuote } from "./pricing.js";
+import { platforms, oneOffItems, priceQuote, priceManagedServices } from "./pricing.js";
 
 export async function priceConfig(c) {
   return Object.fromEntries(
@@ -93,6 +93,17 @@ export function validateInputs(body) {
   return input;
 }
 
+export function validateManagedInputs(body) {
+  const input = {pricingMode:"managed_v20",serviceTier:body.serviceTier==="monitoring"?"monitoring":"managed",confirmed:body.confirmed==="yes"};
+  for (const key of ["users","monitoringDevices","servers","extraDevices","backupUsers","onsiteHours","computers","workstationBackups","serverBackups"]) {
+    input[key] = integer(body[key] || "0");
+  }
+  const onboarding = String(body.onboarding || "0");
+  if (!/^\\d+(\\.\\d{1,2})?$/.test(onboarding)) fail("Enter a valid onboarding amount.");
+  input.onboarding = Number(onboarding);
+  return input;
+}
+
 export function quotesRoutes(app) {
   app.get("/prospects/:id/quotes", async (req, res) => {
     const p = await prospect(req.params.id);
@@ -109,19 +120,40 @@ export function quotesRoutes(app) {
     if (req.query.quote && !selected)
       fail("Quote not found for this prospect.", 404);
     const input = selected ? json(selected.inputs) : prefill(d.answers);
+    const managedInput = {users:prefill(d.answers).users,computers:prefill(d.answers).unallocated,serviceTier:"managed",confirmed:false};
 
     res.render("quotes", {
       p,
       quotes,
       selected,
       input,
-      calculation: priceQuote(input, await priceConfig()),
+      managedInput,
+      calculation: input.pricingMode==="managed_v20" ? priceManagedServices(input) : priceQuote(input, await priceConfig()),
       platforms,
       oneOffItems,
       stops: await query("SELECT * FROM config_stop_conditions ORDER BY id"),
     });
   });
 
+  app.post("/prospects/:id/quotes/managed/calculate", async (req,res) => {
+    const p = await prospect(req.params.id);
+    if (p.hold) fail("On Hold — Pending Josh Review.");
+    if (req.session.user.role !== "owner") fail("Owner access required.",403);
+    res.render("quote-calculation",{calculation:priceManagedServices(validateManagedInputs(req.body))});
+  });
+  app.post("/prospects/:id/quotes/managed", async (req,res) => {
+    if (req.session.user.role !== "owner") fail("Owner access required.",403);
+    await transaction(async c => {
+      const p = await prospect(req.params.id,c);
+      if (p.hold) fail("On Hold — Pending Josh Review.");
+      const input = validateManagedInputs(req.body);
+      const calculation = priceManagedServices(input);
+      await query("UPDATE quotes SET status='Draft',approved_by=NULL,approved_at=NULL WHERE prospect_id=? AND status='Approved'",[p.id],c);
+      const result = await query("INSERT INTO quotes (prospect_id,inputs,line_items,total) VALUES (?,?,?,?)",[p.id,JSON.stringify(input),JSON.stringify(calculation.lines),calculation.total],c);
+      await audit(c,req.session.user,"create managed services v20 draft","quote",result.insertId);
+    });
+    res.redirect(`/prospects/${req.params.id}/quotes`);
+  });
   app.post("/prospects/:id/quotes/calculate", async (req, res) => {
     const p = await prospect(req.params.id);
     if (p.hold) fail("On Hold — Pending Josh Review. Pricing is blocked.");
@@ -258,10 +290,10 @@ export function quotesRoutes(app) {
           "Targeted assessment first. A selected stop condition blocks approval.",
         );
 
-      const calc = priceQuote(input, await priceConfig(c));
+      const calc = input.pricingMode==="managed_v20" ? priceManagedServices(input) : priceQuote(input, await priceConfig(c));
 
       if (calc.pending.length)
-        fail("Priced by Josh: enter every selected one-off amount.");
+        fail("Pricing review required: " + calc.pending.join("; "));
 
       await query(
         "UPDATE quotes SET status='Approved',approved_by=?,approved_at=UTC_TIMESTAMP(),stop_review=?,inputs=?,line_items=?,total=? WHERE id=?",
