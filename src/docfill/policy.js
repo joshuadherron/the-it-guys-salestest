@@ -6,6 +6,8 @@ export const quoteFillMode = (env = process.env) => {
 };
 export const quoteLane = (input, requestedKey) => {
   if (requestedKey && !["COM-PRP", "BII-QSOW"].includes(requestedKey)) throw new Error("Unsupported quote document key.");
+  if (requestedKey === "COM-PRP" && input?.pricingMode !== "managed_v20") throw new Error("Managed IT template requires a Managed IT quote.");
+  if (requestedKey === "BII-QSOW" && input?.pricingMode === "managed_v20") throw new Error("Combined quotes require a separately approved and priced BII scope before BII document generation.");
   if (requestedKey === "BII-QSOW" && input?.includeBii === true) return { key:"BII-QSOW", workflow:"BII-05", label:"BII Quote & SOW", template:"v1.6" };
   if (requestedKey === "BII-QSOW") throw new Error("This quote does not include BII.");
   if (input?.pricingMode === "managed_v20" && requestedKey !== "BII-QSOW") {
