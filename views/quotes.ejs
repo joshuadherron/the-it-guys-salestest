@@ -32,7 +32,7 @@
 <table><thead><tr><th>Saved line item</th><th>Quantity</th><th>Unit price</th><th>Amount</th><th>Billing</th></tr></thead>
 <tbody>
 <% for(const line of savedLines){ %>
-<tr><td><%= line.label %></td><td><%= line.quantity??"—" %></td><td><%= line.unit===undefined?"—":"$"+Number(line.unit).toFixed(2) %></td><td>$<%= Number(line.amount).toFixed(2) %></td><td><%= line.billing==="one_time"?"One-time":"Monthly" %></td></tr>
+<tr><td><%= line.label %></td><td><%= line.quantity??"—" %></td><td><%= line.unit===undefined?"—":"$"+Number(line.unit).toFixed(2) %></td><td>$<%= Number(line.amount).toFixed(2) %></td><td><%= selected.docInput.pricingMode!=="managed_v20"?"One-time":(line.billing==="one_time"?"One-time":"Monthly") %></td></tr>
 <% } %>
 </tbody></table>
 </div>
@@ -48,7 +48,7 @@
 </div>
 <a href="/quotes/<%= selected.id %>/print">Printable internal worksheet</a>
 <% if(user.role==="owner" && selected.status==="Approved"){ %>
-<a href="/quotes/<%= selected.id %>/document?lane=<%= selected.docInput.pricingMode==="managed_v20"?"COM-PRP":"BII-QSOW" %>">Prepare contractual Word quote</a>
+<a class="button quote-document-action" href="/quotes/<%= selected.id %>/document?lane=<%= selected.docInput.pricingMode==="managed_v20"?"COM-PRP":"BII-QSOW" %>">Prepare contractual Word quote</a>
 
 <% } %>
 <% if(user.role==='owner'&&selected.status==='Draft'){ %>
