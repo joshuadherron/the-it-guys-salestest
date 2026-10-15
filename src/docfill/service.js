@@ -26,6 +26,7 @@ export async function prepareQuoteDocument({
     throw new Error("The approved master document does not match this quote lane.");
   assertTagset(expectedKey,await listTags(master.content));
   const {buffer,report}=await fillDocx(master.content,data);
+  if(report.unfilled.length) throw new Error("Quote document contains unfilled fields: "+report.unfilled.join(", "));
   return {buffer,report,master,working,quoteId:quote.id,documentKey:expectedKey};
 }
 
