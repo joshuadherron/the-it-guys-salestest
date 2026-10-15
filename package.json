@@ -22,7 +22,9 @@
     "express-mysql-session": "^3.0.3",
     "express-session": "^1.18.2",
     "helmet": "^8.1.0",
-    "mysql2": "^3.24.4"
+    "mysql2": "^3.24.4",
+    "jszip": "^3.10.1",
+    "@xmldom/xmldom": "^0.9.8"
   },
   "devDependencies": {
     "eslint": "^10.0.0"
