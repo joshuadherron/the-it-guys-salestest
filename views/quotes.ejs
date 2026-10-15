@@ -11,13 +11,13 @@
 <div class="hold">On Hold — Pending Josh Review. Quote actions are blocked.</div>
 <% } %>
 <div class="quote-builder-layout"><div class="quote-builder-main">
-<details class="card" id="managed-services-section"><summary><strong>Managed Services</strong> <span id="managed-services-summary-total" aria-live="polite">Quote total: calculating…</span></summary>
+<details class="card" id="managed-services-section"><summary><strong>Managed Services</strong> <span id="managed-services-summary-total" aria-live="polite">Quote total: calculating…</span><span class="quote-summary-control" onclick="event.stopPropagation()"><label for="managed-tier-select">Service</label><select id="managed-tier-select" name="serviceTier" form="managed-pricing-form"><option value="none" <%= !managedInput.pricingMode ? "selected" : "" %>>No Managed Services</option><option value="managed" <%= managedInput.pricingMode && managedInput.serviceTier !== "monitoring" && managedInput.serviceTier !== "none" ? "selected" : "" %>>Managed IT — $125/user</option><option value="monitoring" <%= managedInput.serviceTier === "monitoring" && managedInput.pricingMode ? "selected" : "" %>>Monitoring-Only — $45/device</option></select></span></summary>
 <p>Managed IT includes SentinelOne EDR and Adlumin MDR. Monthly services and one-time onboarding are separate. No automatic volume discounts.</p>
-<form method="post" action="/prospects/<%= p.id %>/quotes/managed" data-quote-calculator data-calculate-url="/prospects/<%= p.id %>/quotes/managed/calculate" data-preview-target="quote-calculation" data-status-target="quote-preview-status">
+<form id="managed-pricing-form" method="post" action="/prospects/<%= p.id %>/quotes/managed" data-quote-calculator data-calculate-url="/prospects/<%= p.id %>/quotes/managed/calculate" data-preview-target="quote-calculation" data-status-target="quote-preview-status">
 <input type="hidden" name="_csrf" value="<%= csrf %>">
 <fieldset <%= p.hold?'disabled':'' %>>
 <div class="grid">
-<div><label>Service</label><select name="serviceTier"><option value="none" <%= !managedInput.pricingMode ? "selected" : "" %>>No Managed Services</option><option value="managed" <%= managedInput.pricingMode && managedInput.serviceTier !== "monitoring" && managedInput.serviceTier !== "none" ? "selected" : "" %>>Managed IT — $125/user</option><option value="monitoring" <%= managedInput.serviceTier === "monitoring" && managedInput.pricingMode ? "selected" : "" %>>Monitoring-Only — $45/device</option></select></div>
+
 <div><label>Managed users</label><input type="number" name="users" min="0" required value="<%= managedInput.users ?? 0 %>"></div>
 <div><label>Monitoring-only devices</label><input type="number" name="monitoringDevices" min="0" required value="<%= managedInput.monitoringDevices ?? 0 %>"></div>
 <div><label>Managed servers ($75/month)</label><input type="number" name="servers" min="0" required value="<%= managedInput.servers ?? 0 %>"></div>
@@ -37,13 +37,13 @@
 <p>On-site as needed: $125/hr subscribed, billed separately. Additional locations are scoped individually; no standard recurring location fee.</p>
 <div><h3>Managed Services estimate</h3><div id="quote-calculation"></div><p id="quote-preview-status" role="status"></p></div>
 </details>
-<details class="card"><summary><strong>BII Services</strong> · One-time implementation</summary>
+<details class="card" id="bii-services-section"><summary><strong>BII Services</strong> · One-time implementation <span class="quote-summary-control" onclick="event.stopPropagation()"><label><input type="checkbox" name="includeBii" value="yes" form="bii-pricing-form" <%= input.includeBii ? "checked" : "" %>> Include Standard BII Integration</label></span></summary>
 <p>BII foundation, included allowances and additional-unit rates are calculated from the existing centrally configured BII prices. This is a one-time implementation estimate, not part of the monthly Managed IT total.</p>
-<form method="post" action="/prospects/<%= p.id %>/quotes" class="card" data-quote-calculator data-calculate-url="/prospects/<%= p.id %>/quotes/calculate" data-preview-target="bii-quote-calculation" data-status-target="bii-preview-status">
+<form id="bii-pricing-form" method="post" action="/prospects/<%= p.id %>/quotes" class="card" data-quote-calculator data-calculate-url="/prospects/<%= p.id %>/quotes/calculate" data-preview-target="bii-quote-calculation" data-status-target="bii-preview-status">
 <input type="hidden" name="_csrf" value="<%= csrf %>">
 <fieldset <%= p.hold?'disabled':'' %>>
 <legend>BII scope — Josh confirms these before approval</legend>
-<label><input type="checkbox" name="includeBii" value="yes" <%= input.includeBii ? "checked" : "" %>> Include Standard BII Integration (foundation and selected additions)</label>
+
 <p>Discovery computer counts start under platform not yet assigned. Move devices into platform rows without counting them twice. Uncaptured counts start at 0 and require Josh's confirmation.</p>
 <div class="grid">
 <% for(const [key,label] of [['users','Integration users'],['windows','Windows managed business devices'],['mac','Mac managed business devices'],['ios','Company iPhone/iPad managed devices'],['android','Company Android managed devices'],['unallocated','Managed business devices — platform not yet assigned'],['mailboxes','Straightforward mailbox migrations'],['dell','New Dell deployments (labor)'],['phones','Personal / BYOD phones — counted as 0'],['locations','Locations']]){ %>
@@ -146,5 +146,5 @@
 </p>
 <% } %>
 </details>
-<script src="/quote-calculator.js?v=20261015-9" defer></script>
+<script src="/quote-calculator.js?v=20261015-10" defer></script>
 <%- include('footer') %>
