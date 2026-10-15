@@ -73,7 +73,7 @@ export function discoveryRoutes(app) {
       (d.answers[q.id]?.state || "not_discussed") === "not_discussed"
     );
     const fallback = next ? sectionFor(next) : 3;
-    res.render("discovery-resume", { p, fallback });
+    return res.redirect(`/prospects/${p.id}/discovery/${fallback}`);
   });
   app.get("/prospects/:id/discovery/summary", (req, res) =>
     renderDiscoverySummary(req, res),
