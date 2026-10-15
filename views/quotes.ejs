@@ -7,8 +7,8 @@
 </a>
 </p>
 <% if(quotes.length){ %>
-<section class="card" id="quote-history">
-<h2>Quote History</h2>
+<details class="card" id="quote-history" open>
+<summary><strong>Quote History</strong> <span class="muted">(<%= quotes.length %> saved)</span></summary>
 <p>Open a saved quote to review, approve, delete, or print it.</p>
 <div class="quote-history-scroll" role="region" aria-label="Saved quote history" tabindex="0">
 <table class="quote-history-table">
@@ -24,7 +24,7 @@
 </tr>
 <% } %>
 </tbody></table></div>
-</section>
+</details>
  <% } %>
 <h1>Pricing worksheet</h1>
 <p>Josh-approved commercial worksheet. Hardware quoted separately. All personal phones count as zero managed business devices.</p>
