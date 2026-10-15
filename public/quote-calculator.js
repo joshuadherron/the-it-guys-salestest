@@ -29,6 +29,11 @@ document.querySelectorAll("[data-quote-calculator]").forEach((form) => {
       if (myRevision !== revision) return;
 
       target.innerHTML = html;
+      if (form.dataset.previewTarget === "quote-calculation") {
+        const summary = document.getElementById("managed-services-summary-total");
+        const heading = [...target.querySelectorAll("h2")].find(el => el.textContent.includes("Total:"));
+        if (summary && heading) summary.textContent = "Monthly " + heading.textContent.trim();
+      }
       if (status) status.textContent = "Price updated.";
     } catch (error) {
       if (error.name === "AbortError" || myRevision !== revision) return;
