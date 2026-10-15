@@ -27,8 +27,7 @@
 <label><input type="checkbox" name="noCompanyComputers" value="yes" <%= prefill.noCompanyComputers?'checked':'' %>>No company computers - users on shared devices only</label>
 <% } %>
 <fieldset><legend>Onboarding scope</legend><label><input type="radio" name="onboardingMode" value="standard" <%= prefill.onboardingMode==='standard'?'checked':'' %>>Standard</label><label><input type="radio" name="onboardingMode" value="after_bii" <%= prefill.onboardingMode==='after_bii'?'checked':'' %>>After a Business IT Integration project</label></fieldset>
-<label>Onboarding fee ($300-$750 guidance)<input type="number" name="onboardingFee" min="0" step="0.01" value="<%= prefill.onboardingFee ?? '' %>" required></label>
-<p>The fee must match approved worksheet pricing. To change the fee, save and approve revised pricing first.</p>
+<input type="hidden" name="onboardingFee" value="<%= prefill.onboardingFee ?? 0 %>">
 <label><input type="checkbox" name="waiveOnboarding" value="yes" <%= prefill.waiveOnboarding?'checked':'' %>>Waive onboarding (approved fee must be zero)</label><label>Waiver note<textarea name="waiverNote" rows="1" maxlength="4000"><%= prefill.waiverNote || '' %></textarea></label>
 <fieldset><legend>On-site</legend><label><input type="radio" name="onsiteMode" value="hourly" <%= prefill.onsiteMode==='hourly'?'checked':'' %>>Hourly (as needed)</label><label><input type="radio" name="onsiteMode" value="block" <%= prefill.onsiteMode==='block'?'checked':'' %>>Block</label><label>Block hours per month<input type="number" name="onsiteHours" min="0" step="1" value="<%= prefill.onsiteHours ?? 0 %>"></label><p>Block hours must match the approved worksheet. Hourly visits are $125/hour in 30-minute increments.</p></fieldset>
 <label>Client-specific terms<textarea name="clientTerms" maxlength="4000"><%= prefill.clientTerms || 'None.' %></textarea></label><p>One sentence per term; also goes into the Client Service Schedule.</p>
