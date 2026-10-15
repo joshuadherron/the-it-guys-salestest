@@ -1,0 +1,14 @@
+{
+  "sourcePackage": "TIG_Quote_Fill_Codex_Package_v1.zip",
+  "sourceSha256": "ddfc4dcf51f547257a0f7e73e86cf8f0c7c7085b118bd533f49eff1e312fa941",
+  "masters": {
+    "COM-PRP-v1.8.docx": {
+      "sha256": "2e0dedfac483bbbfdc7fd385b58b478d73d326ef583191e85b92d0a6ebc5db9e",
+      "uniqueTagCount": 62
+    },
+    "BII-QSOW-v1.6.docx": {
+      "sha256": "afe4bbec59ef426be4d0be5584030874e73fc84f21888a0b4e36d75940546da4",
+      "uniqueTagCount": 60
+    }
+  }
+}

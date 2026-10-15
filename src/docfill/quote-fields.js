@@ -3,7 +3,7 @@ const money=n=>"$"+Number(n).toLocaleString("en-US",{minimumFractionDigits:Numbe
 const count=(o,k)=>Number(o[k]||0);
 const required=(obj,key)=>{const v=obj?.[key];if(v===undefined||v===null||v==="")throw new Error("Missing owner-entered document field: "+key);return String(v)};
 const formatDate=d=>new Date(d).toLocaleDateString("en-US",{month:"long",day:"numeric",year:"numeric",timeZone:"UTC"});
-export function buildManagedFill({quote,prospect,owner={},prices={}}){
+export function buildManagedFill({quote,prospect,owner={}}){
  const input=quote.inputs,calc=priceManagedServices(input);
  if(input.pricingMode!=="managed_v20"||input.serviceTier!=="managed")throw new Error("Managed IT document requires a Managed IT quote.");
  if(calc.pending.length)throw new Error("Pricing review required: "+calc.pending.join("; "));

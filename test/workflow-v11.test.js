@@ -654,7 +654,7 @@ test("Start Stage gates retain approved BII quoting and Managed IT assessment ru
   );
   await assert.rejects(
     h.call("POST /prospects/:id/handoff", { action: "TechnicalAssessment" }),
-    /not enabled/,
+    /completed BII Acceptance only/,
   );
   h.p.service_lane = "Managed IT";
   await h.call("POST /prospects/:id/handoff", {

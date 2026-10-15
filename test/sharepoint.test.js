@@ -104,7 +104,7 @@ for (const [kind, key, internalName, displayName] of [
 
 test("exact Create Client and Start Stage JSON", () => {
   assert.deepEqual(
-    payload("CreateClient", p, "Business IT Integration", {
+    payload("CreateClient", {...p, client_id:null, client_item_id:null}, "Business IT Integration", {
       discovery: { answers: {} },
     }),
     {
@@ -119,6 +119,7 @@ test("exact Create Client and Start Stage JSON", () => {
     clientId: "CL-0001",
     stage: "Quoting",
     serviceLane: "Business IT Integration",
+    prepareBaa: false,
   });
   assert.deepEqual(payload("TechnicalAssessment", p, "Managed IT"), {
     clientId: "CL-0001",

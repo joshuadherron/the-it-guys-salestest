@@ -48,12 +48,7 @@
 <p><a href="/prospects/<%= p.id %>/edit">Edit prospect information</a></p>
 </section>
 <% } %>
-<script>
-try {
-  localStorage.setItem('tig-discovery-last-<%= p.id %>', String(<%= screen %>));
-} catch (_) { /* Storage may be unavailable; server-side resume still works. */ }
-</script>
-<div id="discovery" data-id="<%= p.id %>" data-revision="<%= d.revision %>">
+<div id="discovery" data-screen="<%= screen %>" data-id="<%= p.id %>" data-revision="<%= d.revision %>">
 <% for(const q of schema.filter(q=>sectionFor(q)===screen&&!inheritedQuestionIds.includes(q.id))){const cell=d.answers[q.id];const v=cell?.value;const state=cell?.state||'not_discussed';const selected=q.follow?v?.answer:v;const visible=!q.condition||q.condition.values.includes(answer(d.answers,q.condition.id)); %>
 <fieldset class="question" data-question="<%= q.id %>" data-type="<%= q.type %>" data-follow="<%= q.follow?.when||'' %>" <%= readonly?'disabled':'' %> <%= visible?'':'hidden' %>>
 <legend><%= q.id %> <%= q.label %></legend>

@@ -7,6 +7,9 @@ if (file)
 
 const discovery = document.querySelector("#discovery");
 if (discovery) {
+  try {
+    localStorage.setItem("tig-discovery-last-" + discovery.dataset.id, discovery.dataset.screen);
+  } catch { /* Server-side resume still works when browser storage is unavailable. */ }
   let revision = Number(discovery.dataset.revision),
     pending = 0,
     failed = false,

@@ -141,7 +141,7 @@ const cases = [
       client: { ...client, "Current Stage": "Sales Discovery" },
       quotes: [{ id: 2, status: "Draft" }],
     },
-    "Approve quote",
+    "Approve BII pricing",
     "Josh",
     true,
     false,
@@ -209,9 +209,9 @@ const cases = [
       client: { ...client, "Current Stage": "Acceptance", "Stage Status": "On track" },
       items: [],
     },
-    "BII project complete",
-    null,
-    false,
+    "Follow up for Managed IT",
+    "Josh",
+    true,
     false,
   ],
   [
@@ -221,7 +221,7 @@ const cases = [
         { ...item, signatureRequired: true, signatureStatus: "Preparing" },
       ],
     },
-    "Prepare for signature: set Internal Notes Removed and Ready to send",
+    "Prepare agreement for signature",
     "Josh",
     true,
     false,
@@ -895,7 +895,7 @@ test("unsigned signature row never renders completion and safe URLs reject execu
     p,
     d,
     step: nextStep(p, d, [], client, [unsigned], [], "owner"),
-    client,
+    clientRecord: client,
     items: [unsigned],
     itemGroups: [{ label: "Current stage", items: [unsigned] }],
     requests: [],
@@ -914,7 +914,7 @@ test("unsigned signature row never renders completion and safe URLs reject execu
     actionErrors: {},
   });
   assert.ok(!html.includes("Mark complete</button>"));
-  assert.ok(html.includes("Completes automatically when signed"));
+  assert.ok(html.includes("Completes automatically when the signed copy returns."));
   assert.ok(html.includes("Confirm Stage Gate v1.1"));
   assert.equal(
     normalizeItem(

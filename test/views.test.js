@@ -1,3 +1,4 @@
+import { inheritedQuestionIds, knownProspectFacts } from "../src/discovery-prefill.js";
 import { screens, sectionFor, requiredProgress } from "../src/discovery-ui.js";
 import test from "node:test";
 import assert from "node:assert/strict";
@@ -67,6 +68,8 @@ for (let screen = 1; screen <= 3; screen++)
       notifications: [],
       missing: ["Company & contact"],
       readonly: false,
+      inheritedQuestionIds,
+      knownProspectFacts: knownProspectFacts(p),
     });
     assert.ok(html.includes(screens[screen - 1].replaceAll("&", "&amp;")));
     assert.ok(!html.includes("<script>alert(1)</script>"));
@@ -74,7 +77,7 @@ for (let screen = 1; screen <= 3; screen++)
     for (const q of schema)
       assert.equal(
         html.includes(`data-question="${q.id}"`),
-        sectionFor(q) === screen,
+        sectionFor(q) === screen && !inheritedQuestionIds.includes(q.id),
       );
     assert.ok(html.includes("Change status"));
     assert.ok(html.includes('value="not_sure"'));
@@ -111,7 +114,8 @@ const fixtures = {
       action: null,
       waitingOn: "Alanna",
     },
-    client: null,
+    clientRecord: null,
+    sync: null,
     items: null,
     itemGroups: [],
     pending: [],
@@ -152,6 +156,7 @@ const fixtures = {
     quotes: [],
     selected: null,
     input,
+    managedInput: {},
     calculation,
     platforms,
     oneOffItems,
@@ -180,6 +185,9 @@ const fixtures = {
     lanes,
   },
   admin: {
+    prospectCount: 0,
+    prospectSyncEnabled: false,
+    prospectSyncSummary: [],
     lostReasons: [],
     prices: [],
     stages: [],
