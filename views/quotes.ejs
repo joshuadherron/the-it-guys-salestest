@@ -9,8 +9,7 @@
 <% if(p.hold){ %>
 <div class="hold">On Hold — Pending Josh Review. Quote actions are blocked.</div>
 <% } %>
-<section class="card">
-<h2>Monthly services · Pricing v20</h2>
+<details class="card" open id="managed-services-section"><summary><strong>Managed Services</strong> <span id="managed-services-summary-total" aria-live="polite">Monthly total: calculating…</span></summary>
 <p>Managed IT includes SentinelOne EDR and Adlumin MDR. Monthly services and one-time onboarding are separate. No automatic volume discounts.</p>
 <form method="post" action="/prospects/<%= p.id %>/quotes/managed" data-quote-calculator data-calculate-url="/prospects/<%= p.id %>/quotes/managed/calculate" data-preview-target="quote-calculation" data-status-target="quote-preview-status">
 <input type="hidden" name="_csrf" value="<%= csrf %>">
@@ -33,9 +32,9 @@
 <button <%= user.role!=='owner'||p.hold?'disabled':'' %>>Save managed services draft</button>
 </form>
 <p>On-site as needed: $125/hr subscribed, billed separately. Additional locations are scoped individually; no standard recurring location fee.</p>
-</section>
-<details class="card"><summary>Managed services estimate preview</summary><p>Adjust the fields above to preview monthly charges.</p><div id="quote-calculation"></div><p id="quote-preview-status" role="status"></p></details>
-<details class="card" open><summary>BII implementation pricing · one-time project</summary>
+<div><h3>Managed Services estimate</h3><div id="quote-calculation"></div><p id="quote-preview-status" role="status"></p></div>
+</details>
+<details class="card" open><summary><strong>BII Services</strong> · One-time implementation</summary>
 <p>BII foundation, included allowances and additional-unit rates are calculated from the existing centrally configured BII prices. This is a one-time implementation estimate, not part of the monthly Managed IT total.</p>
 <form method="post" action="/prospects/<%= p.id %>/quotes" class="card" data-quote-calculator data-calculate-url="/prospects/<%= p.id %>/quotes/calculate" data-preview-target="bii-quote-calculation" data-status-target="bii-preview-status">
 <input type="hidden" name="_csrf" value="<%= csrf %>">
@@ -130,5 +129,5 @@
 </p>
 <% } %>
 </details>
-<script src="/quote-calculator.js?v=20260930-1" defer></script>
+<script src="/quote-calculator.js?v=20261015-3" defer></script>
 <%- include('footer') %>
