@@ -40,7 +40,8 @@
 <form method="post" action="/prospects/<%= p.id %>/quotes" class="card" data-quote-calculator data-calculate-url="/prospects/<%= p.id %>/quotes/calculate" data-preview-target="bii-quote-calculation" data-status-target="bii-preview-status">
 <input type="hidden" name="_csrf" value="<%= csrf %>">
 <fieldset <%= user.role!=='owner'||p.hold?'disabled':'' %>>
-<legend>Counts — Josh confirms these before approval</legend>
+<legend>BII scope — Josh confirms these before approval</legend>
+<label><input type="checkbox" name="includeBii" value="yes" <%= input.includeBii ? "checked" : "" %>> Include Standard BII Integration (foundation and selected additions)</label>
 <p>Discovery computer counts start under platform not yet assigned. Move devices into platform rows without counting them twice. Uncaptured counts start at 0 and require Josh's confirmation.</p>
 <div class="grid">
 <% for(const [key,label] of [['users','Integration users'],['windows','Windows managed business devices'],['mac','Mac managed business devices'],['ios','Company iPhone/iPad managed devices'],['android','Company Android managed devices'],['unallocated','Managed business devices — platform not yet assigned'],['mailboxes','Straightforward mailbox migrations'],['dell','New Dell deployments (labor)'],['phones','Personal / BYOD phones — counted as 0'],['locations','Locations']]){ %>
@@ -83,9 +84,9 @@
 </details>
 <section class="card">
 <h2>Saved quote calculation</h2>
-<p>Saved quote calculation (legacy implementation or managed services).</p>
+<p>Saved draft or approved quote; live estimates are shown inside each service section.</p>
 <div>
-<%- include('quote-calculation',{calculation}) %>
+<% if(calculation){ %><%- include('quote-calculation',{calculation}) %><% } else { %><p>No saved quote yet. Select services and save a draft to see the saved calculation.</p><% } %>
 </div>
 </section>
 <% if(selected){ %>
@@ -130,5 +131,5 @@
 </p>
 <% } %>
 </details>
-<script src="/quote-calculator.js?v=20261015-4" defer></script>
+<script src="/quote-calculator.js?v=20261015-5" defer></script>
 <%- include('footer') %>
