@@ -18,17 +18,17 @@
 <fieldset <%= p.hold?'disabled':'' %>>
 <div class="grid">
 <div><label>Service</label><select name="serviceTier"><option value="managed">Managed IT — $125/user</option><option value="monitoring">Monitoring-Only — $45/device</option></select></div>
-<div><label>Managed users</label><input type="number" name="users" min="0" required value="<%= managedInput.users||0 %>"></div>
-<div><label>Monitoring-only devices</label><input type="number" name="monitoringDevices" min="0" required value="0"></div>
-<div><label>Managed servers ($75/month)</label><input type="number" name="servers" min="0" required value="0"></div>
-<div><label>Shared/additional devices ($15/month, Managed IT)</label><input type="number" name="extraDevices" min="0" required value="0"></div>
-<div><label>Microsoft 365 backup users ($5/month)</label><input type="number" name="backupUsers" min="0" required value="0"></div>
-<div><label>Monthly on-site block hours ($115/hour)</label><input type="number" name="onsiteHours" min="0" required value="0"></div>
-<div><label>Business computers (owner review above 2/user)</label><input type="number" name="computers" min="0" required value="<%= managedInput.computers||0 %>"></div>
-<div><label>Workstations requiring custom backup quote</label><input type="number" name="workstationBackups" min="0" required value="0"></div>
-<div><label>Servers requiring custom backup quote</label><input type="number" name="serverBackups" min="0" required value="0"></div>
+<div><label>Managed users</label><input type="number" name="users" min="0" required value="<%= managedInput.users ?? 0 %>"></div>
+<div><label>Monitoring-only devices</label><input type="number" name="monitoringDevices" min="0" required value="<%= managedInput.monitoringDevices ?? 0 %>"></div>
+<div><label>Managed servers ($75/month)</label><input type="number" name="servers" min="0" required value="<%= managedInput.servers ?? 0 %>"></div>
+<div><label>Shared/additional devices ($15/month, Managed IT)</label><input type="number" name="extraDevices" min="0" required value="<%= managedInput.extraDevices ?? 0 %>"></div>
+<div><label>Microsoft 365 backup users ($5/month)</label><input type="number" name="backupUsers" min="0" required value="<%= managedInput.backupUsers ?? 0 %>"></div>
+<div><label>Monthly on-site block hours ($115/hour)</label><input type="number" name="onsiteHours" min="0" required value="<%= managedInput.onsiteHours ?? 0 %>"></div>
+<div><label>Business computers (owner review above 2/user)</label><input type="number" name="computers" min="0" required value="<%= managedInput.computers ?? 0 %>"></div>
+<div><label>Workstations requiring custom backup quote</label><input type="number" name="workstationBackups" min="0" required value="<%= managedInput.workstationBackups ?? 0 %>"></div>
+<div><label>Servers requiring custom backup quote</label><input type="number" name="serverBackups" min="0" required value="<%= managedInput.serverBackups ?? 0 %>"></div>
 <p>For BII implementation, use the BII Services section below. Its charges are added to the build total once.</p>
-<div><label>One-time onboarding ($300–$750 guided)</label><input type="number" name="onboarding" min="0" step="0.01" value="0"></div>
+<div><label>One-time onboarding ($300–$750 guided)</label><input type="number" name="onboarding" min="0" step="0.01" value="<%= managedInput.onboarding ?? 0 %>"></div>
 </div>
 <label><input type="checkbox" name="confirmed" value="yes" required> I confirmed quantities, scope, and custom-price items.</label>
 </fieldset>
@@ -51,7 +51,7 @@
 <label>
 <%= label %>
 </label>
-<input name="<%= key %>" type="number" min="0" max="100000" required value="<%= input[key] %>">
+<input name="<%= key %>" type="number" min="0" max="100000" required value="<%= input[key] ?? 0 %>">
 </div>
 <% } %>
 </div>
