@@ -53,6 +53,31 @@ export class Graph {
       fields,
     );
   }
+  // The only permitted direct SharePoint file write: replace an approved quote's
+  // existing working-copy content. Caller must validate quote, master and item.
+  async replaceQuoteWorkingCopy(driveId, itemId, etag, buffer) {
+    if (!driveId || !itemId || !etag || !Buffer.isBuffer(buffer) || !buffer.length)
+      throw new Error("Quote replacement requires a resolved drive, item, eTag and nonempty DOCX.");
+    const token = await msalClient().acquireTokenByClientCredential({
+      scopes: ["https://graph.microsoft.com/.default"],
+    });
+    const path = `/drives/${encodeURIComponent(driveId)}/items/${encodeURIComponent(itemId)}/content`;
+    const response = await fetch("https://graph.microsoft.com/v1.0" + path, {
+      method: "PUT",
+      headers: {
+        Authorization: `Bearer ${token.accessToken}`,
+        "Content-Type": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        "If-Match": etag,
+      },
+      body: buffer,
+      signal: AbortSignal.timeout(30000),
+    });
+    if (response.status === 412)
+      throw Object.assign(new Error("The working quote changed in SharePoint. Reload before trying again."), { status: 409 });
+    if (!response.ok)
+      throw Object.assign(new Error(`Microsoft Graph returned HTTP ${response.status}.`), { status: response.status });
+    return response.json();
+  }
   async sendMail(message) {
     return this.request("/users/josh%40theitguys.us/sendMail", "POST", message);
   }
