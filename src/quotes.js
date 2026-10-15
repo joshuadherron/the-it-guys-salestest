@@ -273,6 +273,42 @@ export function quotesRoutes(app) {
     res.redirect(`/prospects/${pid}`);
   });
 
+  // Drafts are edited in place; approved quotes remain immutable and revisions
+  // are saved as new drafts requiring a fresh approval.
+  app.post("/quotes/:id/edit", ownerOnly, async (req,res)=>{
+    let pid, savedId;
+    await transaction(async c=>{
+      const [initial]=await query("SELECT * FROM quotes WHERE id=?",[integer(req.params.id)],c);
+      if(!initial) fail("Quote not found.",404);
+      pid=initial.prospect_id;
+      await query("SELECT id FROM prospects WHERE id=? FOR UPDATE",[pid],c);
+      const [q]=await query("SELECT * FROM quotes WHERE id=? FOR UPDATE",[initial.id],c);
+      if(!q) fail("Quote not found.",404);
+      const p=await prospect(pid,c);
+      if(p.hold) fail("On Hold — Pending Josh Review.");
+      const old=json(q.inputs);
+      const input=old.pricingMode==="managed_v20"?validateManagedInputs(req.body):validateInputs(req.body);
+      if((input.pricingMode==="managed_v20")!==(old.pricingMode==="managed_v20"))
+        fail("Quote type cannot be changed while editing.");
+      const calc=input.pricingMode==="managed_v20"
+        ?combinedManagedQuote(input,await priceConfig(c))
+        :(input.includeBii?priceQuote(input,await priceConfig(c)):{lines:[],pending:[],total:0});
+      if(q.status==="Draft"){
+        await query("UPDATE quotes SET inputs=?,line_items=?,total=?,document_facts=NULL WHERE id=?",
+          [JSON.stringify(input),JSON.stringify(calc.lines),calc.total,q.id],c);
+        savedId=q.id;
+        await audit(c,req.session.user,"edit draft pricing","quote",savedId);
+      }else if(q.status==="Approved"){
+        const result=await query("INSERT INTO quotes (prospect_id,inputs,line_items,total) VALUES (?,?,?,?)",
+          [pid,JSON.stringify(input),JSON.stringify(calc.lines),calc.total],c);
+        savedId=result.insertId;
+        await query("UPDATE quotes SET quote_number=CONCAT('Q-',YEAR(created_at),'-',LPAD(id,GREATEST(3,CHAR_LENGTH(id)),'0')) WHERE id=?",[savedId],c);
+        await audit(c,req.session.user,"create draft revision of approved quote "+q.id,"quote",savedId);
+      }else fail("Only draft or approved quotes can be edited.");
+    });
+    res.redirect(`/prospects/${pid}/quotes?quote=${savedId}#selected-quote`);
+  });
+
   app.post("/quotes/:id/approve", ownerOnly, async (req, res) => {
     let pid;
 
