@@ -269,3 +269,6 @@ footer {
 .preserve-lines {
   white-space: pre-wrap;
 }
+
+/* Relationship-first UX: progressive disclosure and quick actions */
+.dashboard-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin:20px 0}.dashboard-stats>div{background:#fff;border:1px solid #d7e1e6;border-radius:12px;padding:20px;display:flex;flex-direction:column;gap:5px}.dashboard-stats strong{font-size:1.9rem}.dashboard-stats span{color:#587080}.action-grid{display:flex;gap:10px;flex-wrap:wrap}.action-grid a{flex:1 1 190px;text-align:center}.relationship-actions{border-color:#92bac4}.relationship-actions h2{margin-top:0}details.card>summary{font-size:1.05rem}details.card[open]>summary{margin-bottom:16px}@media(max-width:700px){.dashboard-stats{grid-template-columns:1fr 1fr}.action-grid{display:grid;grid-template-columns:1fr}}
