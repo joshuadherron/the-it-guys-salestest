@@ -14,7 +14,7 @@
 </div>
 </div>
 <% if(today){ if(user.role==='owner'){ %>
-<details class="card dashboard-collapse" open><summary class="dashboard-collapse-heading">Waiting for Josh <span class="pill"><%= waiting.length %></span></summary>
+<details class="card dashboard-collapse"><summary class="dashboard-collapse-heading">Waiting for Josh <span class="pill"><%= waiting.length %></span></summary>
 <% if(!waiting.length){ %><p>Nothing waiting for review.</p><% } %>
 <% for(const item of waiting){ %><article class="card"><a href="<%= item.href %>"><%= item.business_name %> — <%= item.label %></a>
 <% if(item.result_message){ %><p class="error preserve-lines"><%= item.result_message %></p><% } %>
@@ -33,7 +33,7 @@
 <a class="dashboard-stat" href="#needs-follow-up"><strong><%= due.length %></strong><span>Due for follow-up</span><span class="stat-action">View follow-ups →</span></a>
 <a class="dashboard-stat" href="#no-follow-up"><strong><%= unscheduled.length %></strong><span>No follow-up set</span><span class="stat-action">Schedule follow-ups →</span></a>
 </div><% } %><% const groups=today?[{name:'Needs follow-up',rows:due},{name:'Upcoming conversations',rows:upcoming},{name:'No follow-up scheduled',rows:unscheduled}]:[{name:'Businesses',rows}];for(const group of groups){ %>
-<details class="card dashboard-collapse" open id="<%= group.name==='Needs follow-up'?'needs-follow-up':group.name==='No follow-up scheduled'?'no-follow-up':'upcoming-conversations' %>">
+<details class="card dashboard-collapse" id="<%= group.name==='Needs follow-up'?'needs-follow-up':group.name==='No follow-up scheduled'?'no-follow-up':'upcoming-conversations' %>">
 <summary class="dashboard-collapse-heading">
 <%= group.name %> <span class="pill">
 <%= group.rows.length %>
