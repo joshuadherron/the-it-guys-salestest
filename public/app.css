@@ -672,3 +672,11 @@ body:has(.dashboard-stats) main>form[method="get"]{
   header .mobile-site-menu-links form button{width:100%;min-height:40px}
   header .mobile-site-menu>summary:focus-visible{outline:2px solid white;outline-offset:3px}
 }
+
+/* Desktop: native details navigation must be open to display its links.
+   Show links directly above the mobile breakpoint without needing the toggle. */
+@media(min-width:761px){
+  header .mobile-site-menu{display:block}
+  header .mobile-site-menu>.mobile-site-menu-links{display:flex}
+  header .mobile-site-menu:not([open])>.mobile-site-menu-links{display:flex}
+}
