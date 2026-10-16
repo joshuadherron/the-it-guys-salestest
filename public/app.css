@@ -538,3 +538,17 @@ footer {
 .admin-sidebar-ready .admin-section-content .admin-stop-row>button{
   height:30px;min-height:30px;margin:0;padding:4px 8px
 }
+
+/* Subtle separators keep each Mark Lost reason aligned with its own controls. */
+.admin-sidebar-ready .admin-section-content .admin-lost-row{
+  border-bottom:1px solid #dce5ea;
+  padding-top:7px;
+  padding-bottom:7px;
+  margin:0;
+}
+.admin-sidebar-ready .admin-section-content .admin-lost-row:last-of-type{
+  border-bottom:0;
+}
+.admin-sidebar-ready .admin-section-content .admin-lost-row:hover{
+  background:rgba(8,126,139,.035);
+}
