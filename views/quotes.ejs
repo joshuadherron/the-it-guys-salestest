@@ -143,12 +143,13 @@
 <div class="grid">
 
 <div><label>Managed users</label><input type="number" name="users" min="0" required value="<%= managedInput.users ?? 0 %>"></div>
+<div><label for="managed-workstations">Company workstations (inventory count; priced per user)</label><input id="managed-workstations" type="number" name="computers" min="0" required value="<%= managedInput.computers ?? 0 %>"><small>Desktops and laptops covered by Managed IT. Tracks device scope for the contract; does not add a per-workstation charge.</small></div>
 <div><label>Monitoring-only devices</label><input type="number" name="monitoringDevices" min="0" required value="<%= managedInput.monitoringDevices ?? 0 %>"></div>
 <div><label>Managed servers ($75/month)</label><input type="number" name="servers" min="0" required value="<%= managedInput.servers ?? 0 %>"></div>
 <div><label>Shared/additional devices ($15/month, Managed IT)</label><input type="number" name="extraDevices" min="0" required value="<%= managedInput.extraDevices ?? 0 %>"></div>
 <div><label>Microsoft 365 backup users ($5/month)</label><input type="number" name="backupUsers" min="0" required value="<%= managedInput.backupUsers ?? 0 %>"></div>
 <div><label>Monthly on-site block hours ($115/hour)</label><input type="number" name="onsiteHours" min="0" required value="<%= managedInput.onsiteHours ?? 0 %>"></div>
-<div><label>Business computers (owner review above 3 assigned devices/user)</label><input type="number" name="computers" min="0" required value="<%= managedInput.computers ?? 0 %>"></div>
+
 <div><label>Assigned company phones (included allowance)</label><input type="number" name="assignedPhones" min="0" value="<%= managedInput.assignedPhones ?? 0 %>"></div>
 <div><label>Assigned company tablets (included allowance)</label><input type="number" name="assignedTablets" min="0" value="<%= managedInput.assignedTablets ?? 0 %>"></div>
 <div><label>Workstations requiring custom backup quote</label><input type="number" name="workstationBackups" min="0" required value="<%= managedInput.workstationBackups ?? 0 %>"></div>
