@@ -358,3 +358,9 @@ footer {
 .admin-user-collapse>summary.admin-user-heading:focus-visible{outline:2px solid currentColor;outline-offset:-3px}
 .admin-user-form{padding:18px 20px 20px}
 @media(max-width:720px){.admin-user-collapse>summary.admin-user-heading{padding:14px}.admin-user-form{padding:14px}}
+
+/* Non-blocking confirmation for inline admin user saves. */
+.admin-save-toast{position:fixed;right:24px;bottom:24px;z-index:1000;max-width:min(440px,calc(100vw - 32px));background:#163e46;color:#fff;border-radius:9px;box-shadow:0 8px 28px rgba(0,0,0,.22);padding:13px 19px;font-weight:600}
+.admin-save-toast.is-error{background:#8c2e27}
+.admin-save-toast[hidden]{display:none}
+@media(max-width:600px){.admin-save-toast{right:16px;bottom:16px}}
