@@ -52,6 +52,7 @@
 </label>
 <button>Save</button>
 </form>
+</details>
 <% } %>
 </details>
 <details class="card admin-block"><summary>Pipeline stage order</summary>
@@ -104,12 +105,14 @@
 <details class="card admin-block admin-users"><summary>User Permissions &amp; Access</summary>
 <p class="muted">Manage who can sign in, approve quotes, send quotes, and access administration. Each user is saved separately.</p>
 <% for(const entry of [...allowlist,{email:'',role:'sales',enabled:true}]){ const isNew=!entry.email; %>
-<form method="post" action="/admin/allowlist" class="admin-user-card">
-<input type="hidden" name="_csrf" value="<%= csrf %>">
-<div class="admin-user-heading">
+<details class="admin-user-card admin-user-collapse">
+<summary class="admin-user-heading">
 <div><strong><%= isNew?'Add a user':(entry.display_name||entry.email) %></strong><% if(!isNew&&entry.display_name){ %><span class="muted admin-user-email"><%= entry.email %></span><% } %></div>
 <span class="admin-user-role"><%= isNew?'New user':entry.role==='owner'?'Owner':'Sales' %></span>
-</div>
+</summary>
+<form method="post" action="/admin/allowlist" class="admin-user-form">
+<input type="hidden" name="_csrf" value="<%= csrf %>">
+
 <div class="admin-user-fields">
 <label>Email address<input name="email" type="email" value="<%= entry.email %>" placeholder="name@theitguys.us" required></label>
 <label>Account role<select name="role"><option value="sales" <%= entry.role==='sales'?'selected':'' %>>Sales</option><option value="owner" <%= entry.role==='owner'?'selected':'' %>>Owner</option></select></label>
