@@ -26,9 +26,10 @@
 <input name="q" value="<%= search %>" placeholder="Search business or contact" aria-label="Search">
 <select name="status" aria-label="Filter by status"><option value="">All statuses</option><% for(const option of statusChoices){ %><option value="<%= option %>" <%= selectedStatus===option?'selected':'' %>><%= option %></option><% } %></select>
 <% if(!today){ %><input type="hidden" name="sort" value="<%= selectedSort %>"><% } %>
-<button>Search</button>
+<% if(today){ %><button>Search</button><% } %>
 </div>
 </form>
+<% if(!today){ %><script src="/prospect-filters.js?v=1" defer></script><% } %>
 <% const due=rows.filter(p=>p.follow_up && String(p.follow_up).slice(0,10)<=new Date().toISOString().slice(0,10)); const upcoming=rows.filter(p=>p.follow_up && String(p.follow_up).slice(0,10)>new Date().toISOString().slice(0,10)); const unscheduled=rows.filter(p=>!p.follow_up); %><% if(today){ %><div class="dashboard-stats" aria-label="Sales dashboard shortcuts">
 <a class="dashboard-stat" href="/pipeline"><strong><%= rows.length %></strong><span>Businesses</span><span class="stat-action">View all businesses →</span></a>
 <a class="dashboard-stat" href="#needs-follow-up"><strong><%= due.length %></strong><span>Due for follow-up</span><span class="stat-action">View follow-ups →</span></a>
