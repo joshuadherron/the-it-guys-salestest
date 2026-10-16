@@ -794,3 +794,8 @@ details.dashboard-collapse:has(>summary) > .prospect-list-item{
  .prospect-sort-form select{min-width:0;flex:1 1 160px}
  .prospect-sort-form button{min-width:0}
 }
+
+/* Keep sorting tucked inside the Prospects panel, above the list. */
+.prospect-panel-toolbar{display:flex;justify-content:flex-end;align-items:center;margin:0 0 9px}
+.prospect-panel-toolbar .prospect-sort-form{margin:0;gap:9px}
+@media(max-width:760px){.prospect-panel-toolbar{justify-content:flex-start}.prospect-panel-toolbar .prospect-sort-form{width:100%}}
