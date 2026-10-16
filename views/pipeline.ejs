@@ -25,6 +25,7 @@
 <div class="row">
 <input name="q" value="<%= search %>" placeholder="Search business or contact" aria-label="Search">
 <select name="status" aria-label="Filter by status"><option value="">All statuses</option><% for(const option of statusChoices){ %><option value="<%= option %>" <%= selectedStatus===option?'selected':'' %>><%= option %></option><% } %></select>
+<% if(!today){ %><select name="sort" aria-label="Sort prospects"><% for(const option of sortOptions){ %><option value="<%= option[0] %>" <%= selectedSort===option[0] ? "selected" : "" %>><%= option[1] %></option><% } %></select><% } %>
 <button>Search</button>
 </div>
 </form>
