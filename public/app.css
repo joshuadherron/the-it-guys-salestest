@@ -420,3 +420,29 @@ footer {
 .admin-sidebar-ready .admin-section-content>details.admin-block>summary::-webkit-details-marker{display:none}
 @media(max-width:780px){.admin-sidebar-ready .admin-settings-workspace{grid-template-columns:1fr;gap:10px}.admin-sidebar-ready .admin-section-nav{position:static;display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}.admin-sidebar-ready .admin-section-content>details.admin-block{padding:12px}}
 @media(max-width:450px){.admin-sidebar-ready .admin-section-nav{grid-template-columns:1fr}}
+
+/* Dense right-side admin settings: align field names, values and actions in rows. */
+@media(min-width:781px){
+.admin-sidebar-ready .admin-section-content>details.admin-block{padding:14px 18px}
+.admin-sidebar-ready .admin-section-content>details.admin-block>summary{margin-bottom:10px;padding-bottom:8px}
+.admin-sidebar-ready .admin-section-content .admin-block form.row{
+ display:grid;grid-template-columns:minmax(0,1fr) 82px;align-items:end;
+ column-gap:10px;row-gap:0;margin:0;padding:5px 0
+}
+.admin-sidebar-ready .admin-section-content .admin-block form.row>label{
+ display:grid;grid-template-columns:minmax(145px,32%) minmax(0,1fr);
+ gap:12px;align-items:center;margin:0;line-height:1.2
+}
+.admin-sidebar-ready .admin-section-content .admin-block form.row>label input{
+ margin:0;width:100%;min-width:0
+}
+.admin-sidebar-ready .admin-section-content .admin-block form.row>button{
+ width:82px;min-height:32px;height:32px;align-self:center;margin:0
+}
+}
+.admin-sidebar-ready .admin-section-content .admin-block form:not(.admin-user-form):not(.row){margin:8px 0}
+.admin-sidebar-ready .admin-section-content .admin-block form:not(.admin-user-form):not(.row)>label{margin:5px 0}
+.admin-sidebar-ready .admin-section-content .admin-block fieldset{margin-top:9px;margin-bottom:9px}
+.admin-sidebar-ready .admin-section-content .admin-block p{margin:5px 0}
+.admin-sidebar-ready .admin-section-content .admin-block table th,
+.admin-sidebar-ready .admin-section-content .admin-block table td{padding:6px 8px;font-size:.84rem}
