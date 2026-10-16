@@ -1003,3 +1003,38 @@ details.dashboard-collapse .prospect-panel-toolbar .prospect-sort-form select{
     max-width:48%;
   }
 }
+
+/* Prospects filters: compact search width, status immediately to its right. */
+.prospect-page-search>.row{
+  justify-content:flex-start;
+}
+.prospect-page-search>.row>input[name="q"]{
+  flex:0 1 340px;
+  width:340px;
+  max-width:100%;
+}
+.prospect-page-search>.row>select[name="status"]{
+  flex:0 0 auto;
+  width:max-content;
+  min-width:145px;
+  max-width:100%;
+}
+@media(max-width:760px){
+  .prospect-page-search>.row{
+    display:flex;
+    flex-wrap:nowrap;
+    justify-content:flex-start;
+    gap:7px;
+  }
+  .prospect-page-search>.row>input[name="q"]{
+    flex:0 1 55%;
+    width:55%;
+    min-width:0;
+  }
+  .prospect-page-search>.row>select[name="status"]{
+    flex:0 1 auto;
+    width:max-content;
+    min-width:0;
+    max-width:44%;
+  }
+}
