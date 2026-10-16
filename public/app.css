@@ -579,3 +579,37 @@ footer {
 .dashboard-collapse>summary.dashboard-collapse-heading .pill{vertical-align:middle;font-size:.78rem}
 .dashboard-collapse[open]>summary.dashboard-collapse-heading{margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid #dce5ea}
 .dashboard-collapse>summary.dashboard-collapse-heading:focus-visible{outline:2px solid #087e8b;outline-offset:3px}
+
+/* Home dashboard: compact overview when all groups are collapsed. */
+body:has(.dashboard-stats) .dashboard-collapse{
+  margin:5px 0;
+  padding:8px 13px;
+  border-radius:8px;
+}
+body:has(.dashboard-stats) .dashboard-collapse>summary.dashboard-collapse-heading{
+  padding:0;
+  margin:0;
+  font-size:1rem;
+  line-height:1.35;
+}
+body:has(.dashboard-stats) .dashboard-collapse[open]>summary.dashboard-collapse-heading{
+  margin-bottom:9px;
+  padding-bottom:7px;
+}
+body:has(.dashboard-stats) .dashboard-stats{
+  margin-top:9px;
+  margin-bottom:10px;
+  gap:9px;
+}
+body:has(.dashboard-stats) .dashboard-stat{
+  padding:10px 13px;
+}
+body:has(.dashboard-stats) main> .row:first-child h1{
+  margin:3px 0 5px;
+}
+body:has(.dashboard-stats) main> .row:first-child p{
+  margin:3px 0;
+}
+body:has(.dashboard-stats) main>form[method="get"]{
+  margin:8px 0;
+}
