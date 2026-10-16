@@ -552,3 +552,23 @@ footer {
 .admin-sidebar-ready .admin-section-content .admin-lost-row:hover{
   background:rgba(8,126,139,.035);
 }
+
+/* User access: show permission name and explanation inline instead of stacked. */
+.admin-sidebar-ready .admin-users .admin-user-permissions label span{
+  display:flex;
+  flex-direction:row;
+  align-items:baseline;
+  flex-wrap:wrap;
+  column-gap:9px;
+  row-gap:1px;
+}
+.admin-sidebar-ready .admin-users .admin-user-permissions label span strong,
+.admin-sidebar-ready .admin-users .admin-user-permissions label span small{
+  display:inline;
+  line-height:1.3;
+}
+@media(max-width:600px){
+  .admin-sidebar-ready .admin-users .admin-user-permissions label span{
+    column-gap:6px;
+  }
+}
