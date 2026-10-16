@@ -35,8 +35,8 @@
 <input type="hidden" name="status" value="<%= selectedStatus %>">
 <label for="prospect-sort-select">Sort</label>
 <select id="prospect-sort-select" name="sort"><% for(const option of sortOptions){ %><option value="<%= option[0] %>" <%= selectedSort===option[0] ? "selected" : "" %>><%= option[1] %></option><% } %></select>
-<button type="submit">Apply sort</button>
 </form>
+<script src="/prospect-sort.js?v=1" defer></script>
 <% } %>
 <% const due=rows.filter(p=>p.follow_up && String(p.follow_up).slice(0,10)<=new Date().toISOString().slice(0,10)); const upcoming=rows.filter(p=>p.follow_up && String(p.follow_up).slice(0,10)>new Date().toISOString().slice(0,10)); const unscheduled=rows.filter(p=>!p.follow_up); %><% if(today){ %><div class="dashboard-stats" aria-label="Sales dashboard shortcuts">
 <a class="dashboard-stat" href="/pipeline"><strong><%= rows.length %></strong><span>Businesses</span><span class="stat-action">View all businesses →</span></a>
