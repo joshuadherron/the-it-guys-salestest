@@ -270,7 +270,7 @@ export function quotesRoutes(app) {
       await audit(c, req.session.user, "delete draft", "quote", q.id);
     });
 
-    res.redirect(`/prospects/${pid}`);
+    res.redirect(`/prospects/${pid}/quotes#quote-history`);
   });
 
   // Drafts are edited in place; approved quotes remain immutable and revisions
