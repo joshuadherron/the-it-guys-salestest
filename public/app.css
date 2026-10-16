@@ -830,3 +830,32 @@ details.dashboard-collapse:has(>summary) > .prospect-list-item{
  .prospect-page-search{margin:7px 0}
  .prospect-scroll-list{max-height:calc(100dvh - 300px);min-height:250px;padding-right:3px}
 }
+
+/* Compact the Prospects panel header and place sorting on the left. */
+details.dashboard-collapse:has(.prospect-panel-toolbar){
+  padding-top:10px;
+}
+details.dashboard-collapse:has(.prospect-panel-toolbar)>summary.dashboard-collapse-heading{
+  margin-bottom:5px;
+  padding-bottom:5px;
+}
+details.dashboard-collapse .prospect-panel-toolbar{
+  justify-content:flex-start;
+  margin:0 0 6px;
+  padding:0;
+}
+details.dashboard-collapse .prospect-panel-toolbar .prospect-sort-form{
+  justify-content:flex-start;
+  margin:0;
+  gap:8px;
+}
+details.dashboard-collapse .prospect-panel-toolbar .prospect-sort-form select{
+  height:34px;
+  min-height:34px;
+  padding:4px 9px;
+}
+@media(max-width:760px){
+  details.dashboard-collapse .prospect-panel-toolbar .prospect-sort-form{
+    width:100%;
+  }
+}
