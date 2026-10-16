@@ -1,5 +1,5 @@
 <%- include('header') %>
-<div class="row">
+<div class="row <%= today ? "" : "prospect-page-heading" %>">
 <div>
 <p class="muted">YOUR SALES WORKSPACE</p>
 <h1>
@@ -21,7 +21,7 @@
 <% if(item.request_id){ %><form method="post" action="/requests/<%= item.request_id %>/acknowledge"><input type="hidden" name="_csrf" value="<%= csrf %>"><button>Acknowledge</button></form><% } %>
 </article><% } %></details>
 <% }else{ %><p><%= waiting.length %> items waiting on Josh</p><% }} %>
-<form method="get">
+<form method="get" class="<%= today ? "" : "prospect-page-search" %>">
 <div class="row">
 <input name="q" value="<%= search %>" placeholder="Search business or contact" aria-label="Search">
 <select name="status" aria-label="Filter by status"><option value="">All statuses</option><% for(const option of statusChoices){ %><option value="<%= option %>" <%= selectedStatus===option?'selected':'' %>><%= option %></option><% } %></select>
@@ -53,6 +53,7 @@
 <% } %>
 </div>
 <% } %>
+<% if(!today){ %><div class="prospect-scroll-list" role="region" aria-label="Prospect records" tabindex="0"><% } %>
 <% if(!group.rows.length){ %>
 <p class="muted">No opportunities here yet.</p>
 <% }for(const p of group.rows){ %>
@@ -77,6 +78,7 @@
 </div>
 </article>
 <% } %>
+<% if(!today){ %></div><% } %>
 </details>
 <% } %>
 <%- include('footer') %>
