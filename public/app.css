@@ -859,3 +859,41 @@ details.dashboard-collapse .prospect-panel-toolbar .prospect-sort-form select{
     width:100%;
   }
 }
+
+/* Mobile prospect list scrolls vertically only; wrap long fields rather than widening it. */
+@media(max-width:760px){
+  .prospect-scroll-list{
+    width:100%;
+    max-width:100%;
+    min-width:0;
+    box-sizing:border-box;
+    overflow-x:hidden;
+    overflow-y:auto;
+    -webkit-overflow-scrolling:touch;
+    touch-action:pan-y;
+  }
+  .prospect-scroll-list .prospect-list-item,
+  .prospect-scroll-list .prospect-list-item>.row,
+  .prospect-scroll-list .prospect-primary,
+  .prospect-scroll-list .prospect-secondary{
+    min-width:0;
+    max-width:100%;
+    box-sizing:border-box;
+  }
+  .prospect-scroll-list .prospect-list-item>.row{
+    display:grid;
+    grid-template-columns:minmax(0,1fr);
+  }
+  .prospect-scroll-list .prospect-list-item.prospect-directory-item>.row>div.prospect-secondary:nth-child(2){
+    grid-template-columns:repeat(2,minmax(0,max-content));
+    max-width:100%;
+    min-width:0;
+  }
+  .prospect-scroll-list .prospect-primary,
+  .prospect-scroll-list .prospect-secondary,
+  .prospect-scroll-list .prospect-meta,
+  .prospect-scroll-list .prospect-primary a{
+    overflow-wrap:anywhere;
+    word-break:normal;
+  }
+}
