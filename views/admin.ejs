@@ -1,5 +1,5 @@
 <%- include('header') %>
-<div class="admin-compact"><h1>Owner administration</h1>
+<div class="admin-compact admin-sidebar-layout"><h1>Owner administration</h1>
 <p class="muted">Select a section heading to expand its settings. User Permissions &amp; Access controls account roles and privileges.</p>
 <details class="card admin-block"><summary>SharePoint connection</summary>
 <p>Last checked: <%= schema.checkedAt||'Not checked' %>
@@ -172,6 +172,7 @@
 <% for(const f of uncertainFills){ %><form method="post" action="/admin/quote-reconcile"><input type="hidden" name="_csrf" value="<%= csrf %>"><input type="hidden" name="fill_id" value="<%= f.id %>"><p>Fill <%= f.id %> / quote <%= f.quote_id %> / <%= f.client_id %></p><label>Verification note<textarea name="note" minlength="10" required></textarea></label><label><input type="checkbox" name="confirm_checked" value="yes" required>I checked the Word versions and Commercial folder</label><button>Release uncertain fill for a new explicit fill</button></form><% } %>
 <% for(const a of uncertainSends){ %><article><p>Send attempt <%= a.id %> / quote <%= a.quote_id %> / <%= a.client_id %> / <%= a.phase %></p><% if(a.phase==='Email'&&a.pdf_item_id){ %><form method="post" action="/admin/quote-reconcile"><input type="hidden" name="_csrf" value="<%= csrf %>"><input type="hidden" name="attempt_id" value="<%= a.id %>"><label>Verified result<select name="decision"><option value="">Choose</option><option value="not_sent">Email definitely absent; permit explicit email-only retry</option><option value="sent">Email is present in shared Sent Items; record Sent</option></select></label><label>Verification note<textarea name="note" minlength="10" required></textarea></label><label><input type="checkbox" name="confirm_checked" value="yes" required>I checked shared Sent Items and the saved PDF</label><button>Reconcile without sending</button></form><% }else{ %><p>PDF creation is uncertain. Verify the exact PDF item and bytes before database reconciliation; no automatic retry is available.</p><% } %></article><% } %></details><% } %>
 
+<script src="/admin-sidebar.js?v=1" defer></script>
 <div id="admin-save-toast" class="admin-save-toast" role="status" aria-live="polite" hidden></div>
 <script src="/admin-user-permissions.js?v=1" defer></script>
 </div>
