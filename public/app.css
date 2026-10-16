@@ -316,3 +316,10 @@ footer {
  header nav button{min-height:34px;padding:7px 13px;font-size:.9rem}
  main{margin-top:15px;margin-bottom:15px}
 }
+
+/* Owner administration: collapsible settings sections. */
+.admin-block{margin-bottom:14px}
+.admin-block>summary{cursor:pointer;font-size:1.12rem;font-weight:700;list-style:revert;padding:4px 0;user-select:none}
+.admin-block>summary:hover{text-decoration:underline;text-underline-offset:3px}
+.admin-block[open]>summary{margin-bottom:16px;padding-bottom:10px;border-bottom:1px solid #d9e0e7}
+.admin-block>summary:focus-visible{outline:2px solid currentColor;outline-offset:4px}
