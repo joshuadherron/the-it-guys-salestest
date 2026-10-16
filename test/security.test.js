@@ -1,3 +1,4 @@
+import { adminOnly, quoteApprove } from "../src/quote-permissions.js";
 import test from "node:test";
 import assert from "node:assert/strict";
 import { ownerOnly, csrf } from "../src/security.js";
@@ -53,9 +54,9 @@ test("every registered owner-only route enforces role before handler", () => {
       r.path.startsWith("/admin") ||
       /approve|sent|reopen|release|mark-lost|reconcile/.test(r.path),
   );
-  assert.equal(protectedRoutes.length, 13);
+  assert.equal(protectedRoutes.length, 15);
   for (const r of protectedRoutes) {
-    assert.equal(r.handlers[0], ownerOnly, r.path);
+    assert.equal(r.handlers[0], r.path.startsWith("/admin")?adminOnly:r.path.includes("/approve")?quoteApprove:ownerOnly, r.path);
     const res = response();
     r.handlers[0]({ session: { user: { role: "sales" } } }, res, () =>
       assert.fail("Sales entered " + r.path),

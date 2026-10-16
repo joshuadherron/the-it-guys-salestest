@@ -29,8 +29,8 @@ test("Combined quote has two independently selectable contractual lanes",()=>{
 test("BII generation from a combined managed quote refuses unpriced scope",()=>{
  assert.throws(()=>buildBiiFill({quote:{inputs:{...managedInput,includeBii:true}},prospect:{business_name:"Example"},prices:{}}),/separately priced/);
 });
-test("Live delivery requires both explicit environment gates",()=>{
- assert.equal(quoteFillMode({QUOTE_FILL_MODE:"live",SHAREPOINT_WRITE_MODE:"dryrun"}),"dryrun");
+test("Explicit quote fill gate controls only quote content writes",()=>{
+ assert.equal(quoteFillMode({QUOTE_FILL_MODE:"live",SHAREPOINT_WRITE_MODE:"dryrun"}),"live");
  assert.equal(quoteFillMode({QUOTE_FILL_MODE:"live",SHAREPOINT_WRITE_MODE:"live"}),"live");
 });
 

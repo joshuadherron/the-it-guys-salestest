@@ -1,3 +1,4 @@
+import { canQuote } from "./quote-permissions.js";
 import { choice, date, integer, text, fail } from "./security.js";
 
 export const outcomeFlags = [
@@ -59,10 +60,10 @@ export const unsigned = (item) =>
 export const mayComplete = (item, user) =>
   openItem(item) &&
   !unsigned(item) &&
-  (user.role === "owner" ||
+  (item.workflowId === "MIT-05" ? canQuote(user,"quote.send") : (user.role === "owner" ||
     (user.role === "sales" &&
       user.email === "alanna@theitguys.us" &&
-      item.assigneeEmail === "alanna@theitguys.us"));
+      item.assigneeEmail === "alanna@theitguys.us")));
 export function safeLink(value) {
   const link = typeof value === "object" ? value?.Url || value?.url : value;
   return typeof link === "string" && /^https:\/\//i.test(link) ? link : null;

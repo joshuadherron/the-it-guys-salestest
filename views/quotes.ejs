@@ -116,11 +116,11 @@
 <% } %>
 </div>
 <a href="/quotes/<%= selected.id %>/print">Printable internal worksheet</a>
-<% if(user.role==="owner" && selected.status==="Approved"){ %>
-<a class="button quote-document-action" href="/quotes/<%= selected.id %>/document?lane=<%= selected.docInput.pricingMode==="managed_v20"?"COM-PRP":"BII-QSOW" %>">Prepare contractual Word quote</a>
+<% if((typeof canSend!=="undefined"&&canSend) && selected.status==="Approved"){ %>
+<a class="button quote-document-action" href="/quotes/<%= selected.id %>/document?lane=<%= selected.docInput.pricingMode==="managed_v20"?"COM-PRP":"BII-QSOW" %>">Prepare contractual Word quote</a><a href="/quotes/<%= selected.id %>/delivery">Fill / Send quote to client</a>
 
 <% } %>
-<% if(user.role==='owner'&&selected.status==='Draft'){ %>
+<% if((typeof canApprove!=='undefined'&&canApprove)&&selected.status==='Draft'){ %>
 <form method="post" action="/quotes/<%= selected.id %>/delete" data-confirm="Delete this draft quote? This cannot be undone.">
 <input type="hidden" name="_csrf" value="<%= csrf %>">
 <button type="submit">Delete draft</button>

@@ -19,7 +19,7 @@ const fill=(owner={},input={})=>buildManagedFill({quote:quote(input),prospect,ow
 test("sites row maps counts and cities without street addresses",()=>{
  assert.equal(fill().fields["MIT.Locations"],"Single office");
  assert.equal(fill({siteCount:2,siteCities:"Beaumont, Houston"}).fields["MIT.Locations"],"2 locations (Beaumont, Houston)");
- assert.throws(()=>fill({siteCount:2,siteCities:"123 Main St"}),/cities only/);
+ assert.throws(()=>fill({siteCount:2,siteCities:"123 Main St"}),/city names only/);
 });
 test("domain row validates Microsoft 365 domains",()=>{
  assert.equal(fill({domain:"EXAMPLE.TEST"}).fields["MIT.Domain"],"example.test");
@@ -127,7 +127,7 @@ test("document route stores formatted identity and owner facts including waiver 
  const routes=new Map(),q=quote({onboarding:0});q.inputs=JSON.stringify(q.inputs);q.line_items=JSON.stringify(q.line_items);const writes=[];
  const query=async(sql,params)=>{writes.push({sql,params});if(sql.startsWith("SELECT * FROM quotes"))return [q];return [];};
  quoteDocumentRoutes({get:(path,...handlers)=>routes.set("GET "+path,handlers),post:(path,...handlers)=>routes.set("POST "+path,handlers)},{query,json:v=>typeof v==="string"?JSON.parse(v):v,transaction:async f=>f({}),audit:async()=>{},prospect:async()=>prospect,priceConfig:async()=>({})});
- const req={params:{id:10},query:{lane:"COM-PRP"},body:{...baseOwner,lane:"COM-PRP",onboardingFee:0,waiveOnboarding:"yes",waiverNote:"Owner waiver for test."},session:{user:{role:"owner"}}};
+ const req={params:{id:10},query:{lane:"COM-PRP"},body:{...baseOwner,lane:"COM-PRP",onboardingFee:0,waiveOnboarding:"yes",waiverNote:"Owner waiver for test."},session:{user:{role:"owner",quote_send:true}}};
  let downloaded;
  const res={locals:{csrf:"token"},render:()=>{},set:()=>{},send:b=>{downloaded=b;}};
  for(const f of routes.get("GET /quotes/:id/document"))await f(req,res,()=>{});

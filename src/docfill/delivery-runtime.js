@@ -1,0 +1,10 @@
+import { query } from "../db.js";
+import { graph } from "../graph.js";
+import { sp } from "../sharepoint-runtime.js";
+import { priceConfig } from "../quotes.js";
+import { DeliveryStore } from "./delivery-store.js";
+import { SharePointQuotes } from "./sharepoint-quotes.js";
+import { QuoteDelivery } from "./delivery.js";
+import { extractPdfText } from "./pdf-text.js";
+export const deliveryStore=new DeliveryStore();
+export const quoteDelivery=new QuoteDelivery({store:deliveryStore,resolver:new SharePointQuotes(sp,graph),graph,extractText:extractPdfText,prices:priceConfig,config:async()=>{const [config]=await query("SELECT * FROM config_quote_email WHERE id=1");return config;}});

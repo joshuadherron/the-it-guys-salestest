@@ -1,3 +1,4 @@
+import { quoteDeliveryRoutes } from "./src/docfill/delivery-routes.js";
 import { existingClientRoutes } from "./src/existing-clients.js";
 import { guidedRoutes } from "./src/guided-workflow.js";
 import "dotenv/config";
@@ -94,7 +95,7 @@ const sharePointStartup = sp
 app.use(requireUser);
 app.use(async (req, res, next) => {
   const [user] = await query(
-    "SELECT email,role FROM allowlist WHERE email=? AND enabled=TRUE",
+    "SELECT * FROM allowlist WHERE email=? AND enabled=TRUE",
     [req.session.user.email],
   );
   if (!user)
@@ -114,6 +115,7 @@ guidedRoutes(app);
 discoveryRoutes(app);
 quotesRoutes(app);
 quoteDocumentRoutes(app);
+quoteDeliveryRoutes(app);
 handoffRoutes(app);
 adminRoutes(app);
 app.use(async (err, req, res, _next) => {

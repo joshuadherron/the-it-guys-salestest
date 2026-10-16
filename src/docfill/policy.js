@@ -2,7 +2,7 @@
 export const quoteFillMode = (env = process.env) => {
   const mode = env.QUOTE_FILL_MODE || "dryrun";
   if (!["off", "dryrun", "live"].includes(mode)) throw new Error("Invalid QUOTE_FILL_MODE; expected off, dryrun or live.");
-  return mode === "live" && env.SHAREPOINT_WRITE_MODE === "live" ? "live" : mode === "off" ? "off" : "dryrun";
+  return mode;
 };
 export const quoteLane = (input, requestedKey) => {
   if (requestedKey && !["COM-PRP", "BII-QSOW"].includes(requestedKey)) throw new Error("Unsupported quote document key.");
@@ -17,8 +17,8 @@ export const quoteLane = (input, requestedKey) => {
   if (input?.includeBii === true) return { key:"BII-QSOW", workflow:"BII-05", label:"BII Quote & SOW", template:"v1.6" };
   throw new Error("Select BII Integration or Managed IT before generating a quote document.");
 };
-export function assertQuoteFillEligible({role,status,clientId,workingCopies,requestsPending=false,signatureStatus,completionStatus}) {
-  if(role !== "owner") throw new Error("Only the owner can generate contractual quote documents.");
+export function assertQuoteFillEligible({canSend,status,clientId,workingCopies,requestsPending=false,signatureStatus,completionStatus}) {
+  if(canSend !== true) throw new Error("Permission quote.send is required to fill quote documents.");
   if(status !== "Approved") throw new Error("Approve the quote before generating its document.");
   if(!clientId) throw new Error("Create or link the SharePoint client first.");
   if(requestsPending) throw new Error("Wait for pending SharePoint Workflow Requests to finish.");

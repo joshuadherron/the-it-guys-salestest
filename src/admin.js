@@ -1,11 +1,18 @@
+import { reconcileQuoteDelivery } from "./docfill/reconcile.js";
+import { adminOnly } from "./quote-permissions.js";
+import { DEFAULT_SUBJECT, DEFAULT_BODY, validateEmailTemplate } from "./docfill/send-policy.js";
 import { lostReasons } from "./workflow-contract.js";
 import { query, transaction, audit } from "./db.js";
-import { ownerOnly, choice, text, integer, fail } from "./security.js";
+import { choice, text, integer, fail } from "./security.js";
 import { sp } from "./handoff.js";
 import { dispatchProspectSync, prospectSyncEnabled } from "./prospect-sync.js";
 export function adminRoutes(app) {
-  app.get("/admin", ownerOnly, async (req, res) =>
+  app.get("/admin", adminOnly, async (req, res) =>
     res.render("admin", {
+      quoteEmail: (await query("SELECT * FROM config_quote_email WHERE id=1"))[0] || {subject_template:DEFAULT_SUBJECT,body_template:DEFAULT_BODY},
+      quoteMailbox: process.env.QUOTE_SENDER_MAILBOX || "Not configured",
+      uncertainFills: await query("SELECT id,quote_id,client_id FROM quote_fills WHERE status='Unknown' ORDER BY id DESC"),
+      uncertainSends: await query("SELECT id,quote_id,client_id,phase,pdf_item_id FROM quote_send_attempts WHERE status='Unknown' ORDER BY id DESC"),
       lostReasons: await query(
         "SELECT * FROM config_lost_reasons ORDER BY sort_order",
       ),
@@ -22,7 +29,7 @@ export function adminRoutes(app) {
       ),
     }),
   );
-  app.post("/admin/prospect-backfill", ownerOnly, async (req, res) => {
+  app.post("/admin/prospect-backfill", adminOnly, async (req, res) => {
     if (!prospectSyncEnabled())
       fail("Prospect sync is disabled. Configure SharePoint, then set PROSPECT_SYNC_ENABLED=true.");
     const prospects = await query("SELECT * FROM prospects ORDER BY id");
@@ -37,7 +44,7 @@ export function adminRoutes(app) {
     );
     res.redirect("/admin");
   });
-  app.post("/admin/lost-reasons", ownerOnly, async (req, res) => {
+  app.post("/admin/lost-reasons", adminOnly, async (req, res) => {
     const reason = choice(req.body.reason, lostReasons);
     await transaction(async (c) => {
       await query(
@@ -55,7 +62,7 @@ export function adminRoutes(app) {
     });
     res.redirect("/admin");
   });
-  app.post("/admin/check", ownerOnly, async (req, res) => {
+  app.post("/admin/check", adminOnly, async (req, res) => {
     await sp.check();
     await audit(
       undefined,
@@ -66,7 +73,7 @@ export function adminRoutes(app) {
     );
     res.redirect("/admin");
   });
-  app.post("/admin/prices", ownerOnly, async (req, res) => {
+  app.post("/admin/prices", adminOnly, async (req, res) => {
     const name = text(req.body.name, 80),
       amount = text(req.body.amount, 30);
     if (!/^\d+(\.\d{1,2})?$/.test(amount) || Number(amount) > 100000000)
@@ -93,7 +100,7 @@ export function adminRoutes(app) {
     });
     res.redirect("/admin");
   });
-  app.post("/admin/stages", ownerOnly, async (req, res) => {
+  app.post("/admin/stages", adminOnly, async (req, res) => {
     await transaction(async (c) => {
       await query(
         "UPDATE config_stages SET sort_order=? WHERE name=?",
@@ -110,7 +117,7 @@ export function adminRoutes(app) {
     });
     res.redirect("/admin");
   });
-  app.post("/admin/stops", ownerOnly, async (req, res) => {
+  app.post("/admin/stops", adminOnly, async (req, res) => {
     const label = text(req.body.label, 200);
     if (!label) fail("Stop condition needs a label.");
     await transaction(async (c) => {
@@ -145,18 +152,31 @@ export function adminRoutes(app) {
     });
     res.redirect("/admin");
   });
-  app.post("/admin/allowlist", ownerOnly, async (req, res) => {
+  app.post("/admin/quote-reconcile", adminOnly, async(req,res)=>{
+    await reconcileQuoteDelivery(req.body,req.session.user,{query,transaction,audit});
+    res.redirect("/admin");
+  });
+  app.post("/admin/quote-email", adminOnly, async(req,res)=>{
+    const subject=text(req.body.subject_template||"",250),body=text(req.body.body_template||"",12000);
+    validateEmailTemplate(subject,body);
+    await transaction(async c=>{
+      await query("UPDATE config_quote_email SET subject_template=?,body_template=? WHERE id=1",[subject,body],c);
+      await audit(c,req.session.user,"configure quote email template","config_quote_email",1);
+    });
+    res.redirect("/admin");
+  });
+  app.post("/admin/allowlist", adminOnly, async (req, res) => {
     const email = text(req.body.email, 254).toLowerCase();
     if (!/^[^\s@]+@theitguys\.us$/.test(email))
       fail("Use a theitguys.us account.");
     const role = choice(req.body.role, ["sales", "owner"]);
     const enabled = req.body.enabled === "yes";
-    if (email === req.session.user.email && (!enabled || role !== "owner"))
-      fail("Do not remove your own owner access.");
+    if (email === req.session.user.email && (!enabled || req.body.is_admin !== "yes"))
+      fail("Do not remove your own admin access.");
     await transaction(async (c) => {
       await query(
-        "INSERT INTO allowlist (email,role,enabled) VALUES (?,?,?) ON DUPLICATE KEY UPDATE role=VALUES(role),enabled=VALUES(enabled)",
-        [email, role, enabled],
+        "INSERT INTO allowlist (email,role,enabled,is_admin,quote_approve,quote_send,display_name,sender_title,sender_phone) VALUES (?,?,?,?,?,?,?,?,?) ON DUPLICATE KEY UPDATE role=VALUES(role),enabled=VALUES(enabled),is_admin=VALUES(is_admin),quote_approve=VALUES(quote_approve),quote_send=VALUES(quote_send),display_name=VALUES(display_name),sender_title=VALUES(sender_title),sender_phone=VALUES(sender_phone)",
+        [email, role, enabled,req.body.is_admin==="yes",req.body.quote_approve==="yes",req.body.quote_send==="yes",text(req.body.display_name||"",200),text(req.body.sender_title||"",200),text(req.body.sender_phone||"",80)],
         c,
       );
       await audit(c, req.session.user, "update allowlist", "allowlist", email);

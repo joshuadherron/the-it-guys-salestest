@@ -18,8 +18,8 @@
   - Payload (plain JSON text)
   - Result Message
 - **Client Workflow Definitions** (list): the workflow rows (MIT-xx, BII-xx). Read-only for the app.
-- **Client Operations** (library): the client folders and working copies. **The app never writes files here.** Flows do. The Sales App may update only the narrow signature-control metadata needed to trigger or record the Microsoft 365 eSignature handoff: Internal Notes Removed, Signature Status, and (when present) Signature Sent Date.
-- **Operational Standards & Templates** (library): masters. **The app never touches it.**
+- **Client Operations** (library): the client folders and working copies. Flows own workflow file creation. The explicit quote exceptions below permit only filling the existing quote DOCX and creating its sent PDF. The Sales App may update only the narrow signature-control metadata needed to trigger or record the Microsoft 365 eSignature handoff: Internal Notes Removed, Signature Status, and (when present) Signature Sent Date.
+- **Operational Standards & Templates** (library): masters. The app reads Approved quote masters for filling; it never writes to this library.
 
 ## How work happens
 The app creates a Workflow Request item with **Processing Status = Pending**, **Source = Sales App**, a Request Type and a JSON Payload. Power Automate flows pick it up, one at a time, and set Processing Status to Done, Rejected or Failed with a Result Message. The app polls the item and shows the result in plain language. Rejected is a normal business outcome with a reason (show it); Failed means a real error (show it and tell Josh).
@@ -110,3 +110,8 @@ Signature-required unsigned items complete through the signing flow. The app exp
 Quoting issues MIT-05 Managed IT Quote, accepted in writing and never signed. Save the written acceptance in /Commercial before marking it accepted. Contracting issues MIT-06 Client Service Schedule and MIT-07 MSA, plus MIT-17 BAA when flagged. All Contracting documents must be signed by both parties and all gate Client Activation.
 
 For MIT-05 in the Managed IT lane, the client HIPAA checkbox automatically includes BAA required; it is shown checked and locked. The owner may select it manually for other business associates. It is offered only with an active Outcome flag definition and live library choice. BII items never send BAA required; BII-16 retains prepareBaa on Send to Quoting. Item Completed retains the itemId, completionStatus and outcomeFlags payload.
+
+
+## Explicit quote file exceptions
+
+A user with quote.send may replace only the content of the client's existing BII-05/MIT-05 quote working copy using an If-Match eTag. Managed IT send may create exactly one PDF in that same Commercial folder, named `<working-copy stem> - SENT <yyyy-MM-dd>.pdf`, with conflict behavior fail, then email that exact PDF from the configured shared mailbox after an explicit user click. No other direct file write is authorized. Masters remain read-only, operational stage changes continue through Workflow Requests, and existing signature-control metadata behavior remains unchanged. QUOTE_FILL_MODE and QUOTE_SEND_MODE govern these exceptions independently of SHAREPOINT_WRITE_MODE. Send dryrun sends only to the clicking user and saves no PDF. See QUOTE-LIVE-WRITE-AND-SEND.md for refusal checks and durable retry/reconciliation.

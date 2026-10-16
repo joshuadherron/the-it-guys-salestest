@@ -8,13 +8,13 @@ import {listTags,fillDocx} from "./fill-docx.js";
  * filters, never from user-submitted drive/item identifiers.
  */
 export async function prepareQuoteDocument({
-  role, quote, clientId, workingCopies, requestsPending, signatureStatus,
+  canSend, quote, clientId, workingCopies, requestsPending, signatureStatus,
   completionStatus, masterCopies, expectedKey, data
 }) {
   if(!quote || !["BII-QSOW","COM-PRP"].includes(expectedKey))
     throw new Error("Unsupported quote document.");
   const working = assertQuoteFillEligible({
-    role,status:quote.status,clientId,workingCopies,requestsPending,
+    canSend,status:quote.status,clientId,workingCopies,requestsPending,
     signatureStatus,completionStatus
   });
   if(!Array.isArray(masterCopies)||masterCopies.length!==1)
@@ -31,13 +31,12 @@ export async function prepareQuoteDocument({
   return {buffer,report,master,working,quoteId:quote.id,documentKey:expectedKey};
 }
 
-/** Does not write unless both feature flags explicitly permit it. */
+/** Writes quote content only when the dedicated QUOTE_FILL_MODE is live. */
 export async function deliverQuoteDocument({prepared,graph,env=process.env}) {
   const mode=quoteFillMode(env);
   if(mode==="off") throw new Error("Quote document generation is disabled.");
   if(mode==="dryrun") return {mode,buffer:prepared.buffer,report:prepared.report};
-  if(prepared.report.unfilled.length)
-    throw new Error("Complete the remaining owner fields before SharePoint delivery: "+prepared.report.unfilled.join(", "));
+  // Unfilled controls remain editable in Word; the current PDF is checked before sending.
   const w=prepared.working;
   if(!w.driveId||!w.itemId||!w.eTag)
     throw new Error("Working copy is missing a resolved drive, item ID or eTag.");

@@ -3,7 +3,8 @@
 <div class="quote-document-page">
 <p><a href="/prospects/<%= p.id %>/quotes?quote=<%= q.id %>#selected-quote">Back to approved quote</a></p>
 <h1>Generate <%= lane.label %> - <%= q.quote_number || ('Quote #' + q.id) %></h1>
-<p>Owner-only draft Word download. Known facts are prefilled for review. Blank facts remain visible placeholders and are reported as unfilled. No SharePoint write or contract delivery occurs.</p>
+<p>Quote-send permission is required. Known facts are prefilled for review. Blank facts remain visible placeholders and are reported as unfilled. Downloading a draft does not write to SharePoint or send email. The separate Fill action uses the mode shown below; Send remains a separate explicit action.</p>
+<p>Fill mode: <strong><%= typeof fillMode!=='undefined'?fillMode:'dryrun' %></strong>. Live replaces the existing quote Word content; dryrun only records a preview.</p>
 <form method="post" action="/quotes/<%= q.id %>/document" class="card quote-document-form">
 <input type="hidden" name="_csrf" value="<%= csrf %>"><input type="hidden" name="lane" value="<%= lane.key %>">
 <% if(lane.key === 'COM-PRP'){ %>
@@ -40,5 +41,5 @@
 <div class="quote-document-optional">
 <% for(const [key,label] of [['deviceNote','Device notes'],['hardwareText','Hardware scope'],['locationText','Additional location scope'],['regulatedText','Regulated-data scope'],['lobExclusion','Line-of-business application exclusions'],['extraExclusions','Additional exclusions'],['extraAssumption','Additional assumptions']]){ %><label><%= label %><textarea name="<%= key %>" rows="2" maxlength="4000"><%= prefill[key] || '' %></textarea></label><% } %></div>
 <% } %>
-<p><strong>Review required:</strong> This preview may contain bracketed placeholders and is not ready for client use until reviewed.</p><button type="submit">Download draft Word document</button></form></div>
+<p><strong>Review required:</strong> This preview may contain bracketed placeholders and is not ready for client use until reviewed.</p><button type="submit">Download draft Word document</button><button type="submit" name="action" value="FillSharePoint">Fill Quote/SOW in SharePoint</button><a href="/quotes/<%= q.id %>/delivery">Send / delivery status</a></form></div>
 <%- include('footer') %>

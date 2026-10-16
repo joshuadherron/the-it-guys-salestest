@@ -155,6 +155,7 @@ const fixtures = {
   quotes: {
     quotes: [],
     selected: null,
+    editing: null,
     input,
     managedInput: {},
     calculation,
@@ -196,7 +197,7 @@ const fixtures = {
     logs: [],
     schema: { errors: [] },
   },
-  error: { message: "Try again" },
+  error: { message: "Try again", returnUrl: "/" },
 };
 for (const [view, data] of Object.entries(fixtures))
   test(`${view} renders`, async () => {

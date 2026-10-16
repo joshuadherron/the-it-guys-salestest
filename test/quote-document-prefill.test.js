@@ -8,14 +8,14 @@ test("BII document prefills known prospect and approved device counts only",()=>
  assert.equal(fields.domain,"exampledental.com");
  assert.equal(fields.location,"123 Main, Beaumont TX 77701");
  assert.equal(fields.deviceTypes,"3 Windows; 1 Mac; 2 Platform not yet assigned");
- assert.equal(fields.legalName,"");
+ assert.equal(fields.legalName,"Example Dental");
  assert.equal(fields.signer,"");
  assert.equal(fields.summary,"");
 });
 test("Never infer a business domain from public mail or an authorized signer",()=>{
  const fields=documentPrefill({business_name:"ABC",email:"owner@gmail.com"},{users:5,computers:5},"COM-PRP");
  assert.equal(fields.domain,"");
- assert.equal(fields.legalName,"");
+ assert.equal(fields.legalName,"ABC");
  assert.equal(fields.assignedSummary,"5 computers");
  assert.deepEqual(fields.deviceKinds,["computers","phones","tablets"]);
  assert.equal(fields.serviceStartMode,"after_contracts");

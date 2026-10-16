@@ -110,7 +110,7 @@ export function authRoutes(app) {
     ).toLowerCase();
 
     const [user] = await query(
-      "SELECT email,role FROM allowlist WHERE email=? AND enabled=TRUE",
+      "SELECT * FROM allowlist WHERE email=? AND enabled=TRUE",
       [email],
     );
 

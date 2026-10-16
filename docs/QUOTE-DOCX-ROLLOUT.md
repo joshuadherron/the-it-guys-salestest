@@ -1,8 +1,8 @@
 # Quote DOCX rollout checklist
 
 ## Current integration state
-- Owner-only route: `GET/POST /quotes/:id/document`.
-- Approved quote required. Browser POST returns **draft DOCX only**, never a SharePoint write.
+- Route: `GET/POST /quotes/:id/document`, enforced by configurable `quote.send`.
+- Approved quote required. The draft-download action returns a draft DOCX without SharePoint changes; the explicit Fill button invokes the separately gated quote-content service.
 - Templates are pinned by exact document key: `COM-PRP-v1.8.docx` and `BII-QSOW-v1.6.docx`.
 - Both original binary masters are installed under `test/fixtures/`, imported using `scripts/import-quote-templates.py` from `TIG_Quote_Fill_Codex_Package_v1.zip`. Their bytes are unchanged. `test/fixtures/quote-masters.json` records the source ZIP and master SHA-256 hashes. Real-master integration tests verify those hashes and the exact approved tag sets (62 Managed IT / 60 BII).
 - Required runtime modules `jszip` and `@xmldom/xmldom` are present in both `package.json` and `package-lock.json`. Clean installation has been verified with Node 22.23.3.
@@ -18,10 +18,10 @@
 6. Rates, monthly/one-time pricing, 50/50 BII payment terms, and client-specific narrative fields are checked against the approved quote and signed-off master.
 7. Combined Managed+BII quotes are **not** permitted to generate an unpriced BII contract. First capture a separate approved BII scope.
 8. The internal printable worksheet remains unchanged.
-9. SharePoint live writes require a separate integration acceptance: exactly one approved master, exactly one open working copy, no pending requests, client ID, eTag, audit record, and both explicit live environment gates.
+9. SharePoint live writes require a separate integration acceptance: exactly one approved master, exactly one open working copy, no pending requests, client ID, eTag, audit record, and the explicit quote-specific live environment gates.
 
 ## Security notes
-The preview route never invokes Graph mutation. The server must not expose an arbitrary template path or permit unapproved quotes. The draft must not be sent for signature without a human review. Maintain `QUOTE_FILL_MODE=dryrun` until the acceptance gates pass.
+The draft-download action never invokes Graph mutation. The separate Fill action uses QUOTE_FILL_MODE. The server must not expose an arbitrary template path or permit unapproved quotes. The draft must not be sent for signature without a human review. Maintain `QUOTE_FILL_MODE=dryrun` until the acceptance gates pass.
 
 
 ## Local verification on October 15 2026
@@ -38,3 +38,8 @@ The preview route never invokes Graph mutation. The server must not expose an ar
 ## Managed IT review follow-up
 
 The Managed IT master/reference are now sourced from package v1.1 with the same 62 tags and the revised How to accept wording. Apply migration 009 for stored quote numbers and document facts before deploying the structured generation form. See [review corrections](QUOTE-FILL-REVIEW-1.md). The existing standalone sample generator and BII regression checks remain available.
+
+
+## Superseding live-fill/send implementation
+
+The live quote prompt is implemented with migration 010 and configurable quote permissions. The earlier owner-only/download-only notes describe the initial rollout; draft downloads remain non-mutating, while the separate Fill action uses QUOTE_FILL_MODE and explicit Send uses QUOTE_SEND_MODE. The two quote flags govern the new file exceptions independently of SHAREPOINT_WRITE_MODE. No flag was enabled during development. See [current fill/send contract](QUOTE-LIVE-WRITE-AND-SEND.md) for shared-mailbox setup, prechecks, reconciliation and real deployment gates.

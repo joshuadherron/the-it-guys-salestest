@@ -1,3 +1,4 @@
+import { quoteApprove, canQuote } from "./quote-permissions.js";
 import { query, transaction, audit, json } from "./db.js";
 import { ownerOnly, integer, fail } from "./security.js";
 import { prospect } from "./pipeline.js";
@@ -156,6 +157,8 @@ export function quotesRoutes(app) {
 
     res.render("quotes", {
       p,
+      canApprove: canQuote(req.session.user,"quote.approve"),
+      canSend: canQuote(req.session.user,"quote.send"),
       quotes,
       selected,
       editing,
@@ -309,7 +312,7 @@ export function quotesRoutes(app) {
     res.redirect(`/prospects/${pid}/quotes?quote=${savedId}#selected-quote`);
   });
 
-  app.post("/quotes/:id/approve", ownerOnly, async (req, res) => {
+  app.post("/quotes/:id/approve", quoteApprove, async (req, res) => {
     let pid;
 
     await transaction(async (c) => {

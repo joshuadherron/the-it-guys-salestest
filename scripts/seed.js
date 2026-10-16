@@ -32,8 +32,8 @@ try {
       ["josh@theitguys.us", "owner"],
     ])
       await query(
-        "INSERT IGNORE INTO allowlist (email,role) VALUES (?,?)",
-        [email, role],
+        "INSERT IGNORE INTO allowlist (email,role,is_admin,quote_approve,quote_send,display_name,sender_title,sender_phone) VALUES (?,?,?,?,?,?,?,?)",
+        [email,role,role==="owner",role==="owner",true,role==="owner"?"Joshua Herron":"Alanna Herron",role==="owner"?"Owner / Technical Lead":"",role==="owner"?"409-937-2798":""],
         c,
       );
   });

@@ -4,7 +4,7 @@ import ejs from 'ejs';
 import { completionFlags, availableFlags, mayComplete, openItem, workPayload } from '../src/work-items.js';
 import { nextStep } from '../src/next-step.js';
 import { clientData } from '../src/guided-workflow.js';
-const owner={role:'owner',email:'josh@theitguys.us'};
+const owner={quote_send:true,role:'owner',email:'josh@theitguys.us'};
 const item={id:'41',workflowId:'MIT-05',lane:'Managed IT',stage:'Quoting',status:'',blocking:true,signatureRequired:false,document:'Managed IT Quote'};
 const defs=[{id:'MIT-17',lane:'Managed IT',active:true,triggerMode:'Outcome flag',triggerFlag:'BAA required',document:'BAA'}];
 const choices=['BAA required'];

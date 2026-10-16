@@ -11,7 +11,7 @@
 </head>
 <body>
 <div class="mode">
-<%= mode === 'live' ? 'LIVE — actions can send requests and email' : 'DRYRUN — requests and emails are stored for review' %>
+<%= mode === 'live' ? 'LIVE - Workflow Requests and internal notifications are enabled. Quote delivery uses its own mode.' : 'DRYRUN - Workflow Requests and internal notifications are previews. Quote delivery has its own mode shown on quote pages.' %>
 </div>
 <header>
 <a class="brand" href="/">THE IT GUYS <span>Sales workspace</span>
@@ -22,7 +22,7 @@
 <a href="/pipeline">Businesses</a>
 <a href="/weekly">Weekly</a>
 <a href="/import">Import / Export</a>
-<% if(user.role==='owner'){ %>
+<% if(user.is_admin){ %>
 <a href="/admin">Admin</a>
 <% } %>
 <form method="post" action="/auth/logout">

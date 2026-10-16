@@ -1,5 +1,45 @@
 import { msalClient } from "./auth.js";
 export class Graph {
+  constructor({fetchImpl = globalThis.fetch, token} = {}) {
+    this.fetch = fetchImpl;
+    this.token = token || (async () => (await msalClient().acquireTokenByClientCredential({scopes:["https://graph.microsoft.com/.default"]})).accessToken);
+  }
+  async quoteBinary(path) {
+    const token = await this.token();
+    let response = await this.fetch("https://graph.microsoft.com/v1.0" + path, {headers:{Authorization:`Bearer ${token}`},redirect:"manual",signal:AbortSignal.timeout(30000)});
+    if ([301,302,303,307,308].includes(response.status)) {
+      const url = new URL(response.headers.get("location"));
+      if(url.protocol!=="https:"||url.username||url.password)throw new Error("Invalid Graph download redirect.");
+      response = await this.fetch(url.href,{signal:AbortSignal.timeout(30000)});
+    }
+    if(!response.ok)throw Object.assign(new Error(`Quote download failed (HTTP ${response.status}).`),{status:response.status});
+    const buffer=Buffer.from(await response.arrayBuffer());
+    if(!buffer.length||buffer.length>3*1000*1000)throw new Error("Quote file must be nonempty and no larger than 3 MB.");
+    return buffer;
+  }
+  async quoteContent(driveId,itemId,pdf=false) {
+    return this.quoteBinary(`/drives/${encodeURIComponent(driveId)}/items/${encodeURIComponent(itemId)}/content${pdf?"?format=pdf":""}`);
+  }
+  async createSentQuotePdf(driveId,folderId,name,buffer) {
+    if(!name.endsWith(".pdf")||/[\\/:]/.test(name)||!Buffer.isBuffer(buffer)||!buffer.length||buffer.length>3*1000*1000)throw new Error("Invalid sent quote PDF.");
+    const session=await this.request(`/drives/${encodeURIComponent(driveId)}/items/${encodeURIComponent(folderId)}:/${encodeURIComponent(name)}:/createUploadSession`,"POST",{item:{name,"@microsoft.graph.conflictBehavior":"fail"}});
+    const url=new URL(session.uploadUrl);
+    if(url.protocol!=="https:"||url.username||url.password)throw new Error("Invalid upload session URL.");
+    const response=await this.fetch(url.href,{method:"PUT",headers:{"Content-Length":String(buffer.length),"Content-Range":`bytes 0-${buffer.length-1}/${buffer.length}`,"Content-Type":"application/pdf"},body:buffer,signal:AbortSignal.timeout(30000)});
+    if(!response.ok)throw Object.assign(new Error(`Sent PDF creation failed (HTTP ${response.status}); nothing was emailed.`),{status:response.status});
+    const item=await response.json();
+    if(!item.id)throw new Error("PDF upload result is missing its item ID.");
+    return item;
+  }
+  async sendQuoteMail(mailbox,message,correlationId) {
+    const {senderMailbox}=await import("./docfill/send-policy.js");
+    senderMailbox({QUOTE_SENDER_MAILBOX:mailbox});
+    const token=await this.token();
+    const response=await this.fetch(`https://graph.microsoft.com/v1.0/users/${encodeURIComponent(mailbox)}/sendMail`,{method:"POST",headers:{Authorization:`Bearer ${token}`,"Content-Type":"application/json","client-request-id":correlationId,"return-client-request-id":"true"},body:JSON.stringify(message),signal:AbortSignal.timeout(30000)});
+    if(response.status!==202)throw Object.assign(new Error(`Shared mailbox send refused (HTTP ${response.status}). Check Mail.Send and the Exchange application access policy. No further send was attempted.`),{status:response.status});
+    return {messageId:null,requestId:response.headers.get("request-id"),correlationId};
+  }
+
   async request(path, method = "GET", body, headers = {}) {
     const token = await msalClient().acquireTokenByClientCredential({
       scopes: ["https://graph.microsoft.com/.default"],
@@ -58,14 +98,12 @@ export class Graph {
   async replaceQuoteWorkingCopy(driveId, itemId, etag, buffer) {
     if (!driveId || !itemId || !etag || !Buffer.isBuffer(buffer) || !buffer.length)
       throw new Error("Quote replacement requires a resolved drive, item, eTag and nonempty DOCX.");
-    const token = await msalClient().acquireTokenByClientCredential({
-      scopes: ["https://graph.microsoft.com/.default"],
-    });
+    const accessToken = await this.token();
     const path = `/drives/${encodeURIComponent(driveId)}/items/${encodeURIComponent(itemId)}/content`;
-    const response = await fetch("https://graph.microsoft.com/v1.0" + path, {
+    const response = await this.fetch("https://graph.microsoft.com/v1.0" + path, {
       method: "PUT",
       headers: {
-        Authorization: `Bearer ${token.accessToken}`,
+        Authorization: `Bearer ${accessToken}`,
         "Content-Type": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
         "If-Match": etag,
       },

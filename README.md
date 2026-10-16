@@ -1,6 +1,6 @@
 # The IT Guys sales app
 
-Internal Express/EJS application for Alanna and Josh at `sales.theitguys.us`. Node.js **22.13 or later within 22.x**, MySQL 8, no compilation/native build, no SPA, no ORM. SharePoint remains the client/document system of record. The only SharePoint write path creates items in **Workflow Requests**.
+Internal Express/EJS application for Alanna and Josh at `sales.theitguys.us`. Node.js **22.13 or later within 22.x**, MySQL 8, no compilation/native build, no SPA, no ORM. SharePoint remains the client/document system of record. Workflow changes use **Workflow Requests**. Explicit user-triggered quote delivery additionally permits the two narrow file exceptions documented below.
 
 ## Local setup
 
@@ -178,3 +178,12 @@ Apply migration 008 before running this version. Josh can use **Customer relatio
 ## Managed IT quote review update
 
 Apply migration 009 before deploying this version. It stores formatted quote numbers and the owner document facts. The Managed IT Word form now captures structured contact, site, device, onboarding and on-site facts and uses the v1.1 approved reference wording. See [quote review corrections](docs/QUOTE-FILL-REVIEW-1.md) for validation and compatibility details.
+
+
+## Explicit quote fill and shared-mailbox send
+
+Apply migration 010 before deploying this version. Quote approval and fill/send now use configurable quote.approve and quote.send permissions; admin controls their grants and sender profiles. QUOTE_FILL_MODE controls the narrow quote-content write and QUOTE_SEND_MODE controls sent-PDF creation plus email. Both default to dryrun. **Send dryrun still emails the signed-in user from the shared mailbox**, with [DRYRUN] in the subject, no CC and no saved PDF. A signed-in person must click Send; there are no automatic sends.
+
+Two direct file-write exceptions are permitted: replacing only the existing BII-05/MIT-05 working-copy DOCX content with If-Match, and creating one sent quote PDF in its same Commercial folder with conflictBehavior=fail. No master, other document or workflow-stage write is added. Existing signature handoff controls remain unchanged. The written-acceptance MIT-05 completion action now requires quote.send.
+
+Configure QUOTE_SENDER_MAILBOX as the dedicated shared mailbox, never workflow@ or a personal mailbox. Extend the existing Exchange application access policy scope to include that shared mailbox while retaining Josh for the app's existing notifications; verify an unrelated mailbox remains denied. Josh must enter Alanna's sender title and phone before she sends. See [live quote fill and send](docs/QUOTE-LIVE-WRITE-AND-SEND.md) for master-column mapping, recipient checks, failure recovery and deployment acceptance. Live settings and production configuration have not been changed by this implementation.

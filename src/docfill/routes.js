@@ -1,9 +1,10 @@
+import { quoteSend } from "../quote-permissions.js";
 import { managedOwnerFacts, formattedQuoteNumber } from "./managed-facts.js";
 import {readFile} from "node:fs/promises";
 import {fileURLToPath} from "node:url";
 import {dirname,join} from "node:path";
 import {query,audit,json,transaction} from "../db.js";
-import {ownerOnly,integer,fail} from "../security.js";
+import {integer,fail} from "../security.js";
 import {prospect} from "../pipeline.js";
 import {priceConfig} from "../quotes.js";
 import {quoteLane,quoteFillMode} from "./policy.js";
@@ -24,7 +25,7 @@ function cleanOwner(body){
 }
 export function quoteDocumentRoutes(app,dependencies={query,audit,json,transaction,prospect,priceConfig}){
  const {query,audit,json,transaction,prospect,priceConfig}=dependencies;
- app.get("/quotes/:id/document",ownerOnly,async(req,res)=>{
+ app.get("/quotes/:id/document",quoteSend,async(req,res)=>{
   if(quoteFillMode()==="off")fail("Document fill is disabled.",403);
   const [q]=await query("SELECT * FROM quotes WHERE id=?",[integer(req.params.id)]);
   if(!q)fail("Quote not found.",404);
@@ -34,9 +35,9 @@ export function quoteDocumentRoutes(app,dependencies={query,audit,json,transacti
   if(!q.quote_number){q.quote_number=formattedQuoteNumber(q);await query("UPDATE quotes SET quote_number=? WHERE id=? AND quote_number IS NULL",[q.quote_number,q.id]);}
   const input=json(q.inputs);
   const lane=quoteLane(input,req.query.lane);
-  res.render("quote-document",{q,p,lane,prefill:{...documentPrefill(p,input,lane.key),...Object.fromEntries(Object.entries(q.document_facts?json(q.document_facts):{}).filter(([,v])=>v!=="" && v!==null && v!==undefined && !(typeof v==="string" && ["none","none.","null","undefined","n/a","unknown"].includes(v.trim().toLowerCase())))),onboardingFee:Number(input.onboarding||0),onsiteHours:Number(input.onsiteHours||0),quoteComputers:Number(input.computers||0)},csrf:res.locals.csrf});
+  res.render("quote-document",{q,p,lane,fillMode:quoteFillMode(),prefill:{...documentPrefill(p,input,lane.key),...Object.fromEntries(Object.entries(q.document_facts?json(q.document_facts):{}).filter(([,v])=>v!=="" && v!==null && v!==undefined && !(typeof v==="string" && ["none","none.","null","undefined","n/a","unknown"].includes(v.trim().toLowerCase())))),onboardingFee:Number(input.onboarding||0),onsiteHours:Number(input.onsiteHours||0),quoteComputers:Number(input.computers||0)},csrf:res.locals.csrf});
  });
- app.post("/quotes/:id/document",ownerOnly,async(req,res)=>{
+ app.post("/quotes/:id/document",quoteSend,async(req,res)=>{
   const mode=quoteFillMode();
   if(mode==="off")fail("Document fill is disabled.",403);
   // Browser downloads remain dry-run. Live writes require the separate
@@ -75,6 +76,11 @@ export function quoteDocumentRoutes(app,dependencies={query,audit,json,transacti
     await query("UPDATE quotes SET document_facts=? WHERE id=?",[JSON.stringify(owner),q.id],c);
     await audit(c,req.session.user,"dryrun quote document "+lane.key,"quote",q.id);
   });
+  if(req.body.action==="FillSharePoint"){
+    const {quoteDelivery}=await import("./delivery-runtime.js");
+    await quoteDelivery.fill(q.id,req.session.user);
+    return res.redirect(`/quotes/${q.id}/delivery`);
+  }
   res.set("Cache-Control","no-store");
   res.set("Content-Type","application/vnd.openxmlformats-officedocument.wordprocessingml.document");
   res.set("Content-Disposition",'attachment; filename="TIG-'+lane.key+'-Quote-'+q.id+'-DRAFT.docx"');

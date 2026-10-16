@@ -10,9 +10,9 @@ const route=readFileSync(join(root,"src/docfill/routes.js"),"utf8");
 const view=readFileSync(join(root,"views/quote-document.ejs"),"utf8");
 const quotesView=readFileSync(join(root,"views/quotes.ejs"),"utf8");
 
-test("contract document route is owner-only and requires approved quote",()=>{
- assert.match(route,/app\.get\("\/quotes\/:id\/document",ownerOnly/);
- assert.match(route,/app\.post\("\/quotes\/:id\/document",ownerOnly/);
+test("contract document route requires quote.send and requires approved quote",()=>{
+ assert.match(route,/app\.get\("\/quotes\/:id\/document",quoteSend/);
+ assert.match(route,/app\.post\("\/quotes\/:id\/document",quoteSend/);
  assert.match(route,/q\.status!=="Approved"/);
  assert.match(route,/if\(p\.hold\)/);
 });

@@ -118,11 +118,12 @@
 <option <%= entry.role==='owner'?'selected':'' %>>owner</option>
 </select>
 <label>
-<input type="checkbox" name="enabled" value="yes" <%= entry.enabled?'checked':'' %>> Enabled</label>
+<input type="checkbox" name="enabled" value="yes" <%= entry.enabled?'checked':'' %>> Enabled</label><label><input type="checkbox" name="is_admin" value="yes" <%= entry.is_admin?'checked':'' %>>admin</label><label><input type="checkbox" name="quote_approve" value="yes" <%= entry.quote_approve?'checked':'' %>>quote.approve</label><label><input type="checkbox" name="quote_send" value="yes" <%= entry.quote_send?'checked':'' %>>quote.send</label><label>Sender name<input name="display_name" maxlength="200" value="<%= entry.display_name||'' %>"></label><label>Sender title<input name="sender_title" maxlength="200" value="<%= entry.sender_title||'' %>"></label><label>Sender phone<input name="sender_phone" maxlength="80" value="<%= entry.sender_phone||'' %>"></label>
 <button>Save user</button>
 </form>
 <% } %>
 </section>
+<% if(typeof quoteEmail!=='undefined'){ %><section class="card"><h2>Shared-mailbox quote email</h2><p>QUOTE_SENDER_MAILBOX: <%= quoteMailbox %>. This must be a dedicated shared mailbox, never workflow@ or a person's mailbox.</p><form method="post" action="/admin/quote-email"><input type="hidden" name="_csrf" value="<%= csrf %>"><label>Subject template<input name="subject_template" maxlength="250" value="<%= quoteEmail.subject_template %>" required></label><label>Body template<textarea name="body_template" maxlength="12000" rows="8" required><%= quoteEmail.body_template %></textarea></label><p>Tokens: {QuoteId}, {FirstName}, {MonthlyTotal}, {Onboarding}, {BAA phrase}, {SenderName}, {SenderTitle}, {SenderPhone}</p><button>Save quote email template</button></form></section><% } %>
 <section class="card">
 <h2>Audit log — latest 200 events</h2>
 <div class="table-wrap">
@@ -156,4 +157,9 @@
 </table>
 </div>
 </section>
+
+<% if(typeof uncertainFills!=='undefined'){ %><section class="card"><h2>Uncertain quote deliveries</h2><p>Check Word version history, Commercial and shared Sent Items before reconciling. No retry or email is sent by this form. Wait at least two minutes.</p>
+<% for(const f of uncertainFills){ %><form method="post" action="/admin/quote-reconcile"><input type="hidden" name="_csrf" value="<%= csrf %>"><input type="hidden" name="fill_id" value="<%= f.id %>"><p>Fill <%= f.id %> / quote <%= f.quote_id %> / <%= f.client_id %></p><label>Verification note<textarea name="note" minlength="10" required></textarea></label><label><input type="checkbox" name="confirm_checked" value="yes" required>I checked the Word versions and Commercial folder</label><button>Release uncertain fill for a new explicit fill</button></form><% } %>
+<% for(const a of uncertainSends){ %><article><p>Send attempt <%= a.id %> / quote <%= a.quote_id %> / <%= a.client_id %> / <%= a.phase %></p><% if(a.phase==='Email'&&a.pdf_item_id){ %><form method="post" action="/admin/quote-reconcile"><input type="hidden" name="_csrf" value="<%= csrf %>"><input type="hidden" name="attempt_id" value="<%= a.id %>"><label>Verified result<select name="decision"><option value="">Choose</option><option value="not_sent">Email definitely absent; permit explicit email-only retry</option><option value="sent">Email is present in shared Sent Items; record Sent</option></select></label><label>Verification note<textarea name="note" minlength="10" required></textarea></label><label><input type="checkbox" name="confirm_checked" value="yes" required>I checked shared Sent Items and the saved PDF</label><button>Reconcile without sending</button></form><% }else{ %><p>PDF creation is uncertain. Verify the exact PDF item and bytes before database reconciliation; no automatic retry is available.</p><% } %></article><% } %></section><% } %>
+
 <%- include('footer') %>
