@@ -691,3 +691,26 @@ body:has(.dashboard-stats) main>form[method="get"]{
 @media(min-width:761px){
   header .desktop-site-nav{margin-left:auto;justify-content:flex-end}
 }
+
+/* Prospects list: dense two-column rows rather than oversized cards. */
+details.dashboard-collapse:has(>summary) > .prospect-list-item{
+  padding:11px 15px;
+  margin:6px 0;
+  border-radius:8px;
+}
+.prospect-list-item>.row{align-items:center;gap:14px}
+.prospect-list-item>.row>div{min-width:0}
+.prospect-list-item small{display:block;font-size:.72rem;line-height:1.15;color:#587080}
+.prospect-list-item h2{font-size:1rem;line-height:1.25;margin:3px 0}
+.prospect-list-item p{margin:3px 0;font-size:.85rem;line-height:1.35}
+.prospect-list-item .pill{padding:3px 8px;font-size:.74rem;margin:0 4px 2px 0}
+.prospect-list-item>.row>div:nth-child(2){display:flex;align-items:center;align-content:center;flex-wrap:wrap;gap:4px 8px}
+.prospect-list-item>.row>div:nth-child(2)>p{margin:0}
+.prospect-list-item>.row>div:nth-child(2)>p.muted{font-size:.78rem}
+.prospect-list-item>.row>div:nth-child(2)>strong{font-size:.8rem}
+@media(max-width:760px){
+  .prospect-list-item{padding:10px 12px!important}
+  .prospect-list-item>.row{gap:6px}
+  .prospect-list-item>.row>div{flex:1 1 100%}
+  .prospect-list-item>.row>div:nth-child(2){gap:4px 6px}
+}
