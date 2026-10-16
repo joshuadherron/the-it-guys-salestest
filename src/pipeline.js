@@ -179,6 +179,30 @@ export function pipelineRoutes(app) {
     const selectedStatus = req.query.status
       ? choice(req.query.status, statusChoices)
       : "";
+    const sortOptions = [
+      ["newest", "Newest added"],
+      ["oldest", "Oldest added"],
+      ["name_asc", "Business name (A–Z)"],
+      ["name_desc", "Business name (Z–A)"],
+      ["status", "Status (A–Z)"],
+      ["stage", "Pipeline stage (A–Z)"],
+      ["followup_asc", "Follow-up (soonest first)"],
+      ["followup_desc", "Follow-up (latest first)"],
+      ["interest", "Interest / service (A–Z)"],
+    ];
+    const sortColumns = {
+      newest: "id DESC",
+      oldest: "id ASC",
+      name_asc: "business_name ASC,id DESC",
+      name_desc: "business_name DESC,id DESC",
+      status: "status IS NULL,status ASC,business_name ASC,id DESC",
+      stage: "stage ASC,business_name ASC,id DESC",
+      followup_asc: "follow_up IS NULL,follow_up ASC,id DESC",
+      followup_desc: "follow_up IS NULL,follow_up DESC,id DESC",
+      interest: "likely_service IS NULL,likely_service ASC,business_name ASC,id DESC",
+    };
+    const selectedSort = req.path === "/pipeline" && Object.hasOwn(sortColumns, String(req.query.sort || ""))
+      ? String(req.query.sort) : "newest";
     const where = ["(business_name LIKE ? OR contact_name LIKE ?)"];
     const params = ["%" + search + "%", "%" + search + "%"];
 
@@ -193,7 +217,7 @@ export function pipelineRoutes(app) {
    ORDER BY ${
      req.path === "/"
        ? "follow_up IS NULL,follow_up ASC,id DESC"
-       : "stage,id DESC"
+       : sortColumns[selectedSort]
    }`,
       params,
     );
@@ -209,6 +233,8 @@ export function pipelineRoutes(app) {
       waiting: req.path === "/" ? await waitingForJosh() : [],
       selectedStatus,
       statusChoices,
+      selectedSort,
+      sortOptions,
     });
   });
   app.get("/prospects/new", async (req, res) =>
