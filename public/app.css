@@ -897,3 +897,73 @@ details.dashboard-collapse .prospect-panel-toolbar .prospect-sort-form select{
     word-break:normal;
   }
 }
+
+/* Mobile prospects: prioritize list visibility over page introduction. */
+@media(max-width:760px){
+  body:has(.prospect-page-heading) main{
+    margin-top:10px;
+    margin-bottom:12px;
+    padding-left:12px;
+    padding-right:12px;
+  }
+  body:has(.prospect-page-heading) header{
+    padding-top:9px;
+    padding-bottom:9px;
+  }
+  .prospect-page-heading{
+    display:flex;
+    flex-wrap:nowrap;
+    align-items:center;
+    gap:8px;
+    margin:0 0 8px;
+  }
+  .prospect-page-heading>div:first-child{flex:1 1 auto;min-width:0}
+  .prospect-page-heading>div:last-child{flex:0 0 auto}
+  .prospect-page-heading .muted,
+  .prospect-page-heading p:not(.muted){display:none}
+  .prospect-page-heading h1{font-size:1.32rem;margin:0;line-height:1.2}
+  .prospect-page-heading .button{
+    padding:7px 10px;
+    font-size:.78rem;
+    white-space:nowrap;
+    min-height:34px;
+  }
+  .prospect-page-search{margin:0 0 8px}
+  .prospect-page-search>.row{
+    display:grid;
+    grid-template-columns:minmax(0,1fr) minmax(0,1fr) auto;
+    gap:5px;
+    align-items:center;
+  }
+  .prospect-page-search input,
+  .prospect-page-search select{
+    width:100%;
+    min-width:0;
+    height:36px;
+    min-height:36px;
+    padding:6px 7px;
+    font-size:.79rem;
+  }
+  .prospect-page-search button{
+    width:auto;
+    min-width:0;
+    min-height:36px;
+    height:36px;
+    padding:5px 9px;
+    font-size:.79rem;
+  }
+  details.dashboard-collapse:has(.prospect-panel-toolbar){
+    margin-top:6px;
+    padding:9px 10px;
+  }
+  details.dashboard-collapse:has(.prospect-panel-toolbar)>summary.dashboard-collapse-heading{
+    padding:0 0 5px;
+    margin:0 0 6px;
+  }
+  .prospect-panel-toolbar{margin-bottom:5px!important}
+  .prospect-panel-toolbar .prospect-sort-form label{margin:0}
+  .prospect-scroll-list{
+    max-height:calc(100dvh - 245px);
+    min-height:250px;
+  }
+}
