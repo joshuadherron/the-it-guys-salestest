@@ -14,12 +14,12 @@
 </div>
 </div>
 <% if(today){ if(user.role==='owner'){ %>
-<section class="card"><h2>Waiting for Josh <span class="pill"><%= waiting.length %></span></h2>
+<details class="card dashboard-collapse" open><summary class="dashboard-collapse-heading">Waiting for Josh <span class="pill"><%= waiting.length %></span></summary>
 <% if(!waiting.length){ %><p>Nothing waiting for review.</p><% } %>
 <% for(const item of waiting){ %><article class="card"><a href="<%= item.href %>"><%= item.business_name %> — <%= item.label %></a>
 <% if(item.result_message){ %><p class="error preserve-lines"><%= item.result_message %></p><% } %>
 <% if(item.request_id){ %><form method="post" action="/requests/<%= item.request_id %>/acknowledge"><input type="hidden" name="_csrf" value="<%= csrf %>"><button>Acknowledge</button></form><% } %>
-</article><% } %></section>
+</article><% } %></details>
 <% }else{ %><p><%= waiting.length %> items waiting on Josh</p><% }} %>
 <form method="get">
 <div class="row">
@@ -33,12 +33,12 @@
 <a class="dashboard-stat" href="#needs-follow-up"><strong><%= due.length %></strong><span>Due for follow-up</span><span class="stat-action">View follow-ups →</span></a>
 <a class="dashboard-stat" href="#no-follow-up"><strong><%= unscheduled.length %></strong><span>No follow-up set</span><span class="stat-action">Schedule follow-ups →</span></a>
 </div><% } %><% const groups=today?[{name:'Needs follow-up',rows:due},{name:'Upcoming conversations',rows:upcoming},{name:'No follow-up scheduled',rows:unscheduled}]:[{name:'Businesses',rows}];for(const group of groups){ %>
-<section class="card" id="<%= group.name==='Needs follow-up'?'needs-follow-up':group.name==='No follow-up scheduled'?'no-follow-up':'upcoming-conversations' %>">
-<h2>
+<details class="card dashboard-collapse" open id="<%= group.name==='Needs follow-up'?'needs-follow-up':group.name==='No follow-up scheduled'?'no-follow-up':'upcoming-conversations' %>">
+<summary class="dashboard-collapse-heading">
 <%= group.name %> <span class="pill">
 <%= group.rows.length %>
 </span>
-</h2>
+</summary>
 <% if(!group.rows.length){ %>
 <p class="muted">No opportunities here yet.</p>
 <% }for(const p of group.rows){ %>
@@ -74,6 +74,6 @@
 </div>
 </article>
 <% } %>
-</section>
+</details>
 <% } %>
 <%- include('footer') %>
