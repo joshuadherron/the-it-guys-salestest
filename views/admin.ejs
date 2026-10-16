@@ -1,5 +1,5 @@
 <%- include('header') %>
-<h1>Owner administration</h1>
+<div class="admin-compact"><h1>Owner administration</h1>
 <p class="muted">Select a section heading to expand its settings. User Permissions &amp; Access controls account roles and privileges.</p>
 <details class="card admin-block"><summary>SharePoint connection</summary>
 <p>Last checked: <%= schema.checkedAt||'Not checked' %>
@@ -174,4 +174,5 @@
 
 <div id="admin-save-toast" class="admin-save-toast" role="status" aria-live="polite" hidden></div>
 <script src="/admin-user-permissions.js?v=1" defer></script>
+</div>
 <%- include('footer') %>
