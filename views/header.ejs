@@ -17,6 +17,14 @@
 <a class="brand" href="/">THE IT GUYS <span>Sales workspace</span>
 </a>
 <% if(user){ %>
+<nav class="desktop-site-nav" aria-label="Main navigation">
+<a href="/">Home</a>
+<a href="/pipeline">Prospects</a>
+<a href="/weekly">Weekly</a>
+<a href="/import">Import / Export</a>
+<% if(user.is_admin){ %><a href="/admin">Admin</a><% } %>
+<form method="post" action="/auth/logout"><input type="hidden" name="_csrf" value="<%= csrf %>"><button>Sign out</button></form>
+</nav>
 <details class="mobile-site-menu"><summary aria-label="Open navigation menu">Menu <span aria-hidden="true">☰</span></summary><div class="mobile-site-menu-links">
 <a href="/">Home</a>
 <a href="/pipeline">Prospects</a>
