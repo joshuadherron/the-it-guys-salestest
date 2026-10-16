@@ -613,3 +613,39 @@ body:has(.dashboard-stats) main> .row:first-child p{
 body:has(.dashboard-stats) main>form[method="get"]{
   margin:8px 0;
 }
+
+/* Mobile dashboard: three KPI shortcuts side by side instead of tall stacked cards. */
+@media(max-width:760px){
+  body:has(.dashboard-stats) .dashboard-stats{
+    display:grid;
+    grid-template-columns:repeat(3,minmax(0,1fr));
+    gap:7px;
+    margin:9px 0 11px;
+  }
+  body:has(.dashboard-stats) .dashboard-stats a.dashboard-stat{
+    min-width:0;
+    min-height:0;
+    padding:11px 7px;
+    gap:5px;
+    justify-content:flex-start;
+    align-items:center;
+    text-align:center;
+    border-left-width:3px;
+    border-radius:10px;
+  }
+  body:has(.dashboard-stats) .dashboard-stats a.dashboard-stat strong{
+    font-size:clamp(1.4rem,7vw,2rem);
+    line-height:1;
+  }
+  body:has(.dashboard-stats) .dashboard-stats a.dashboard-stat>span:not(.stat-action){
+    font-size:clamp(.66rem,2.6vw,.82rem);
+    line-height:1.2;
+    overflow-wrap:break-word;
+  }
+  body:has(.dashboard-stats) .dashboard-stats a.dashboard-stat .stat-action{
+    margin-top:auto;
+    font-size:clamp(.6rem,2.35vw,.74rem);
+    line-height:1.2;
+    overflow-wrap:anywhere;
+  }
+}
