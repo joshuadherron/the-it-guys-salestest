@@ -124,3 +124,14 @@ body:has(#selected-quote[role="dialog"]){overflow:hidden}
 .quote-page .onboarding-guidance-field small{display:block;font-size:.76rem;margin-top:5px}
 .quote-page .onboarding-guidance-field button{margin-top:7px}
 .quote-page .onboarding-guidance-field button[hidden]{display:none!important}
+
+/* Full-width quoting workspace: remove the global 1200px centered main gutter. */
+body:has(.quote-page)>main{
+  max-width:none;
+  width:100%;
+  margin-left:0;
+  margin-right:0;
+  padding-left:clamp(12px,1.4vw,24px);
+  padding-right:clamp(12px,1.4vw,24px);
+}
+body:has(.quote-page)>main>.quote-page{width:100%;max-width:none}
