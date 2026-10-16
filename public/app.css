@@ -364,3 +364,28 @@ footer {
 .admin-save-toast.is-error{background:#8c2e27}
 .admin-save-toast[hidden]{display:none}
 @media(max-width:600px){.admin-save-toast{right:16px;bottom:16px}}
+
+/* Compact owner administration without changing other application forms. */
+.admin-compact>h1{margin:0 0 8px}
+.admin-compact>p.muted{margin:0 0 14px;font-size:.87rem}
+.admin-compact>.admin-block{margin:8px 0;padding:10px 14px;border-radius:9px}
+.admin-compact>.admin-block>summary{font-size:1rem;padding:2px 0;line-height:1.4}
+.admin-compact>.admin-block[open]>summary{margin-bottom:10px;padding-bottom:8px}
+.admin-compact .admin-block p{margin:7px 0;font-size:.9rem}
+.admin-compact .admin-block form.row{display:grid;grid-template-columns:minmax(0,1fr) 110px;gap:10px;align-items:end;margin:6px 0;padding:4px 0}
+.admin-compact .admin-block form.row>label{min-width:0}
+.admin-compact input:not([type="checkbox"]):not([type="radio"]),.admin-compact select{min-height:36px;padding:7px 10px;font-size:.9rem}
+.admin-compact textarea{padding:8px 10px;font-size:.9rem}
+.admin-compact button{min-height:36px;padding:7px 12px;font-size:.88rem;width:auto}
+.admin-compact .admin-block .table-wrap th,.admin-compact .admin-block .table-wrap td{padding:7px 10px;font-size:.85rem}
+.admin-compact .admin-user-card{margin:9px 0;padding:0;border-radius:8px}
+.admin-compact .admin-user-collapse>summary.admin-user-heading{padding:10px 13px}
+.admin-compact .admin-user-collapse[open]>summary.admin-user-heading{padding-bottom:10px}
+.admin-compact .admin-user-heading strong{font-size:.95rem}
+.admin-compact .admin-user-role{padding:3px 9px;font-size:.72rem}
+.admin-compact .admin-user-form{padding:12px 14px}
+.admin-compact .admin-user-fields{gap:9px}
+.admin-compact .admin-user-card fieldset{margin:12px 0;padding:10px 12px}
+.admin-compact .admin-user-permissions{gap:9px}
+.admin-compact .admin-user-actions{margin-top:8px}
+@media(max-width:600px){.admin-compact .admin-block form.row{grid-template-columns:minmax(0,1fr)}.admin-compact .admin-block form.row button{justify-self:start}}
