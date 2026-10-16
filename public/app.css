@@ -974,3 +974,32 @@ details.dashboard-collapse .prospect-panel-toolbar .prospect-sort-form select{
     grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);
   }
 }
+
+/* Let the prospect status filter size to its contents, not fill the row. */
+.prospect-page-search>.row>select[name="status"]{
+  width:max-content;
+  max-width:100%;
+  min-width:145px;
+  flex:0 0 auto;
+}
+@media(min-width:761px){
+  .prospect-page-search>.row>input[name="q"]{flex:1 1 320px}
+  .prospect-page-search>.row>select[name="status"]{flex:0 0 auto}
+}
+@media(max-width:760px){
+  .prospect-page-search>.row{
+    display:flex;
+    flex-wrap:nowrap;
+    gap:7px;
+  }
+  .prospect-page-search>.row>input[name="q"]{
+    flex:1 1 0;
+    min-width:0;
+  }
+  .prospect-page-search>.row>select[name="status"]{
+    flex:0 1 auto;
+    width:max-content;
+    min-width:0;
+    max-width:48%;
+  }
+}
