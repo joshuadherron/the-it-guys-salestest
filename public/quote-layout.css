@@ -144,7 +144,7 @@ body:has(.quote-page)>main>.quote-page{width:100%;max-width:none}
 .quote-page .quote-history-delete-button:hover,.quote-page .quote-history-delete-button:focus-visible{color:#7f2413}
 
 /* Stable action columns across draft and approved quote rows. */
-.quote-page .quote-history-action-grid{display:grid;grid-template-columns:68px 48px 50px 150px 58px;align-items:center;column-gap:12px;min-width:max-content}
+.quote-page .quote-history-action-grid{display:grid;grid-template-columns:56px 34px 38px 124px 46px;align-items:center;column-gap:7px;min-width:max-content}
 .quote-page .quote-history-action-grid>a{margin-left:0!important;white-space:nowrap}
 .quote-page .quote-history-action-grid .quote-history-delete-form{margin:0;padding:0;display:block}
 .quote-page .quote-history-action-grid .quote-history-delete-button{white-space:nowrap}
