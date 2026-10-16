@@ -71,7 +71,7 @@
 <details class="card admin-block"><summary>Mark Lost reasons</summary>
 <p>Flow-approved text is fixed. Enable reasons and set their display order.</p>
 <% for(const reason of lostReasons){ %>
-<form method="post" action="/admin/lost-reasons">
+<form method="post" action="/admin/lost-reasons" class="admin-lost-row">
 <input type="hidden" name="_csrf" value="<%= csrf %>">
 <input type="hidden" name="reason" value="<%= reason.reason %>">
 <strong><%= reason.reason %></strong>
@@ -83,7 +83,7 @@
 </details>
 <details class="card admin-block"><summary>Pre-quote stop conditions</summary>
 <% for(const stop of [...stops,{id:'',label:'',status:'Owner confirmed'}]){ %>
-<form method="post" action="/admin/stops">
+<form method="post" action="/admin/stops" class="admin-stop-row">
 <input type="hidden" name="_csrf" value="<%= csrf %>">
 <input type="hidden" name="id" value="<%= stop.id %>">
 <label>
