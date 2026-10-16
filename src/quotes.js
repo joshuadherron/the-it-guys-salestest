@@ -238,7 +238,7 @@ export function quotesRoutes(app) {
       await audit(c, req.session.user, "create draft", "quote", r.insertId);
     });
 
-    res.redirect(`/prospects/${req.params.id}`);
+    res.redirect(`/prospects/${req.params.id}/quotes#quote-history`);
   });
 
   app.post("/quotes/:id/delete", ownerOnly, async (req, res) => {
