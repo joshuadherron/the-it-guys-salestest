@@ -732,3 +732,8 @@ details.dashboard-collapse:has(>summary) > .prospect-list-item{
  .prospect-directory-item>.row{grid-template-columns:minmax(0,1fr);gap:8px}
  .prospect-directory-item .prospect-secondary{gap:5px 9px}
 }
+
+/* Give key prospect follow-up labels stronger contrast. */
+.prospect-directory-item .prospect-meta:has(.prospect-meta-label){color:#243c4c}
+.prospect-directory-item .prospect-meta-label{color:#64798a}
+.prospect-directory-item .prospect-meta:has(.prospect-meta-label) .prospect-meta-label{color:#334b5b;font-weight:650}
