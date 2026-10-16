@@ -1,7 +1,7 @@
 <%- include('header') %>
 <h1>Owner administration</h1>
-<section class="card">
-<h2>SharePoint connection</h2>
+<p class="muted">Select a section heading to expand its settings. User Permissions &amp; Access controls account roles and privileges.</p>
+<details class="card admin-block"><summary>SharePoint connection</summary>
 <p>Last checked: <%= schema.checkedAt||'Not checked' %>
 </p>
 <% for(const error of schema.errors){ %>
@@ -21,9 +21,8 @@
 <%= JSON.stringify(schema,null,2) %>
 </pre>
 </details>
-</section>
-<section class="card">
-<h2>Sales Prospects sync</h2>
+</details>
+<details class="card admin-block"><summary>Sales Prospects sync</summary>
 <p>Prospects in Sales App: <strong><%= prospectCount %></strong></p>
 <p>Automatic prospect sync is <strong><%= prospectSyncEnabled?'enabled':'disabled' %></strong>.</p>
 <% if(prospectSyncSummary.length){ %>
@@ -40,9 +39,8 @@
 <% if(!prospectSyncEnabled){ %>
 <p class="muted">Create the Sales Prospects list and Upsert Prospect Power Automate handler first, then set PROSPECT_SYNC_ENABLED=true.</p>
 <% } %>
-</section>
-<section class="card">
-<h2>Prices & included amounts</h2>
+</details>
+<details class="card admin-block"><summary>Prices & included amounts</summary>
 <p>Changing prices returns approved worksheets to Draft for review.</p>
 <% for(const price of prices){ %>
 <form method="post" action="/admin/prices" class="row">
@@ -55,9 +53,8 @@
 <button>Save</button>
 </form>
 <% } %>
-</section>
-<section class="card">
-<h2>Pipeline stage order</h2>
+</details>
+<details class="card admin-block"><summary>Pipeline stage order</summary>
 <% for(const stage of stages){ %>
 <form method="post" action="/admin/stages" class="row">
 <input type="hidden" name="_csrf" value="<%= csrf %>">
@@ -70,9 +67,8 @@
 <button>Save order</button>
 </form>
 <% } %>
-</section>
-<section class="card">
-<h2>Mark Lost reasons</h2>
+</details>
+<details class="card admin-block"><summary>Mark Lost reasons</summary>
 <p>Flow-approved text is fixed. Enable reasons and set their display order.</p>
 <% for(const reason of lostReasons){ %>
 <form method="post" action="/admin/lost-reasons">
@@ -84,9 +80,8 @@
 <button>Save reason</button>
 </form>
 <% } %>
-</section>
-<section class="card">
-<h2>Pre-quote stop conditions</h2>
+</details>
+<details class="card admin-block"><summary>Pre-quote stop conditions</summary>
 <% for(const stop of [...stops,{id:'',label:'',status:'Owner confirmed'}]){ %>
 <form method="post" action="/admin/stops">
 <input type="hidden" name="_csrf" value="<%= csrf %>">
@@ -105,9 +100,8 @@
 <button>Save condition</button>
 </form>
 <% } %>
-</section>
-<section class="card">
-<h2>Allowlist</h2>
+</details>
+<details class="card admin-block"><summary>User Permissions & Access</summary>
 <% for(const entry of [...allowlist,{email:'',role:'sales',enabled:true}]){ %>
 <form method="post" action="/admin/allowlist">
 <input type="hidden" name="_csrf" value="<%= csrf %>">
@@ -122,10 +116,9 @@
 <button>Save user</button>
 </form>
 <% } %>
-</section>
-<% if(typeof quoteEmail!=='undefined'){ %><section class="card"><h2>Shared-mailbox quote email</h2><p>QUOTE_SENDER_MAILBOX: <%= quoteMailbox %>. This must be a dedicated shared mailbox, never workflow@ or a person's mailbox.</p><form method="post" action="/admin/quote-email"><input type="hidden" name="_csrf" value="<%= csrf %>"><label>Subject template<input name="subject_template" maxlength="250" value="<%= quoteEmail.subject_template %>" required></label><label>Body template<textarea name="body_template" maxlength="12000" rows="8" required><%= quoteEmail.body_template %></textarea></label><p>Tokens: {QuoteId}, {FirstName}, {MonthlyTotal}, {Onboarding}, {BAA phrase}, {SenderName}, {SenderTitle}, {SenderPhone}</p><button>Save quote email template</button></form></section><% } %>
-<section class="card">
-<h2>Audit log — latest 200 events</h2>
+</details>
+<% if(typeof quoteEmail!=='undefined'){ %><details class="card admin-block"><summary>Shared-mailbox quote email</summary><p>QUOTE_SENDER_MAILBOX: <%= quoteMailbox %>. This must be a dedicated shared mailbox, never workflow@ or a person's mailbox.</p><form method="post" action="/admin/quote-email"><input type="hidden" name="_csrf" value="<%= csrf %>"><label>Subject template<input name="subject_template" maxlength="250" value="<%= quoteEmail.subject_template %>" required></label><label>Body template<textarea name="body_template" maxlength="12000" rows="8" required><%= quoteEmail.body_template %></textarea></label><p>Tokens: {QuoteId}, {FirstName}, {MonthlyTotal}, {Onboarding}, {BAA phrase}, {SenderName}, {SenderTitle}, {SenderPhone}</p><button>Save quote email template</button></form></details><% } %>
+<details class="card admin-block"><summary>Audit log — latest 200 events</summary>
 <div class="table-wrap">
 <table>
 <thead>
@@ -156,10 +149,10 @@
 </tbody>
 </table>
 </div>
-</section>
+</details>
 
-<% if(typeof uncertainFills!=='undefined'){ %><section class="card"><h2>Uncertain quote deliveries</h2><p>Check Word version history, Commercial and shared Sent Items before reconciling. No retry or email is sent by this form. Wait at least two minutes.</p>
+<% if(typeof uncertainFills!=='undefined'){ %><details class="card admin-block"><summary>Uncertain quote deliveries</summary><p>Check Word version history, Commercial and shared Sent Items before reconciling. No retry or email is sent by this form. Wait at least two minutes.</p>
 <% for(const f of uncertainFills){ %><form method="post" action="/admin/quote-reconcile"><input type="hidden" name="_csrf" value="<%= csrf %>"><input type="hidden" name="fill_id" value="<%= f.id %>"><p>Fill <%= f.id %> / quote <%= f.quote_id %> / <%= f.client_id %></p><label>Verification note<textarea name="note" minlength="10" required></textarea></label><label><input type="checkbox" name="confirm_checked" value="yes" required>I checked the Word versions and Commercial folder</label><button>Release uncertain fill for a new explicit fill</button></form><% } %>
-<% for(const a of uncertainSends){ %><article><p>Send attempt <%= a.id %> / quote <%= a.quote_id %> / <%= a.client_id %> / <%= a.phase %></p><% if(a.phase==='Email'&&a.pdf_item_id){ %><form method="post" action="/admin/quote-reconcile"><input type="hidden" name="_csrf" value="<%= csrf %>"><input type="hidden" name="attempt_id" value="<%= a.id %>"><label>Verified result<select name="decision"><option value="">Choose</option><option value="not_sent">Email definitely absent; permit explicit email-only retry</option><option value="sent">Email is present in shared Sent Items; record Sent</option></select></label><label>Verification note<textarea name="note" minlength="10" required></textarea></label><label><input type="checkbox" name="confirm_checked" value="yes" required>I checked shared Sent Items and the saved PDF</label><button>Reconcile without sending</button></form><% }else{ %><p>PDF creation is uncertain. Verify the exact PDF item and bytes before database reconciliation; no automatic retry is available.</p><% } %></article><% } %></section><% } %>
+<% for(const a of uncertainSends){ %><article><p>Send attempt <%= a.id %> / quote <%= a.quote_id %> / <%= a.client_id %> / <%= a.phase %></p><% if(a.phase==='Email'&&a.pdf_item_id){ %><form method="post" action="/admin/quote-reconcile"><input type="hidden" name="_csrf" value="<%= csrf %>"><input type="hidden" name="attempt_id" value="<%= a.id %>"><label>Verified result<select name="decision"><option value="">Choose</option><option value="not_sent">Email definitely absent; permit explicit email-only retry</option><option value="sent">Email is present in shared Sent Items; record Sent</option></select></label><label>Verification note<textarea name="note" minlength="10" required></textarea></label><label><input type="checkbox" name="confirm_checked" value="yes" required>I checked shared Sent Items and the saved PDF</label><button>Reconcile without sending</button></form><% }else{ %><p>PDF creation is uncertain. Verify the exact PDF item and bytes before database reconciliation; no automatic retry is available.</p><% } %></article><% } %></details><% } %>
 
 <%- include('footer') %>
