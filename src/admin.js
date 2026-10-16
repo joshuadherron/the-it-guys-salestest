@@ -181,6 +181,7 @@ export function adminRoutes(app) {
       );
       await audit(c, req.session.user, "update allowlist", "allowlist", email);
     });
-    res.redirect("/admin");
+    if (req.get("Accept")?.includes("application/json")) return res.json({ok:true,email,displayName:text(req.body.display_name||"",200),role});
+    res.redirect("/admin#user-permissions");
   });
 }
