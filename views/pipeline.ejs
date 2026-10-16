@@ -42,34 +42,23 @@
 <% if(!group.rows.length){ %>
 <p class="muted">No opportunities here yet.</p>
 <% }for(const p of group.rows){ %>
-<article class="card prospect-list-item">
+<article class="card prospect-list-item <%= !today?'prospect-directory-item':'' %>">
 <div class="row">
-<div>
-<small>
-<%= opportunity(p.id) %>
-</small>
-<h2>
-<a href="/prospects/<%= p.id %>">
-<%= p.business_name %>
-</a>
-</h2>
-<p>
-<%= p.contact_name %> · <%= p.phone %>
-</p>
-</div>
-<div>
-<span class="pill">
-<%= p.stage %>
-</span>
-<% if(p.status){ %><p class="pill">Status: <%= p.status %></p><% } %>
-<% if(p.legacy_stage){ %><p class="muted">Source stage: <%= p.legacy_stage %></p><% } %>
-<% if(p.next_action){ %><p><%= p.next_action %> · <%= p.next_action_date||'' %> <%= p.next_action_time||'' %> <%= p.next_action_method||'' %></p><% } %>
-<p>Interest: <%= p.likely_service||'Not specified' %></p>
-<p>Follow-up: <%= p.follow_up||'Not scheduled' %>
-</p>
-<% if(p.hold){ %>
-<strong class="error">On Hold — Pending Josh Review</strong>
+<div class="prospect-primary">
+<small><%= opportunity(p.id) %></small>
+<h2><a href="/prospects/<%= p.id %>"><%= p.business_name %></a></h2>
+<% if(p.contact_name || p.phone){ %>
+<p class="prospect-contact"><%= [p.contact_name,p.phone].filter(Boolean).join(' · ') %></p>
 <% } %>
+</div>
+<div class="prospect-secondary">
+<span class="pill prospect-stage"><%= p.stage %></span>
+<% if(p.status){ %><span class="pill prospect-status">Status: <%= p.status %></span><% } %>
+<% if(p.legacy_stage){ %><span class="prospect-meta"><span class="prospect-meta-label">Source stage:</span> <%= p.legacy_stage %></span><% } %>
+<% if(p.next_action){ %><span class="prospect-meta"><span class="prospect-meta-label">Next action:</span> <%= p.next_action %> <%= [p.next_action_date,p.next_action_time,p.next_action_method].filter(Boolean).join(' · ') %></span><% } %>
+<span class="prospect-meta"><span class="prospect-meta-label">Interest:</span> <%= p.likely_service||'Not specified' %></span>
+<span class="prospect-meta"><span class="prospect-meta-label">Follow-up:</span> <%= p.follow_up||'Not scheduled' %></span>
+<% if(p.hold){ %><strong class="error">On Hold — Pending Josh Review</strong><% } %>
 </div>
 </div>
 </article>
