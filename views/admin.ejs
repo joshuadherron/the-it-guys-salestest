@@ -101,19 +101,33 @@
 </form>
 <% } %>
 </details>
-<details class="card admin-block"><summary>User Permissions & Access</summary>
-<% for(const entry of [...allowlist,{email:'',role:'sales',enabled:true}]){ %>
-<form method="post" action="/admin/allowlist">
+<details class="card admin-block admin-users"><summary>User Permissions &amp; Access</summary>
+<p class="muted">Manage who can sign in, approve quotes, send quotes, and access administration. Each user is saved separately.</p>
+<% for(const entry of [...allowlist,{email:'',role:'sales',enabled:true}]){ const isNew=!entry.email; %>
+<form method="post" action="/admin/allowlist" class="admin-user-card">
 <input type="hidden" name="_csrf" value="<%= csrf %>">
-<label>Tenant email</label>
-<input name="email" type="email" value="<%= entry.email %>" required>
-<select name="role">
-<option <%= entry.role==='sales'?'selected':'' %>>sales</option>
-<option <%= entry.role==='owner'?'selected':'' %>>owner</option>
-</select>
-<label>
-<input type="checkbox" name="enabled" value="yes" <%= entry.enabled?'checked':'' %>> Enabled</label><label><input type="checkbox" name="is_admin" value="yes" <%= entry.is_admin?'checked':'' %>>admin</label><label><input type="checkbox" name="quote_approve" value="yes" <%= entry.quote_approve?'checked':'' %>>quote.approve</label><label><input type="checkbox" name="quote_send" value="yes" <%= entry.quote_send?'checked':'' %>>quote.send</label><label>Sender name<input name="display_name" maxlength="200" value="<%= entry.display_name||'' %>"></label><label>Sender title<input name="sender_title" maxlength="200" value="<%= entry.sender_title||'' %>"></label><label>Sender phone<input name="sender_phone" maxlength="80" value="<%= entry.sender_phone||'' %>"></label>
-<button>Save user</button>
+<div class="admin-user-heading">
+<div><strong><%= isNew?'Add a user':(entry.display_name||entry.email) %></strong><% if(!isNew&&entry.display_name){ %><span class="muted admin-user-email"><%= entry.email %></span><% } %></div>
+<span class="admin-user-role"><%= isNew?'New user':entry.role==='owner'?'Owner':'Sales' %></span>
+</div>
+<div class="admin-user-fields">
+<label>Email address<input name="email" type="email" value="<%= entry.email %>" placeholder="name@theitguys.us" required></label>
+<label>Account role<select name="role"><option value="sales" <%= entry.role==='sales'?'selected':'' %>>Sales</option><option value="owner" <%= entry.role==='owner'?'selected':'' %>>Owner</option></select></label>
+</div>
+<fieldset class="admin-user-permissions"><legend>Account permissions</legend>
+<label><input type="checkbox" name="enabled" value="yes" <%= entry.enabled?'checked':'' %>> <span><strong>Enabled</strong><small>Allow this user to sign in</small></span></label>
+<label><input type="checkbox" name="is_admin" value="yes" <%= entry.is_admin?'checked':'' %>> <span><strong>Administrator</strong><small>Access the administration screen</small></span></label>
+<label><input type="checkbox" name="quote_approve" value="yes" <%= entry.quote_approve?'checked':'' %>> <span><strong>Approve quotes</strong><small>Authorize quote approval</small></span></label>
+<label><input type="checkbox" name="quote_send" value="yes" <%= entry.quote_send?'checked':'' %>> <span><strong>Send quotes</strong><small>Permission to send approved quotes</small></span></label>
+</fieldset>
+<fieldset class="admin-user-sender"><legend>Quote sender details</legend>
+<div class="admin-user-fields">
+<label>Display name<input name="display_name" maxlength="200" value="<%= entry.display_name||'' %>" placeholder="Full name"></label>
+<label>Job title<input name="sender_title" maxlength="200" value="<%= entry.sender_title||'' %>" placeholder="Client Relations"></label>
+<label>Phone number<input name="sender_phone" maxlength="80" value="<%= entry.sender_phone||'' %>" placeholder="Business phone"></label>
+</div>
+</fieldset>
+<div class="admin-user-actions"><button type="submit"><%= isNew?'Add user':'Save changes' %></button></div>
 </form>
 <% } %>
 </details>
