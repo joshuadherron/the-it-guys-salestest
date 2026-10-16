@@ -492,3 +492,29 @@ footer {
  .admin-sidebar-ready .admin-stop-row>label{grid-column:1/-1}
  .admin-sidebar-ready .admin-stop-row>button{grid-column:2}
 }
+
+/* Extra-tight vertical rhythm for the three remaining admin panels. */
+.admin-sidebar-ready .admin-section-content .admin-lost-row,
+.admin-sidebar-ready .admin-section-content .admin-stop-row{
+ padding-top:2px;padding-bottom:2px;row-gap:3px;min-height:38px
+}
+.admin-sidebar-ready .admin-lost-row>strong,
+.admin-sidebar-ready .admin-stop-row>label{line-height:1.1}
+.admin-sidebar-ready .admin-lost-row input[type=number],
+.admin-sidebar-ready .admin-stop-row input,
+.admin-sidebar-ready .admin-stop-row select{height:29px;min-height:29px;padding-top:3px;padding-bottom:3px}
+.admin-sidebar-ready .admin-lost-row>button,
+.admin-sidebar-ready .admin-stop-row>button{height:29px;min-height:29px;padding:3px 8px}
+.admin-sidebar-ready .admin-users>p.muted{margin:0 0 5px;line-height:1.25}
+.admin-sidebar-ready .admin-users .admin-user-card{margin:3px 0}
+.admin-sidebar-ready .admin-users .admin-user-collapse>summary.admin-user-heading{padding:5px 9px;line-height:1.2}
+.admin-sidebar-ready .admin-users .admin-user-email{margin-top:0;line-height:1.15}
+.admin-sidebar-ready .admin-users .admin-user-form{padding:7px 9px}
+.admin-sidebar-ready .admin-users .admin-user-fields{gap:5px}
+.admin-sidebar-ready .admin-users .admin-user-fields input,
+.admin-sidebar-ready .admin-users .admin-user-fields select{margin-top:3px}
+.admin-sidebar-ready .admin-users .admin-user-card fieldset{margin:5px 0;padding:5px 8px}
+.admin-sidebar-ready .admin-users .admin-user-permissions{gap:4px}
+.admin-sidebar-ready .admin-users .admin-user-permissions label{line-height:1.15}
+.admin-sidebar-ready .admin-users .admin-user-permissions small{line-height:1.15}
+.admin-sidebar-ready .admin-users .admin-user-actions{margin-top:4px}
