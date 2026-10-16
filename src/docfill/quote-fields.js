@@ -1,10 +1,11 @@
+import {chicagoLongDate} from "./chicago-date.js";
 import { mitFields } from "./managed-reference.js";
 import { managedReferenceFacts } from "./managed-facts.js";
 import {priceManagedServices,priceQuote,platforms} from "../pricing.js";
 const money=n=>"$"+Number(n).toLocaleString("en-US",{minimumFractionDigits:Number(n)%1?2:0,maximumFractionDigits:2});
 const count=(o,k)=>Number(o[k]||0);
 const required=(obj,key)=>{const v=obj?.[key];if(v===undefined||v===null||v==="")throw new Error("Missing owner-entered document field: "+key);return String(v)};
-const formatDate=d=>new Date(d).toLocaleDateString("en-US",{month:"long",day:"numeric",year:"numeric",timeZone:"UTC"});
+const formatDate=chicagoLongDate;
 export function buildManagedFill({quote,prospect,owner={}}){
  const input=quote.inputs,calc=priceManagedServices(input);
  if(input.pricingMode!=="managed_v20"||input.serviceTier!=="managed"||!input.users)throw new Error("Managed IT document requires a Managed IT quote with users.");
