@@ -1,3 +1,4 @@
+import {chicagoDate} from "./chicago-date.js";
 import { fail } from "../security.js";
 import { mitFields } from "./managed-reference.js";
 export const DEFAULT_MANAGED_SUMMARY = mitFields({ users: 3, computers: 3, date: "2000-01-01", onboarding: 350 }).fields["MIT.SummaryText"];
@@ -85,7 +86,7 @@ export function managedReferenceFacts(quote, prospect, raw) {
   const sites = owner.siteCount;
   return { owner, facts: {
     clientShortName: factText(prospect.business_name, "business name"), clientLegalName: owner.legalName,
-    quoteId: formattedQuoteNumber(quote), date: String(quote.approved_at || quote.created_at || new Date().toISOString()).slice(0, 10),
+    quoteId: formattedQuoteNumber(quote), date: chicagoDate(quote.approved_at || quote.created_at || new Date()),
     preparedFor: contact, backupContact: owner.backupContact,
     locations: sites === undefined ? undefined : sites === 1 ? "Single office" : `${sites} locations${owner.siteCities ? " (" + owner.siteCities + ")" : ""}`,
     domain: validateDomain(owner.domain), serviceStart, summaryText: owner.summary,
