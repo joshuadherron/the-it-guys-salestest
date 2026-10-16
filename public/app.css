@@ -680,3 +680,9 @@ body:has(.dashboard-stats) main>form[method="get"]{
   header .mobile-site-menu>.mobile-site-menu-links{display:flex}
   header .mobile-site-menu:not([open])>.mobile-site-menu-links{display:flex}
 }
+
+/* Independent desktop and mobile navigation avoids hidden <details> contents. */
+.desktop-site-nav{display:flex;align-items:center;flex-wrap:wrap;gap:18px}
+.desktop-site-nav form{margin:0}
+@media(min-width:761px){header .mobile-site-menu{display:none}}
+@media(max-width:760px){header .desktop-site-nav{display:none}}
