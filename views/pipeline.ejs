@@ -3,10 +3,10 @@
 <div>
 <p class="muted">YOUR SALES WORKSPACE</p>
 <h1>
-<%= today?'Your sales dashboard':'All businesses' %>
+<%= today?'Your sales dashboard':'All prospects' %>
 </h1>
 <p>
-<%= today?'See who needs attention, record conversations, and keep relationships moving.':'Find and manage every business relationship in one place.' %>
+<%= today?'See who needs attention, record conversations, and keep relationships moving.':'Find and manage every prospect relationship in one place.' %>
 </p>
 </div>
 <div>
@@ -32,8 +32,8 @@
 <a class="dashboard-stat" href="/pipeline"><strong><%= rows.length %></strong><span>Businesses</span><span class="stat-action">View all businesses →</span></a>
 <a class="dashboard-stat" href="#needs-follow-up"><strong><%= due.length %></strong><span>Due for follow-up</span><span class="stat-action">View follow-ups →</span></a>
 <a class="dashboard-stat" href="#no-follow-up"><strong><%= unscheduled.length %></strong><span>No follow-up set</span><span class="stat-action">Schedule follow-ups →</span></a>
-</div><% } %><% const groups=today?[{name:'Needs follow-up',rows:due},{name:'Upcoming conversations',rows:upcoming},{name:'No follow-up scheduled',rows:unscheduled}]:[{name:'Businesses',rows}];for(const group of groups){ %>
-<details class="card dashboard-collapse" id="<%= group.name==='Needs follow-up'?'needs-follow-up':group.name==='No follow-up scheduled'?'no-follow-up':'upcoming-conversations' %>">
+</div><% } %><% const groups=today?[{name:'Needs follow-up',rows:due},{name:'Upcoming conversations',rows:upcoming},{name:'No follow-up scheduled',rows:unscheduled}]:[{name:'Prospects',rows}];for(const group of groups){ %>
+<details class="card dashboard-collapse" <%= !today?'open':'' %> id="<%= group.name==='Needs follow-up'?'needs-follow-up':group.name==='No follow-up scheduled'?'no-follow-up':'upcoming-conversations' %>">
 <summary class="dashboard-collapse-heading">
 <%= group.name %> <span class="pill">
 <%= group.rows.length %>
