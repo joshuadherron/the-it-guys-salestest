@@ -967,3 +967,10 @@ details.dashboard-collapse .prospect-panel-toolbar .prospect-sort-form select{
     min-height:250px;
   }
 }
+
+/* Two automatic prospect filters, no Search button. */
+@media(max-width:760px){
+  .prospect-page-search>.row{
+    grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);
+  }
+}
