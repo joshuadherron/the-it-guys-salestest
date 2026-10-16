@@ -714,3 +714,21 @@ details.dashboard-collapse:has(>summary) > .prospect-list-item{
   .prospect-list-item>.row>div{flex:1 1 100%}
   .prospect-list-item>.row>div:nth-child(2){gap:4px 6px}
 }
+
+/* Readable, still compact prospect directory rows. */
+.prospect-directory-item{border-color:#d5e0e7}
+.prospect-directory-item:nth-of-type(even){background:#f9fbfc}
+.prospect-directory-item:hover{border-color:#a9cbd2;background:#f4f9fa}
+.prospect-directory-item>.row{display:grid;grid-template-columns:minmax(210px,45%) minmax(0,1fr);gap:16px}
+.prospect-directory-item .prospect-primary h2{font-size:1.06rem;line-height:1.3;margin:4px 0}
+.prospect-directory-item .prospect-primary small{font-size:.75rem}
+.prospect-directory-item .prospect-contact{color:#455e70;font-size:.84rem}
+.prospect-directory-item .prospect-secondary{display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px;line-height:1.35}
+.prospect-directory-item .prospect-secondary .pill{margin:0}
+.prospect-directory-item .prospect-meta{font-size:.82rem;color:#243c4c}
+.prospect-directory-item .prospect-meta-label{color:#64798a;font-weight:500}
+.prospect-directory-item .prospect-stage{font-weight:650}
+@media(max-width:760px){
+ .prospect-directory-item>.row{grid-template-columns:minmax(0,1fr);gap:8px}
+ .prospect-directory-item .prospect-secondary{gap:5px 9px}
+}
