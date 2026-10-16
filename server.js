@@ -142,7 +142,7 @@ app.use(async (err, req, res, _next) => {
       ? err.message
       : "The action could not be completed. Check the server console for details.";
 
-  if (req.is("application/json")) {
+  if (req.is("application/json") || req.accepts(["json","html"]) === "json") {
     return res.json({ error: message });
   }
 
