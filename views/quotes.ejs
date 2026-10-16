@@ -25,7 +25,7 @@
 <a href="/prospects/<%= p.id %>/quotes?quote=<%= q.id %>#selected-quote">Review</a>
 <% if(user.role==="owner"){ %><a href="/prospects/<%= p.id %>/quotes?edit=<%= q.id %>#<%= q.docInput.pricingMode==="managed_v20"?"managed-services-section":"bii-services-section" %>">Edit</a><% }else{ %><span></span><% } %>
 <a href="/quotes/<%= q.id %>/print">Print</a>
-<% if(user.role==="owner" && q.status==="Approved" && !p.hold){ %><a href="/quotes/<%= q.id %>/document?lane=<%= q.docInput.pricingMode==="managed_v20"?"COM-PRP":"BII-QSOW" %>">Prepare Contract</a><% } %>
+<% if(user.role==="owner" && q.status==="Approved" && !p.hold){ %><a href="/quotes/<%= q.id %>/document?lane=<%= q.docInput.pricingMode==="managed_v20"?"COM-PRP":"BII-QSOW" %>">Prepare Contract</a><% }else{ %><span aria-hidden="true"></span><% } %>
 <% if(user.role==="owner" && q.status==="Draft" && !p.hold){ %>
 <form class="quote-history-delete-form" method="post" action="/quotes/<%= q.id %>/delete" data-quote-label="<%= q.quoteName %> #<%= q.id %>">
 <input type="hidden" name="_csrf" value="<%= csrf %>">
