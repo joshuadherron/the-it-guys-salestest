@@ -135,3 +135,6 @@ body:has(.quote-page)>main{
   padding-right:clamp(12px,1.4vw,24px);
 }
 body:has(.quote-page)>main>.quote-page{width:100%;max-width:none}
+
+.quote-page #managed-services-section>summary .quote-summary-control{margin-left:0}
+.quote-page #managed-services-summary-total{margin-left:auto;white-space:nowrap;text-align:right;font-variant-numeric:tabular-nums}
