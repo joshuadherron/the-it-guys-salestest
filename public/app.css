@@ -572,3 +572,10 @@ footer {
     column-gap:6px;
   }
 }
+
+/* Dashboard groups: click heading to collapse; count remains visible. */
+.dashboard-collapse{margin:12px 0}
+.dashboard-collapse>summary.dashboard-collapse-heading{cursor:pointer;font-size:1.2rem;font-weight:700;line-height:1.4;padding:3px 0;list-style:revert}
+.dashboard-collapse>summary.dashboard-collapse-heading .pill{vertical-align:middle;font-size:.78rem}
+.dashboard-collapse[open]>summary.dashboard-collapse-heading{margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid #dce5ea}
+.dashboard-collapse>summary.dashboard-collapse-heading:focus-visible{outline:2px solid #087e8b;outline-offset:3px}
