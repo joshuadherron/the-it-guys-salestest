@@ -389,3 +389,19 @@ footer {
 .admin-compact .admin-user-permissions{gap:9px}
 .admin-compact .admin-user-actions{margin-top:8px}
 @media(max-width:600px){.admin-compact .admin-block form.row{grid-template-columns:minmax(0,1fr)}.admin-compact .admin-block form.row button{justify-self:start}}
+
+/* Owner admin dense layout, deliberately stronger than global form defaults. */
+.admin-compact .admin-block{padding:8px 12px;margin:7px 0}
+.admin-compact .admin-block>summary{font-size:.94rem;line-height:1.25;padding:2px 0}
+.admin-compact .admin-block[open]>summary{margin-bottom:8px}
+.admin-compact .admin-block form:not(.admin-user-form){margin:5px 0}
+.admin-compact .admin-block form.row{grid-template-columns:minmax(0,1fr) 90px;gap:8px;padding:1px 0}
+.admin-compact .admin-block form.row label{font-size:.83rem;line-height:1.2}
+.admin-compact .admin-block form.row input{margin-top:2px}
+.admin-compact .admin-block input:not([type=checkbox]):not([type=radio]),.admin-compact .admin-block select{height:32px;min-height:32px;padding:4px 8px}
+.admin-compact .admin-block button{min-height:32px;padding:5px 10px;font-size:.82rem}
+.admin-compact .admin-user-collapse>summary.admin-user-heading{padding:8px 12px}
+.admin-compact .admin-user-form{padding:10px 12px}
+.admin-compact .admin-user-card fieldset{margin:9px 0;padding:8px 10px}
+.admin-compact .admin-user-permissions label{gap:7px}
+.admin-compact .admin-user-permissions small{font-size:.73rem}
