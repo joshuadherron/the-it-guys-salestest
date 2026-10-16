@@ -131,6 +131,7 @@
 </fieldset>
 <div class="admin-user-actions"><button type="submit"><%= isNew?'Add user':'Save changes' %></button></div>
 </form>
+</details>
 <% } %>
 </details>
 <% if(typeof quoteEmail!=='undefined'){ %><details class="card admin-block"><summary>Shared-mailbox quote email</summary><p>QUOTE_SENDER_MAILBOX: <%= quoteMailbox %>. This must be a dedicated shared mailbox, never workflow@ or a person's mailbox.</p><form method="post" action="/admin/quote-email"><input type="hidden" name="_csrf" value="<%= csrf %>"><label>Subject template<input name="subject_template" maxlength="250" value="<%= quoteEmail.subject_template %>" required></label><label>Body template<textarea name="body_template" maxlength="12000" rows="8" required><%= quoteEmail.body_template %></textarea></label><p>Tokens: {QuoteId}, {FirstName}, {MonthlyTotal}, {Onboarding}, {BAA phrase}, {SenderName}, {SenderTitle}, {SenderPhone}</p><button>Save quote email template</button></form></details><% } %>
