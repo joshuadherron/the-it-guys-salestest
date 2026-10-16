@@ -405,3 +405,18 @@ footer {
 .admin-compact .admin-user-card fieldset{margin:9px 0;padding:8px 10px}
 .admin-compact .admin-user-permissions label{gap:7px}
 .admin-compact .admin-user-permissions small{font-size:.73rem}
+
+/* Two-pane administration: compact navigation left, selected settings right. */
+.admin-sidebar-ready .admin-settings-workspace{display:grid;grid-template-columns:245px minmax(0,1fr);align-items:start;gap:18px;margin-top:14px}
+.admin-sidebar-ready .admin-section-nav{display:flex;flex-direction:column;gap:5px;position:sticky;top:12px;background:#fff;border:1px solid #d6e0e7;border-radius:10px;padding:9px}
+.admin-sidebar-ready .admin-section-link{display:block;width:100%;min-height:0;padding:10px 12px;text-align:left;background:transparent;color:#183047;border:0;border-radius:7px;font-weight:600;font-size:.88rem;line-height:1.35}
+.admin-sidebar-ready .admin-section-link:hover{background:#e9f1f4}
+.admin-sidebar-ready .admin-section-link.active{background:#dcecf0;color:#075e6c}
+.admin-sidebar-ready .admin-section-link:focus-visible{outline:2px solid #087e8b;outline-offset:2px}
+.admin-sidebar-ready .admin-section-content{min-width:0}
+.admin-sidebar-ready .admin-section-content>details.admin-block{margin:0;padding:18px 20px;min-width:0}
+.admin-sidebar-ready .admin-section-content>details.admin-block[hidden]{display:none!important}
+.admin-sidebar-ready .admin-section-content>details.admin-block>summary{font-size:1.1rem;cursor:default;list-style:none;border-bottom:1px solid #d6e0e7;padding-bottom:12px;margin-bottom:14px}
+.admin-sidebar-ready .admin-section-content>details.admin-block>summary::-webkit-details-marker{display:none}
+@media(max-width:780px){.admin-sidebar-ready .admin-settings-workspace{grid-template-columns:1fr;gap:10px}.admin-sidebar-ready .admin-section-nav{position:static;display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}.admin-sidebar-ready .admin-section-content>details.admin-block{padding:12px}}
+@media(max-width:450px){.admin-sidebar-ready .admin-section-nav{grid-template-columns:1fr}}
