@@ -686,3 +686,8 @@ body:has(.dashboard-stats) main>form[method="get"]{
 .desktop-site-nav form{margin:0}
 @media(min-width:761px){header .mobile-site-menu{display:none}}
 @media(max-width:760px){header .desktop-site-nav{display:none}}
+
+/* Keep desktop navigation anchored to the right side of the header. */
+@media(min-width:761px){
+  header .desktop-site-nav{margin-left:auto;justify-content:flex-end}
+}
