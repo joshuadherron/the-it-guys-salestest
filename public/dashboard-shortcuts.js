@@ -5,7 +5,10 @@ function openDashboardPanel(hash) {
   if (!['#needs-follow-up', '#no-follow-up'].includes(hash)) return;
   const panel = document.getElementById(hash.slice(1));
   if (!(panel instanceof HTMLDetailsElement)) return;
-  panel.open = true;
+  // Keep only the selected dashboard section expanded.
+  document.querySelectorAll('details.dashboard-collapse').forEach((section) => {
+    section.open = section === panel;
+  });
   panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
