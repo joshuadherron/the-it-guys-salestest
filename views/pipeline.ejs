@@ -34,7 +34,7 @@
 <a class="dashboard-stat" href="/pipeline"><strong><%= rows.length %></strong><span>Businesses</span><span class="stat-action">View all businesses →</span></a>
 <a class="dashboard-stat" href="#needs-follow-up"><strong><%= due.length %></strong><span>Due for follow-up</span><span class="stat-action">View follow-ups →</span></a>
 <a class="dashboard-stat" href="#no-follow-up"><strong><%= unscheduled.length %></strong><span>No follow-up set</span><span class="stat-action">Schedule follow-ups →</span></a>
-</div><% } %><% const groups=today?[{name:'Needs follow-up',rows:due},{name:'Upcoming conversations',rows:upcoming},{name:'No follow-up scheduled',rows:unscheduled}]:[{name:'Prospects',rows}];for(const group of groups){ %>
+</div><% } %><% if(today){ %><script src="/dashboard-shortcuts.js?v=1" defer></script><% } %><% const groups=today?[{name:'Needs follow-up',rows:due},{name:'Upcoming conversations',rows:upcoming},{name:'No follow-up scheduled',rows:unscheduled}]:[{name:'Prospects',rows}];for(const group of groups){ %>
 <details class="card dashboard-collapse" <%= !today?'open':'' %> id="<%= group.name==='Needs follow-up'?'needs-follow-up':group.name==='No follow-up scheduled'?'no-follow-up':'upcoming-conversations' %>">
 <summary class="dashboard-collapse-heading">
 <%= group.name %> <span class="pill">
