@@ -378,6 +378,9 @@ export function pipelineRoutes(app) {
         ],
         c,
       );
+      if (p.switch_review_new) {
+        await query("UPDATE prospects SET switch_review_new=NULL WHERE id=?", [p.id], c);
+      }
       await audit(c, req.session.user, "create activity", "prospect", p.id);
     });
     res.redirect(`/prospects/${p.id}`);
@@ -516,3 +519,4 @@ export function pipelineRoutes(app) {
     res.redirect(preview.kind === "weekly" ? "/weekly" : "/pipeline");
   });
 }
+

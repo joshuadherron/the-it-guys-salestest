@@ -69,6 +69,8 @@
 </div>
 <div class="prospect-secondary">
 <span class="pill prospect-stage"><%= p.stage %></span>
+<% if(p.switch_review_new){ %><span class="pill">New lead</span><% } %>
+<% if(p.source){ %><span class="pill"><%= p.source %><%= p.employee_range ? " · Staff: "+p.employee_range : "" %></span><% } %>
 <% if(p.status){ %><span class="pill prospect-status">Status: <%= p.status %></span><% } %>
 <% if(p.legacy_stage){ %><span class="prospect-meta"><span class="prospect-meta-label">Source stage:</span> <%= p.legacy_stage %></span><% } %>
 <% if(p.next_action){ %><span class="prospect-meta"><span class="prospect-meta-label">Next action:</span> <%= p.next_action %> <%= [p.next_action_date,p.next_action_time,p.next_action_method].filter(Boolean).join(' · ') %></span><% } %>

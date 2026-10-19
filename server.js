@@ -166,3 +166,6 @@ const port = Number(process.env.PORT || 3000);
 app.listen(port, () => {
   console.log("Sales app listening.");
 });
+startSwitchPickup();
+
+import { startSwitchPickup } from "./src/switch-review-runtime.js";
