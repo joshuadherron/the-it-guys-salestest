@@ -8,7 +8,7 @@ export async function queueNotice(c, p, kind) {
         contentType: "Text",
         content: `Review this internal opportunity: ${process.env.APP_URL}/prospects/${p.id}/discovery/3`,
       },
-      toRecipients: [{ emailAddress: { address: "josh@theitguys.us" } }],
+      toRecipients: [{ emailAddress: { address: process.env.MAIL_TO_LEADS || "website@theitguys.us" } }],
     },
     saveToSentItems: true,
   };
@@ -25,7 +25,7 @@ export async function deliverNotice(notice) {
   try {
     const result = await writeMail(
       graph,
-      process.env.SHAREPOINT_WRITE_MODE || "dryrun",
+      process.env.SALES_MAIL_ENABLED === "true" ? "live" : "dryrun",
       notice.message,
     );
     await query("UPDATE notifications SET status=? WHERE id=?", [
