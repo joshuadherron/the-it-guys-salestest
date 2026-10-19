@@ -1,4 +1,5 @@
 import { msalClient } from "./auth.js";
+import { ConfidentialClientApplication } from "@azure/msal-node";
 export class Graph {
   constructor({fetchImpl = globalThis.fetch, token} = {}) {
     this.fetch = fetchImpl;
@@ -117,7 +118,34 @@ export class Graph {
     return response.json();
   }
   async sendMail(message) {
-    return this.request("/users/josh%40theitguys.us/sendMail", "POST", message);
+    const { SALES_MAIL_TENANT_ID: tenantId, SALES_MAIL_CLIENT_ID: clientId, SALES_MAIL_CLIENT_SECRET: clientSecret } = process.env;
+    if (!tenantId || !clientId || !clientSecret)
+      throw new Error("Sales notification mail credentials are not configured.");
+    const client = new ConfidentialClientApplication({
+      auth: {
+        clientId,
+        authority: `https://login.microsoftonline.com/${tenantId}`,
+        clientSecret,
+      },
+    });
+    const token = await client.acquireTokenByClientCredential({
+      scopes: ["https://graph.microsoft.com/.default"],
+    });
+    if (!token?.accessToken) throw new Error("Sales notification mail token unavailable.");
+    const response = await this.fetch(
+      "https://graph.microsoft.com/v1.0/users/website%40theitguys.us/sendMail",
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token.accessToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(message),
+        signal: AbortSignal.timeout(20000),
+      },
+    );
+    if (response.status !== 202)
+      throw Object.assign(new Error(`Sales notification send failed (HTTP ${response.status}).`), { status: response.status });
   }
 }
 export const graph = new Graph();
