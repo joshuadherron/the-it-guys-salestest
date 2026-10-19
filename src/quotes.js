@@ -104,6 +104,16 @@ export function validateManagedInputs(body) {
   const onboarding = String(body.onboarding || "0");
   if (!/^\d+(\.\d{1,2})?$/.test(onboarding)) fail("Enter a valid onboarding amount.");
   input.onboarding = Number(onboarding);
+  for (const key of ["workstationBackupPrice", "serverBackupPrice"]) {
+    const raw = body[key];
+    if (raw === undefined || raw === null || raw === "") {
+      input[key] = null;
+    } else {
+      if (!/^\\d+(\\.\\d{1,2})?$/.test(String(raw)) || Number(raw) > 10000000)
+        fail("Enter a valid nonnegative custom monthly backup unit price.");
+      input[key] = Number(raw);
+    }
+  }
   input.includeBii = body.includeBii === "yes";
   return input;
 }
