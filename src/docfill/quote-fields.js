@@ -14,9 +14,16 @@ export function buildManagedFill({quote,prospect,owner={}}){
  const monthly=quote.line_items.filter(x=>x.billing!=="one_time").reduce((sum,l)=>sum+Number(l.amount),0);
  if(!Number.isFinite(monthly)||Math.abs(monthly-calc.total)>.005)throw new Error("Approved Managed IT monthly pricing does not match the current pricing engine.");
  if(input.includeBii && !quote.line_items.some(x=>x.billing==="one_time" && String(x.label).includes("BII Integration")))throw new Error("Combined quote is missing its separately approved BII foundation line.");
- if(count(input,"workstationBackups")||count(input,"serverBackups"))throw new Error("System backups require explicit per-system owner pricing before document generation.");
+ const backups = [];
+ for (const [qtyKey, priceKey, label] of [["workstationBackups","workstationBackupPrice","Workstation backup"],["serverBackups","serverBackupPrice","Server backup"]]) {
+   const quantity = count(input, qtyKey);
+   if (!quantity) continue;
+   const unit = Number(input[priceKey]);
+   if (input[priceKey] == null || input[priceKey] === "" || !Number.isFinite(unit) || unit < 0) throw new Error(label + " requires approved pricing.");
+   backups.push({label, detail:quantity + " x " + money(unit) + " monthly", price:Math.round(quantity*unit*100)/100});
+ }
  const {facts,owner:clean,assigned}=managedReferenceFacts(quote,prospect,owner);
- const result=mitFields(facts);
+ const result=mitFields({...facts,systemBackups:backups});
  if(Math.abs(result.total-calc.total)>.005)throw new Error("Reference formatting disagrees with approved Managed IT pricing.");
  // Assigned and shared devices must never describe the same quantities.
  result.fields["MIT.DevicesSummary"]=assigned || (clean.noCompanyComputers ? "Users on shared devices only" : undefined);
