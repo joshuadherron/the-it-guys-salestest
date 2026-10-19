@@ -147,7 +147,20 @@ export function priceManagedServices(input) {
   }
   if (tier !== "none" && servers) add("Managed servers",servers,75);
   if (tier !== "none" && backupUsers) add("Microsoft 365 backup users",backupUsers,5);
-  if (qty("workstationBackups") || qty("serverBackups")) pending.push("Workstation/server backup: custom price required");
+  for (const [countKey, priceKey, label] of [
+    ["workstationBackups", "workstationBackupPrice", "Workstation backup"],
+    ["serverBackups", "serverBackupPrice", "Server backup"],
+  ]) {
+    const count = qty(countKey);
+    if (!count) continue;
+    const raw = input[priceKey];
+    if (raw === null || raw === undefined || raw === "") {
+      pending.push(label + ": custom monthly unit price required");
+      continue;
+    }
+    const unit = money(priceKey);
+    add(label + " — owner-priced monthly", count, unit);
+  }
   let total = monthly.reduce((sum,l)=>sum+l.amount,0);
   if (tier==="monitoring" && (devices>0 || servers>0) && total<225) {
     add("Monitoring-only minimum adjustment",1,225-total);
