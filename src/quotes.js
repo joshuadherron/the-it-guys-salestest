@@ -109,7 +109,7 @@ export function validateManagedInputs(body) {
     if (raw === undefined || raw === null || raw === "") {
       input[key] = null;
     } else {
-      if (!/^\\d+(\\.\\d{1,2})?$/.test(String(raw)) || Number(raw) > 10000000)
+      if (!/^\d+(\.\d{1,2})?$/.test(String(raw)) || Number(raw) > 10000000)
         fail("Enter a valid nonnegative custom monthly backup unit price.");
       input[key] = Number(raw);
     }
