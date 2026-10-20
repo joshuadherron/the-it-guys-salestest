@@ -224,3 +224,24 @@ test("only Josh can explicitly supersede a prior proposal via existing Item Comp
   item.signatureStatus="Signed";
   await assert.rejects(()=>executeWorkAction(80,input,{email:"josh@theitguys.us",role:"owner"},null,deps),/not started signing/);
 });
+
+
+test("quote preparation honors a BII-first plan instead of choosing Managed IT from the quote", async()=>{
+  const h=harness(),s=schema();
+  h.p.planned_service_lanes=JSON.stringify(["Business IT Integration","Managed IT"]);
+  h.p.starting_service_lane="Business IT Integration";
+  const ctx={q:h.q,p:h.p,actor,hash:snapshot(h.q),token:"lease",state:{}};
+  let fields;
+  const store=new ProposalStore({env:{SHAREPOINT_WRITE_MODE:"live"},sp:{ready:()=>s,client:async()=>null,clients:async()=>[]},graph:{createWorkflowRequest:async(site,list,f)=>{fields=f;return {id:"remote"};}},deliveryStore:{},getProspect:async()=>h.p,tx:async fn=>fn({}),log:async()=>{},run:async sql=>{
+    if(sql.startsWith("SELECT * FROM quotes"))return [h.q];
+    if(sql.startsWith("SELECT * FROM allowlist"))return [actor];
+    if(sql.startsWith("SELECT operation_token"))return [{operation_token:"lease",valid:1}];
+    if(sql.startsWith("INSERT INTO sp_requests"))return {insertId:18};
+    return {affectedRows:1};
+  }});
+  store.validate=async()=>{};
+  await store.request(ctx,"CreateClient",{key:"COM-PRP",workflow:"MIT-05"},{discovery:{servicePlan:{services:["Business IT Integration","Managed IT"],startingLane:"Business IT Integration"}}},"record_request_id");
+  assert.equal(fields.ServiceLane,"Business IT Integration");
+  assert.equal(JSON.parse(fields.Payload).serviceLane,"Business IT Integration");
+  assert.equal(JSON.parse(fields.Payload).stage,"Sales Discovery");
+});

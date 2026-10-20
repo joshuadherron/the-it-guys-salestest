@@ -9,6 +9,7 @@ import { buildFields,assertNoPending,submitRequest } from "../sharepoint.js";
 import { lookupId } from "../sharepoint-runtime.js";
 import { snapshot } from "./delivery-store.js";
 import { quoteLane } from "./policy.js";
+import { servicePlan } from "../service-plan.js";
 import { duplicateClients } from "../existing-client-rules.js";
 import { dispatchProspectSync } from "../prospect-sync.js";
 
@@ -131,7 +132,9 @@ export class ProposalStore {
         if(await this.sp.client(p))throw new Error("A SharePoint record just became available. Click Save again to reuse it.");
         if(duplicateClients(p,await this.sp.clients(),s).length)throw new Error("Possible existing customer found. Josh must review and link the existing record on Customer relationship before saving.");
       }
-      body=buildFields(s,action,p,lane.key==="COM-PRP"?"Managed IT":"Business IT Integration",actor.email,new Date(),lookupId(actor.email),options);
+      const planned=servicePlan(p);
+      const requestLane=action==="CreateClient"&&p.planned_service_lanes?planned.startingLane:lane.key==="COM-PRP"?"Managed IT":"Business IT Integration";
+      body=buildFields(s,action,p,requestLane,actor.email,new Date(),lookupId(actor.email),options);
       // Stable, quote-specific title supports exact reconciliation after transport uncertainty.
       body.fields[s.maps.requests.Title.name]=`SALESAPP-${p.opp}-QUOTE-${q.id}-${action}-${randomUUID()}`;
       const r=await this.query("INSERT INTO sp_requests (prospect_id,action,request_json,status) VALUES (?,?,?,'Preparing')",[p.id,action,JSON.stringify(body)],c);id=r.insertId;

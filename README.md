@@ -191,3 +191,7 @@ Configure QUOTE_SENDER_MAILBOX as the dedicated shared mailbox, never workflow@ 
 ## Prospect proposals
 
 Apply migration 011 before deploying this version. Save proposal to SharePoint opens or reuses an opportunity record and a quote-specific working copy before filling. Creating a record no longer implies conversion; activation observation controls Converted. See [deployment prerequisites and OPP-0080 acceptance](docs/PROSPECT-PROPOSALS.md). SharePoint column/flow setup is performed by Josh; application startup performs no setup writes.
+
+## BII and Managed IT service plans
+
+Apply migration 012 before deploying the combined-service handoff form. Both services may be planned on one opportunity, with BII first as the default and an owner-approved Managed IT-first timing exception. See [service plan scope and flow limits](docs/SERVICE-PLANS.md).

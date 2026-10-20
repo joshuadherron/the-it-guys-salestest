@@ -2,6 +2,8 @@
 
 **Glossary:** SharePoint record (Clients row) = opportunity/engagement from Sales Discovery. Client = Client Activation or later. Opening the record stores pre-sale proposals; it does not convert the prospect. Save proposal ensures the record and quote-specific working copy through Workflow Requests, then fills it. See [prospect proposals](PROSPECT-PROPOSALS.md) for migration 011, verified definitions, operator setup and OPP-0080 acceptance.
 
+**Both services:** The opportunity plan may include BII and Managed IT. BII first is preferred; Josh can choose Managed IT first with a timing reason when opening the record. Create Client still sends one serviceLane, never a fabricated Both value. Planned services are included as optional discovery.servicePlan metadata. See [service plans](SERVICE-PLANS.md) and migration 012. Parallel workflows and mid-project switching still require a verified flow contract.
+
 **v1.1 alignment (2026-09-28):** The owner-supplied live-flow contract takes precedence over the frozen blueprint below. No live flows or SharePoint schema were changed by the app.
 
 **Source:** The IT Guys SharePoint Operations Blueprint v1 (frozen 2026-09-22) and the flow readmes (Create Client, Start Stage, Stage Gate, eSignature, BII price-first rows). Condensed for app builders. Where this conflicts with a live SharePoint list, **the live list wins**. The app must read column names and choice values at runtime and stop with a clear error if something it needs is missing. Never guess.

@@ -1,4 +1,5 @@
 import { schema, format, flags, mvd } from "./discovery-rules.js";
+import { servicePlan } from "./service-plan.js";
 
 export function discoverySnapshot(
   p,
@@ -13,6 +14,7 @@ export function discoverySnapshot(
   return {
     form: "BII Business Discovery Form v0.3 + v0.4 corrections",
     opportunityId: p.opp,
+    ...(p.planned_service_lanes ? { servicePlan: servicePlan(p) } : {}),
     status: d.status,
     revision: d.revision,
     capturedBy,

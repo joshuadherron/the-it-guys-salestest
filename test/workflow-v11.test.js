@@ -674,3 +674,34 @@ test("Start Stage gates retain approved BII quoting and Managed IT assessment ru
     },
   );
 });
+
+
+test("both-service handoff stores the plan but sends one BII starting lane", async () => {
+  const h = routeHarness();
+  await h.call("POST /prospects/:id/handoff", {action:"CreateClient",service_scope:"BII + Managed IT"});
+  const saved = h.writes.find(r=>r.sql.startsWith("UPDATE prospects SET planned_service_lanes"));
+  assert.deepEqual(JSON.parse(saved.values[0]),["Business IT Integration","Managed IT"]);
+  assert.equal(saved.values[1],"Business IT Integration");
+  const request = h.writes.find(r=>r.sql.startsWith("INSERT INTO sp_requests"));
+  const fields = JSON.parse(request.values[2]).fields;
+  const body = JSON.parse(fields[h.s.maps.requests.Payload.name]);
+  assert.equal(body.serviceLane,"Business IT Integration");
+  assert.equal(body.stage,"Sales Discovery");
+  assert.equal(body.discovery.servicePlan.services.length,2);
+});
+
+test("owner timing exception starts Managed IT while retaining BII in the plan", async () => {
+  const h=routeHarness();
+  await h.call("POST /prospects/:id/handoff", {action:"CreateClient",service_scope:"BII + Managed IT",starting_service_lane:"Managed IT",service_sequence_reason:"The BII project cannot start before their support deadline."});
+  const request=h.writes.find(r=>r.sql.startsWith("INSERT INTO sp_requests"));
+  const body=JSON.parse(JSON.parse(request.values[2]).fields[h.s.maps.requests.Payload.name]);
+  assert.equal(body.serviceLane,"Managed IT");
+  assert.deepEqual(body.discovery.servicePlan.services,["Business IT Integration","Managed IT"]);
+  assert.match(body.discovery.servicePlan.reason,/deadline/);
+});
+
+test("sales timing exception is refused before creating a workflow request", async () => {
+  const h=routeHarness({role:"sales"});
+  await assert.rejects(()=>h.call("POST /prospects/:id/handoff",{action:"CreateClient",service_scope:"BII + Managed IT",starting_service_lane:"Managed IT",service_sequence_reason:"The customer needs support now."}),/Josh/);
+  assert.equal(h.writes.filter(r=>r.sql.startsWith("INSERT INTO sp_requests")).length,0);
+});

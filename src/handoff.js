@@ -19,6 +19,7 @@ import { discovery } from "./discovery.js";
 import { mvd, flags } from "./discovery-rules.js";
 import { ownerOnly, integer, choice, text, fail } from "./security.js";
 import { lanes } from "./config.js";
+import { servicePlan, validateServicePlan, applyServicePlan } from "./service-plan.js";
 export { sp, lookupId } from "./sharepoint-runtime.js";
 export async function refresh(
   p,
@@ -240,6 +241,7 @@ export function handoffRoutes(
       json,
       plainResult,
       lanes,
+      servicePlan: servicePlan(p),
     });
   });
   const handoff = async (req, res) => {
@@ -259,7 +261,7 @@ export function handoffRoutes(
         [integer(req.params.id)],
         c,
       );
-      const p = await prospect(req.params.id, c);
+      let p = await prospect(req.params.id, c);
       if (p.hold) fail("On Hold — Pending Josh Review");
       schema = sp.ready();
       await lockClientRequests(p, query, c);
@@ -273,9 +275,11 @@ export function handoffRoutes(
         ).length
       )
         fail("A request is already active or needs reconciliation.");
+      const plan = action === "CreateClient" ? validateServicePlan(req.body, req.session.user) : null;
+      if (plan && req.body.service_scope) p = applyServicePlan(p, plan);
       const lane = choice(
         action === "CreateClient"
-          ? req.body.service_lane
+          ? plan.startingLane
           : action === "TechnicalAssessment"
             ? "Managed IT"
             : action === "Quoting"
@@ -416,6 +420,10 @@ export function handoffRoutes(
         c,
       );
       id = result.insertId;
+      if (plan && req.body.service_scope) {
+        await query("UPDATE prospects SET planned_service_lanes=?,starting_service_lane=?,service_sequence_reason=? WHERE id=?", [JSON.stringify(plan.services), plan.startingLane, plan.reason || null, p.id], c);
+        await audit(c, req.session.user, plan.services.length === 2 ? "plan BII and Managed IT; start " + plan.startingLane : "plan " + plan.startingLane, "prospect", p.id);
+      }
       if (action !== "TechnicalAssessment" || p.service_lane === lane)
         await query(
           "UPDATE prospects SET service_lane=? WHERE id=?",

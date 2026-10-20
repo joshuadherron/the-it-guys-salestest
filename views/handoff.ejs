@@ -60,17 +60,30 @@
     <input type="hidden" name="action" value="CreateClient">
     <% if(typeof duplicates!=='undefined'&&duplicates.length){ %><div class="error"><h3>Possible existing client found</h3><% for(const c of duplicates){ %><p><%= c.Title %> - <%= c['Client ID'] %> - <%= c['Service Lanes'] %></p><% } %><a href="/prospects/<%= p.id %>/relationship">Use existing client (Josh)</a><label><input type="checkbox" name="confirm_different" value="yes" required>This is a different company</label></div><% } %>
 
-    <% for (const lane of lanes) { %>
+    <fieldset><legend>Services being considered</legend>
+    <p>Choose both when this opportunity includes a BII project and ongoing Managed IT.</p>
+    <% for (const lane of [...lanes, 'BII + Managed IT']) { %>
       <label>
         <input
           type="radio"
-          name="service_lane"
+          name="service_scope"
           value="<%= lane %>"
+          <%= typeof servicePlan!=='undefined'&&servicePlan.scope===lane?'checked':'' %>
           required
         >
         <%= lane %>
       </label>
     <% } %>
+    </fieldset>
+    <fieldset data-service-sequence hidden><legend>Which workflow starts first?</legend>
+      <p>BII first is preferred. When timing requires Managed IT first, Josh records the reason. Both services stay in the opportunity plan; this starts one workflow.</p>
+      <label>Starting workflow<select name="starting_service_lane" <%= user.role!=='owner'?'disabled':'' %>>
+        <option value="Business IT Integration">BII first (preferred)</option>
+        <option value="Managed IT" <%= typeof servicePlan!=='undefined'&&servicePlan.scope==='BII + Managed IT'&&servicePlan.startingLane==='Managed IT'?'selected':'' %>>Managed IT first (timing exception)</option>
+      </select></label>
+      <label data-sequence-reason hidden>Why must Managed IT start first?<textarea name="service_sequence_reason" maxlength="1000" minlength="10"><%= typeof servicePlan!=='undefined'?servicePlan.reason:'' %></textarea></label>
+      <% if(user.role!=='owner'){ %><p>Josh can choose Managed IT first when needed. BII first is the default for both services.</p><% } %>
+    </fieldset>
 
     <button
       <%= !ready || nameError ||
@@ -92,6 +105,8 @@
     <% if(nameError){ %><p class="error"><%= nameError %></p><% } %>
   </form>
 </section>
+
+<script src="/service-plan.js" defer></script>
 
 <% }else{ %><section class="card"><h2>Existing SharePoint Client</h2><p><%= p.business_name %> - <%= p.client_id %></p><p>New service being sold: <%= p.service_lane %></p><a href="/prospects/<%= p.id %>/additional-discovery">Additional Service Discovery</a><% if(typeof transitionError!=='undefined'&&transitionError){ %><p class="error"><%= transitionError %></p><% } %></section><% } %>
 <% if (user.role === 'owner') { %>
