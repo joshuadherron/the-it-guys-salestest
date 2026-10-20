@@ -1,4 +1,4 @@
-import { randomUUID } from "node:crypto";
+import { randomUUID, createHash } from "node:crypto";
 import { query,transaction,audit,json } from "../db.js";
 import { prospect } from "../pipeline.js";
 import { discovery } from "../discovery.js";
@@ -13,6 +13,14 @@ import { servicePlan } from "../service-plan.js";
 import { duplicateClients } from "../existing-client-rules.js";
 import { dispatchProspectSync } from "../prospect-sync.js";
 
+const canonical = value => Array.isArray(value) ? value.map(canonical)
+  : value && typeof value === "object" ? Object.fromEntries(Object.keys(value).sort().map(key=>[key,canonical(value[key])])) : value;
+// Preparation binds approved commercial data. Quote numbering and editable Word
+// facts are checked separately by the existing, stricter fill/send snapshot.
+export const proposalApprovalSnapshot = q => createHash("sha256").update(JSON.stringify([
+  canonical(json(q.inputs)), canonical(json(q.line_items)), String(q.total), String(q.approved_at),
+])).digest("hex");
+
 export class ProposalStore {
   constructor({sp,graph,deliveryStore,env=process.env,run=query,tx=transaction,getProspect=prospect,getDiscovery=discovery,log=audit,sync=dispatchProspectSync}) { Object.assign(this,{sp,graph,deliveryStore,env,query:run,transaction:tx,prospect:getProspect,discoveryData:getDiscovery,audit:log,sync}); }
   async acquire(id,user) {
@@ -25,11 +33,25 @@ export class ProposalStore {
       if(!canQuote(actor,"quote.send"))throw new Error("Permission quote.send is required.");
       if(q.status!=="Approved"||p.hold||p.stage==="Closed Lost")throw new Error("Save proposal requires an Approved quote and an opportunity that is not On Hold or Lost.");
       const hash=snapshot(q);
-      const approvalHash=snapshot({...q,document_facts:null});
+      const approvalHash=proposalApprovalSnapshot(q);
       await this.query("INSERT IGNORE INTO quote_proposal_states (quote_id,snapshot_hash) VALUES (?,?)",[id,approvalHash],c);
       const [state]=await this.query("SELECT *,lease_until>UTC_TIMESTAMP() AS busy FROM quote_proposal_states WHERE quote_id=? FOR UPDATE",[id],c);
       if(state.operation_token&&state.busy)throw new Error("A Save proposal operation is already active. Wait for its progress.");
-      if(state.snapshot_hash!==approvalHash)throw new Error("The approved pricing snapshot changed. Approve a revised quote with a new Quote ID.");
+      if(state.snapshot_hash!==approvalHash) {
+        const legacyHash=snapshot({...q,document_facts:null});
+        let safe=state.snapshot_hash===legacyHash;
+        if(!safe && ["record_requested","record_ready"].includes(state.step) &&
+          ![state.record_request_id,state.record_sync_request_id,state.copy_request_id,state.working_item_id,state.fill_id].some(Boolean)) {
+          const fills=await this.query("SELECT id FROM quote_fills WHERE quote_id=? LIMIT 1",[id],c);
+          const sends=await this.query("SELECT id FROM quote_send_attempts WHERE quote_id=? LIMIT 1",[id],c);
+          const operations=p.client_id ? await this.query("SELECT client_id FROM quote_operation_locks WHERE client_id=?",[p.client_id],c) : [];
+          safe=!fills.length&&!sends.length&&!operations.length;
+        }
+        if(!safe)throw Object.assign(new Error("The approved pricing snapshot differs from an existing proposal operation. Approve a revised quote with a new Quote ID or ask Josh to reconcile the existing operation."),{status:409});
+        await this.query("UPDATE quote_proposal_states SET snapshot_hash=? WHERE quote_id=?",[approvalHash,id],c);
+        await this.audit(c,actor,"refresh proposal approval baseline","quote",id);
+        state.snapshot_hash=approvalHash;
+      }
       const token=randomUUID();
       await this.query("UPDATE quote_proposal_states SET operation_token=?,lease_until=DATE_ADD(UTC_TIMESTAMP(),INTERVAL 120 SECOND),error_message=NULL WHERE quote_id=?",[token,id],c);
       return {q,p,actor,hash,state,token};

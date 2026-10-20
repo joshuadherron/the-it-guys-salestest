@@ -4,7 +4,7 @@ import { readFile } from "node:fs/promises";
 import ejs from "ejs";
 import JSZip from "jszip";
 import { ProposalPreparation } from "../src/docfill/proposals.js";
-import { ProposalStore } from "../src/docfill/proposal-store.js";
+import { ProposalStore, proposalApprovalSnapshot } from "../src/docfill/proposal-store.js";
 import { quoteDocumentSamples } from "../scripts/lib/quote-document-samples.js";
 import { prices } from "../src/config.js";
 import { snapshot } from "../src/docfill/delivery-store.js";
@@ -171,7 +171,7 @@ test("Item Completed cancellation payload is explicit; normal completion remains
 });
 
 test("real SQL lease acquisition refuses a second click, revoked permission, and a changed approved snapshot",async()=>{
-  const h=harness();let state,enabled=true,approvedHash=snapshot({...h.q,document_facts:null});
+  const h=harness();let state,enabled=true,approvedHash=proposalApprovalSnapshot(h.q);
   const run=async(sql,args)=>{
     if(sql.startsWith("SELECT * FROM quotes"))return [h.q];
     if(sql.startsWith("SELECT * FROM allowlist"))return [{...actor,quote_send:enabled?1:0}];
@@ -184,7 +184,7 @@ test("real SQL lease acquisition refuses a second click, revoked permission, and
   const ctx=await store.acquire(h.q.id,actor);assert.equal(state.snapshot_hash,approvedHash);assert.equal(ctx.hash,snapshot(h.q));
   await assert.rejects(()=>store.acquire(h.q.id,actor),/already active/);
   state.operation_token=null;state.busy=0;state.snapshot_hash="different";
-  await assert.rejects(()=>store.acquire(h.q.id,actor),/pricing snapshot changed/);
+  await assert.rejects(()=>store.acquire(h.q.id,actor),/pricing snapshot differs/);
   enabled=false;await assert.rejects(()=>store.acquire(h.q.id,actor),/quote.send/);
 });
 
