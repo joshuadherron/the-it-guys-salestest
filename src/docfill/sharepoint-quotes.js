@@ -1,5 +1,11 @@
 import { quoteLane } from "./policy.js";
 import { assertNoPending } from "../sharepoint.js";
+import { assertTagset } from "./tagsets.js";
+import { listTags } from "./fill-docx.js";
+const masterNames={
+  "COM-PRP":["COM-PRP-v1.8.docx","The_IT_Guys_Managed_IT_Quote_Template_v1.8.docx"],
+  "BII-QSOW":["BII-QSOW-v1.6.docx","The_IT_Guys_BII_Short_Form_Quote_SOW_Template_v1.6.docx"],
+};
 export class SharePointQuotes {
   constructor(sp,graph,env=process.env){this.sp=sp;this.graph=graph;this.env=env;}
   async working(prospect,key,quoteId,itemId){
@@ -38,6 +44,7 @@ export class SharePointQuotes {
     return {working,master:await this.master(key)};
   }
   async master(key){
+    if(!masterNames[key])throw new Error("Unsupported quote master key.");
     const schema=this.sp.ready();
     const lists=await this.graph.all(`/sites/${schema.siteId}/lists?$select=id,displayName`);
     const matches=lists.filter(l=>l.displayName==="Operational Standards & Templates");
@@ -49,11 +56,13 @@ export class SharePointQuotes {
       return found[0].name;
     };
     const keyColumn=column(this.env.QUOTE_MASTER_KEY_COLUMN,"Document Key"),statusColumn=column(this.env.QUOTE_MASTER_STATUS_COLUMN,"Status");
-    const rows=(await this.graph.all(`/sites/${schema.siteId}/lists/${list.id}/items?$expand=fields,driveItem`)).filter(r=>r.fields?.[keyColumn]===key&&r.fields?.[statusColumn]==="Approved"&&r.driveItem?.name===(key==="COM-PRP"?"COM-PRP-v1.8.docx":"BII-QSOW-v1.6.docx"));
-    if(rows.length!==1)throw new Error("Expected exactly one promoted Approved master of the pinned quote version.");
+    const candidates=(await this.graph.all(`/sites/${schema.siteId}/lists/${list.id}/items?$expand=fields,driveItem`)).filter(r=>r.fields?.[keyColumn]===key&&r.fields?.[statusColumn]==="Approved");
+    const rows=candidates.filter(r=>masterNames[key].includes(r.driveItem?.name));
+    if(rows.length!==1)throw new Error(`Expected exactly one promoted Approved ${key} master of the pinned quote version; found ${rows.length}. Expected filename: ${masterNames[key].join(" or ")}. Approved filenames found: ${candidates.map(r=>r.driveItem?.name||"(no drive item)").join(", ")||"none"}.`);
     const row=rows[0],d=row.driveItem;
     if(!d.id||!d.parentReference?.driveId)throw new Error("Approved master drive item is unavailable.");
     const content=await this.graph.quoteContent(d.parentReference.driveId,d.id);
+    assertTagset(key,await listTags(content));
     return {documentKey:key,status:"Approved",name:d.name,content};
   }
 }
