@@ -28,6 +28,7 @@ import {
 } from "./sales-import.js";
 import { commitImport } from "./import-commit.js";
 import { dispatchProspectSync, syncStatus } from "./prospect-sync.js";
+import { relationshipLabel } from "./prospect-lifecycle.js";
 export const fields = [
   ...pipelineFields.map(([key, label]) =>
     key === "likely_tier" ? ["likely_service", "Likely Service"] : [key, label],
@@ -308,6 +309,7 @@ export function pipelineRoutes(app) {
       structuredFields,
       notifications,
       sync: await syncStatus(p.id),
+      relationshipLabel,
       json,
     });
   });

@@ -40,11 +40,14 @@ export function nextStep(p, d, quotes, client, items, pendingRequests, role) {
       link("Review & send to Josh", root + "/discovery/3"),
       "Alanna",
     );
+  const approvedProposal=quotes.find(q=>q.status==="Approved");
+  if(approvedProposal && !p.client_id && p.relationship_type!=="existing_client")
+    return result("Save proposal to SharePoint","Review the document facts, then create the opportunity record and quote copy in one action. This does not make them a client.",link("Save proposal to SharePoint",`/quotes/${approvedProposal.id}/document`));
   if (p.relationship_type !== "existing_client" && d.status === "Ready for Review" && !p.client_id)
     return owner
       ? result(
           "Review discovery",
-          "Then create the client in SharePoint from SharePoint actions & history.",
+          "Then open the SharePoint record from SharePoint actions & history.",
           link("Review discovery", root + "/discovery/summary"),
           "Josh",
         )

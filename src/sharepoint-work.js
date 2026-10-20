@@ -79,6 +79,10 @@ export class WorkReader {
             .filter((c) => c.choice)
             .map((c) => [c.name, c.choice.choices]),
         );
+        const instanceColumns = columns.filter(c => process.env.QUOTE_INSTANCE_REF_COLUMN
+          ? c.name === process.env.QUOTE_INSTANCE_REF_COLUMN
+          : ["Instance Reference", "Instance Ref"].includes(c.displayName));
+        s.quoteInstanceColumn = instanceColumns.length === 1 && instanceColumns[0].text ? instanceColumns[0].name : null;
       } catch {
         s.workErrors.push("Could not read Client Operations columns.");
       }
@@ -190,7 +194,7 @@ export class WorkReader {
     const items = await Promise.all(
       rows.map(async (r) =>
         normalizeItem(
-          r,
+          {...r, instanceRef: s.quoteInstanceColumn ? r.fields[s.quoteInstanceColumn] : null},
           s.definitions || [],
           await this.assignee(r.fields.TIG_AssignedToLookupId),
           s.signatureSentColumn,

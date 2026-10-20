@@ -31,7 +31,7 @@
 <% } %>
 
 <section class="card" data-client-status="<%= p.id %>">
-  <h2>Client status</h2>
+  <h2>SharePoint record status</h2>
 
   <% if (clientRecord) { %>
     <% for (const [name, value] of Object.entries(clientRecord)) { %>
@@ -41,13 +41,14 @@
       </p>
     <% } %>
   <% } else { %>
-    <p>No linked SharePoint client yet.</p>
+    <p>No linked SharePoint record yet.</p>
   <% } %>
 </section>
 
 <% if(p.relationship_type!=='existing_client'){ %>
 <section class="card">
-  <h2>Create client in SharePoint</h2>
+  <h2>Open SharePoint record</h2>
+  <p>Creates the opportunity's SharePoint folder and tracking row so proposals can be stored. This does not make them a client.</p>
 
   <p>
     Requires Qualified or later and completed discovery.
@@ -85,7 +86,7 @@
           ? 'disabled'
           : '' %>
     >
-      Create client in SharePoint
+      Open SharePoint record
     </button>
     <p>The discovery is copied to SharePoint when the client is created. Later edits stay in the app.</p>
     <% if(nameError){ %><p class="error"><%= nameError %></p><% } %>

@@ -42,7 +42,7 @@ export function guardPipelineEdit(previous, next) {
   validateBusinessName(next.business_name);
 }
 export function lostPayload(p, { reason, notes = "", expectedStage } = {}) {
-  if (!p.client_id) fail("Create the SharePoint client first.");
+  if (!p.client_id) fail("Open the SharePoint record first.");
   if (!canMarkLost(expectedStage))
     fail(
       "Mark Lost is available only before Client Activation. Signed clients must use Start Offboarding in SharePoint.",

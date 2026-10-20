@@ -18,6 +18,7 @@ import {
 } from "./work-items.js";
 import { choice, integer, fail, ownerOnly } from "./security.js";
 import { lanes } from "./config.js";
+import { observeLifecycle } from "./prospect-lifecycle-sync.js";
 
 export function clientData(row, schema) {
   if (!row) return null;
@@ -130,6 +131,10 @@ export async function guidedData(
       }
       try {
         items = await sp.workItems(p.client_id, freshItems);
+        if(client)await observeLifecycle(p,client["Current Stage"],{query,actor:user,sync:async (...args)=>{
+          const {dispatchProspectSync}=await import("./prospect-sync.js");
+          return dispatchProspectSync(...args);
+        }});
       } catch (e) {
         console.error("SharePoint work-item read failed:", {
           name: e?.name,
@@ -269,7 +274,7 @@ export async function executeSignatureAction(
   let p, schema, item;
   await transaction(async (tx) => {
     p = await prospect(id, tx);
-    if (!p.client_id) fail("Create the SharePoint client first.");
+    if (!p.client_id) fail("Open the SharePoint record first.");
     if (p.hold) fail("On Hold — Pending Josh Review");
     schema = sp.ready();
     const items = await sp.workItems(p.client_id, true);
@@ -346,7 +351,7 @@ export async function executeWorkAction(
   let body, schema, requestId, p;
   await transaction(async (c) => {
     p = await prospect(id, c);
-    if (!p.client_id) fail("Create the SharePoint client first.");
+    if (!p.client_id) fail("Open the SharePoint record first.");
     if (p.hold) fail("On Hold — Pending Josh Review");
     schema = sp.ready();
     await lockClientRequests(p, query, c);
@@ -372,6 +377,7 @@ export async function executeWorkAction(
     assertNoPending(await sp.requests(), schema, p);
     const options = {
       ...input,
+      cancelProposal: false,
       allowedStages: schema.maps.clients["Current Stage"].choice.choices,
     };
     if (["ItemCompleted", "NotRequired", "RequestException"].includes(action)) {
@@ -381,7 +387,15 @@ export async function executeWorkAction(
       if (!item || item.clientId !== p.client_id || !openItem(item))
         fail("Select an open work item for this client.");
       lane = choice(item.lane, clientLanes(client));
-      if (action === "ItemCompleted") {
+      if(action==="ItemCompleted" && input.supersede==="yes") {
+        if(user.email!=="josh@theitguys.us"||user.role!=="owner"||input.confirm!=="yes")fail("Josh must explicitly confirm superseding the previous proposal.",403);
+        if(!["MIT-05","BII-05"].includes(item.workflowId)||item.signatureStatus!=="Preparing")fail("Only an open proposal that has not started signing can be superseded.");
+        if(!schema.workChoices?.TIG_CompletionStatus?.includes("Cancelled"))fail("Client Operations Completion Status needs the Cancelled choice. Josh must update SharePoint.");
+        const [replacement]=await query("SELECT q.id FROM quotes q JOIN quote_proposal_states s ON s.quote_id=q.id WHERE q.id=? AND q.prospect_id=? AND q.status='Approved' AND s.step='filled'",[integer(input.replacementQuoteId),p.id],c);
+        if(!replacement||!item.instanceRef||Number(replacement.id)<=Number(item.instanceRef))fail("Save an approved newer quote first and enter its Quote ID. The old copy must have a verified quote instance reference.");
+        options.cancelProposal=true;
+      }
+      if (action === "ItemCompleted" && !options.cancelProposal) {
         if (!mayComplete(item, user))
           fail(
             "Only the owner or assigned Alanna can complete this item. Unsigned signature items complete automatically when signed.",

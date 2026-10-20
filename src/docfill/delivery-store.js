@@ -15,7 +15,8 @@ export class DeliveryStore {
       const [q]=await this.query("SELECT * FROM quotes WHERE id=? FOR UPDATE",[id],c);
       const [actor]=await this.query("SELECT * FROM allowlist WHERE email=? AND enabled=TRUE",[user.email],c);
       if(!canQuote(actor,"quote.send"))throw new Error("Permission quote.send is required.");
-      if(q.status!=="Approved"||p.hold||!p.client_id)throw new Error("Quote must be Approved, linked to a client, and not On Hold.");
+      if(q.status!=="Approved"||p.hold)throw new Error("Quote must be Approved and not On Hold.");
+      if(!p.client_id)throw new Error("Save proposal to SharePoint first to create the opportunity record and quote copy.");
       await lockClientRequests(p,this.query,c);
       const pending=await this.query("SELECT id FROM quote_send_attempts WHERE client_id=? AND (status IN ('Preparing','PdfSaved','Sending','Unknown') OR (status='Failed' AND pdf_item_id IS NOT NULL)) FOR UPDATE",[p.client_id],c);
       if(pending.some(a=>String(a.id)!==String(retryId||"")))throw new Error("A saved/active quote send needs reconciliation or email-only retry before another fill/send.");

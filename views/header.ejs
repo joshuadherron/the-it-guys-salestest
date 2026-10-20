@@ -38,3 +38,4 @@
 <% } %>
 </header>
 <main>
+<% if(typeof mode!=='undefined'){ %><p class="muted">Workflow Requests: <strong><%= String(mode).toUpperCase() %></strong>. Quote fill and send use their separate configured modes.</p><% } %>

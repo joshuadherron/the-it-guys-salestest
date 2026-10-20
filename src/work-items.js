@@ -158,6 +158,7 @@ export function normalizeItem(
     id: String(row.id),
     clientId: f.TIG_ClientID,
     workflowId: f.TIG_WorkflowID,
+    instanceRef: row.instanceRef ?? null,
     document:
       definition?.document ||
       row.driveItem?.name ||
@@ -190,12 +191,14 @@ export function normalizeItem(
   };
 }
 export function workPayload(action, p, lane, options) {
-  if (!p.client_id) fail("Create the SharePoint client first.");
+  if (!p.client_id) fail("Open the SharePoint record first.");
   if (["ItemCompleted", "NotRequired", "RequestException"].includes(action)) {
     const itemId = integer(options.itemId, 2147483647);
     if (!itemId) fail("Select a work item.");
     if (action === "NotRequired")
       return { itemId, completionStatus: "Not Required" };
+    if(action==="ItemCompleted" && options.cancelProposal===true)
+      return {itemId,completionStatus:"Cancelled",outcomeFlags:[]};
     if (action === "RequestException") {
       const reason = text(options.reason || "", 5000),
         reference = text(options.reference || "", 1000);

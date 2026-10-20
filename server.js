@@ -116,6 +116,7 @@ discoveryRoutes(app);
 quotesRoutes(app);
 quoteDocumentRoutes(app);
 quoteDeliveryRoutes(app);
+proposalRoutes(app);
 handoffRoutes(app);
 adminRoutes(app);
 app.use(async (err, req, res, _next) => {
@@ -169,3 +170,4 @@ app.listen(port, () => {
 startSwitchPickup();
 
 import { startSwitchPickup } from "./src/switch-review-runtime.js";
+import { proposalRoutes } from "./src/docfill/proposal-routes.js";

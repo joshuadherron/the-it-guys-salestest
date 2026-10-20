@@ -77,9 +77,9 @@ export function quoteDocumentRoutes(app,dependencies={query,audit,json,transacti
     await audit(c,req.session.user,"dryrun quote document "+lane.key,"quote",q.id);
   });
   if(req.body.action==="FillSharePoint"){
-    const {quoteDelivery}=await import("./delivery-runtime.js");
-    await quoteDelivery.fill(q.id,req.session.user);
-    return res.redirect(`/quotes/${q.id}/delivery`);
+    req.session.proposalRuns ||= {};
+    req.session.proposalRuns[q.id]=true;
+    return res.redirect(`/quotes/${q.id}/preparation?run=yes`);
   }
   res.set("Cache-Control","no-store");
   res.set("Content-Type","application/vnd.openxmlformats-officedocument.wordprocessingml.document");

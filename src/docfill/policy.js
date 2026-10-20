@@ -20,7 +20,7 @@ export const quoteLane = (input, requestedKey) => {
 export function assertQuoteFillEligible({canSend,status,clientId,workingCopies,requestsPending=false,signatureStatus,completionStatus}) {
   if(canSend !== true) throw new Error("Permission quote.send is required to fill quote documents.");
   if(status !== "Approved") throw new Error("Approve the quote before generating its document.");
-  if(!clientId) throw new Error("Create or link the SharePoint client first.");
+  if(!clientId) throw new Error("Save proposal to SharePoint to create or link the opportunity record.");
   if(requestsPending) throw new Error("Wait for pending SharePoint Workflow Requests to finish.");
   if(!Array.isArray(workingCopies) || workingCopies.length !== 1) throw new Error("Expected exactly one open working Quote/SOW copy.");
   const copy=workingCopies[0];

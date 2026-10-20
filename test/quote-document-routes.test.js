@@ -28,5 +28,5 @@ test("owner form uses CSRF and explicit template lane",()=>{
 });
 test("Quote History retains printable internal worksheet and offers contractual quote",()=>{
  assert.match(quotesView,/Printable internal worksheet/);
- assert.match(quotesView,/Prepare contractual Word quote/);
+ assert.match(quotesView,/Save proposal to SharePoint/);
 });

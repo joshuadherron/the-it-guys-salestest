@@ -1,0 +1,13 @@
+<%- include('header') %>
+<h1>Save proposal to SharePoint</h1>
+<p>Opening a SharePoint record stores this opportunity's proposal. It does not make them a client.</p>
+<p id="proposal-progress" role="status"><%= state?.step || 'Ready to prepare' %></p>
+<p id="proposal-error" class="error" role="alert"><%= state?.error_message || '' %></p>
+<form id="proposal-save" method="post" action="/quotes/<%= q.id %>/prepare" data-run="<%= run?'yes':'no' %>">
+<input type="hidden" name="_csrf" value="<%= csrf %>">
+<button>Save proposal to SharePoint / Resume</button>
+</form>
+<p><a href="/quotes/<%= q.id %>/document">Review document facts</a> · <a href="/quotes/<%= q.id %>/delivery">Open in Word / delivery status</a> · <a href="/prospects/<%= q.prospect_id %>/handoff">SharePoint actions &amp; history</a></p>
+<p>You can leave this page and resume later. Sending is a separate action.</p>
+<script src="/proposal-progress.js" defer></script>
+<%- include('footer') %>

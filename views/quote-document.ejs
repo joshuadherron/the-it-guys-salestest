@@ -41,5 +41,5 @@
 <div class="quote-document-optional">
 <% for(const [key,label] of [['deviceNote','Device notes'],['hardwareText','Hardware scope'],['locationText','Additional location scope'],['regulatedText','Regulated-data scope'],['lobExclusion','Line-of-business application exclusions'],['extraExclusions','Additional exclusions'],['extraAssumption','Additional assumptions']]){ %><label><%= label %><textarea name="<%= key %>" rows="2" maxlength="4000"><%= prefill[key] || '' %></textarea></label><% } %></div>
 <% } %>
-<p><strong>Review required:</strong> This preview may contain bracketed placeholders and is not ready for client use until reviewed.</p><button type="submit">Download draft Word document</button><button type="submit" name="action" value="FillSharePoint">Fill Quote/SOW in SharePoint</button><a href="/quotes/<%= q.id %>/delivery">Send / delivery status</a></form></div>
+<p><strong>Review required:</strong> This preview may contain bracketed placeholders and is not ready for client use until reviewed.</p><button type="submit">Download draft Word document</button><button type="submit" name="action" value="FillSharePoint">Save proposal to SharePoint</button><a href="/quotes/<%= q.id %>/delivery">Send / delivery status</a></form></div>
 <%- include('footer') %>

@@ -76,8 +76,8 @@ export async function refresh(
         ) {
           await transaction(async (c) => {
             await query(
-              "UPDATE prospects SET client_id=?,client_item_id=? WHERE id=?",
-              [id, client.id, p.id],
+              "UPDATE prospects SET client_id=?,client_item_id=?,sharepoint_record_id=? WHERE id=?",
+              [id, client.id, id, p.id],
               c,
             );
             await audit(
@@ -89,6 +89,7 @@ export async function refresh(
             );
           });
           p.client_id = id;
+          p.sharepoint_record_id = id;
           p.client_item_id = client.id;
         }
       }
@@ -327,7 +328,7 @@ export function handoffRoutes(
         });
       }
       if (action === "MarkLost") {
-        if (!p.client_id) fail("Create the SharePoint client first.");
+        if (!p.client_id) fail("Open the SharePoint record first.");
         if (schema.actionErrors?.MarkLost?.length)
           fail(schema.actionErrors.MarkLost.join(" "));
         const expectedStage = req.session.lostReviews?.[p.id];

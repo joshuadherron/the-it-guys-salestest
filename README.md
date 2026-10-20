@@ -187,3 +187,7 @@ Apply migration 010 before deploying this version. Quote approval and fill/send 
 Two direct file-write exceptions are permitted: replacing only the existing BII-05/MIT-05 working-copy DOCX content with If-Match, and creating one sent quote PDF in its same Commercial folder with conflictBehavior=fail. No master, other document or workflow-stage write is added. Existing signature handoff controls remain unchanged. The written-acceptance MIT-05 completion action now requires quote.send.
 
 Configure QUOTE_SENDER_MAILBOX as the dedicated shared mailbox, never workflow@ or a personal mailbox. Extend the existing Exchange application access policy scope to include that shared mailbox while retaining Josh for the app's existing notifications; verify an unrelated mailbox remains denied. Josh must enter Alanna's sender title and phone before she sends. See [live quote fill and send](docs/QUOTE-LIVE-WRITE-AND-SEND.md) for master-column mapping, recipient checks, failure recovery and deployment acceptance. Live settings and production configuration have not been changed by this implementation.
+
+## Prospect proposals
+
+Apply migration 011 before deploying this version. Save proposal to SharePoint opens or reuses an opportunity record and a quote-specific working copy before filling. Creating a record no longer implies conversion; activation observation controls Converted. See [deployment prerequisites and OPP-0080 acceptance](docs/PROSPECT-PROPOSALS.md). SharePoint column/flow setup is performed by Josh; application startup performs no setup writes.

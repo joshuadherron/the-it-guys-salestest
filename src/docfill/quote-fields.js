@@ -19,7 +19,7 @@ export function buildManagedFill({quote,prospect,owner={}}){
    const quantity = count(input, qtyKey);
    if (!quantity) continue;
    const unit = Number(input[priceKey]);
-   if (input[priceKey] == null || input[priceKey] === "" || !Number.isFinite(unit) || unit < 0) throw new Error(label + " requires approved pricing.");
+   if (input[priceKey] === null || input[priceKey] === undefined || input[priceKey] === "" || !Number.isFinite(unit) || unit < 0) throw new Error(label + " requires approved pricing.");
    backups.push({label, detail:quantity + " x " + money(unit) + " monthly", price:Math.round(quantity*unit*100)/100});
  }
  const {facts,owner:clean,assigned}=managedReferenceFacts(quote,prospect,owner);

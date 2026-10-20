@@ -6,6 +6,7 @@ import {
   serializePayload,
 } from "./workflow-contract.js";
 import { lanes } from "./config.js";
+import { prospectLifecycle } from "./prospect-lifecycle.js";
 export const sitePath =
   "/sites/theitguys713.sharepoint.com:/sites/TheITGuysOperations";
 export const required = {
@@ -150,7 +151,8 @@ function payloadData(action, p, lane, options) {
       zip: p.zip || "",
       employeeCount: p.employee_count ?? null,
       stage: p.stage,
-      status: p.status || "Active",
+      status: prospectLifecycle(p).status,
+      convertedClientId:prospectLifecycle(p).convertedClientId,
       owner: p.owner || "",
       likelyService: p.likely_service || "",
       currentIt: p.current_it || "",
@@ -185,7 +187,7 @@ function payloadData(action, p, lane, options) {
   }
   if (action === "MarkLost") return lostPayload(p, options);
   if (actionTypes[action]) return workPayload(action, p, lane, options);
-  if (!p.client_id) throw new Error("Create the SharePoint client first.");
+  if (!p.client_id) throw new Error("Open the SharePoint record first.");
   if (action === "Quoting" && lane === "Business IT Integration")
     return {
       clientId: p.client_id,
@@ -214,6 +216,8 @@ export function buildFields(
   if (schema.actionErrors?.[action]?.length)
     throw new Error(schema.actionErrors[action].join(" "));
   const body = payload(action, p, lane, options);
+  if(action==="UpsertProspect" && schema.prospectRecordColumn && p.sharepoint_record_id)
+    body.sharepointRecordId=p.sharepoint_record_id;
   const f = {};
   const map = schema.maps.requests;
   const put = (name, value) => {
@@ -346,6 +350,15 @@ export class SharePoint {
         checkedAt: new Date().toISOString(),
       };
       await this.work.check(lists);
+      this.cache.prospectRecordColumn=null;
+      const prospects=lists.filter(l=>l.displayName==="Sales Prospects");
+      if(prospects.length===1) {
+        try {
+          const columns=await this.graph.all(`/sites/${site.id}/lists/${prospects[0].id}/columns`);
+          const matches=columns.filter(c=>c.name==="TIGP_SharePointRecordID" && c.text);
+          if(matches.length===1)this.cache.prospectRecordColumn=matches[0].name;
+        } catch { /* Optional field sync is disabled until schema is verified. */ }
+      }
     } catch (e) {
       console.error("SharePoint schema check failed:", {
         name: e?.name,

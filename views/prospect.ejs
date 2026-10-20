@@ -29,7 +29,7 @@ BUSINESS RECORD · <%= p.opp %> · <%= p.stage %>
 <button class="secondary">Sync prospect to SharePoint</button>
 </form>
 </details>
-<section class="card"><h2>Customer relationship</h2><p><%= p.relationship_type==='existing_client'?'Existing customer / additional service':'New customer' %><%= p.client_id?' - '+p.client_id:'' %></p><% if(user.role==='owner'){ %><a href="/prospects/<%= p.id %>/relationship">Customer relationship / Link existing client</a><% } %></section>
+<section class="card"><h2>Customer relationship</h2><p><%= relationshipLabel(p) %></p><% if(user.role==='owner'){ %><a href="/prospects/<%= p.id %>/relationship">Customer relationship / Link existing client</a><% } %></section>
 <details class="card"><summary>Workflow guidance and operational steps</summary><div data-workflow-panel="<%= p.id %>"><%- include('workflow-panel') %></div></details>
 <div class="row no-print">
 <a class="button" href="/prospects/<%= p.id %>/<%= p.relationship_type==='existing_client'?'additional-discovery' :'discovery/resume' %>"><%= p.relationship_type==='existing_client'?'Additional Service Discovery':'Business discovery' %></a>

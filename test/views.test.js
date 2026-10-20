@@ -39,7 +39,9 @@ import {
   statusChoices,
 } from "../src/prospect-data.js";
 import { importNames, needsLane } from "../src/sales-import.js";
+import { relationshipLabel } from "../src/prospect-lifecycle.js";
 const common = {
+  relationshipLabel,
   structuredFields,
   locationFields,
   importNames,

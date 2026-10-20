@@ -599,7 +599,7 @@ test("Create Client still requires qualification and MVD and blocks unsafe names
     csrf: "token",
     json,
   });
-  assert.match(html, /<button\s+disabled\s*>\s*Create client in SharePoint/);
+  assert.match(html, /<button\s+disabled\s*>\s*Open SharePoint record/);
   assert.ok(html.includes("SharePoint folder name"));
 });
 

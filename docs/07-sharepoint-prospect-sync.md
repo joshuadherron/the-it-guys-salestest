@@ -4,7 +4,7 @@
 
 A prospect is written to SharePoint when the Sales App creates it. A prospect is **not** a Client yet.
 
-Do not use the existing Create Client workflow for raw prospects. Create Client allocates the client lifecycle (Client ID, client folder/workflow, Sales Discovery stage) and remains the later qualification/conversion action.
+Do not use Create Client for raw prospects. For a qualified opportunity it opens the existing engagement record at Sales Discovery, including the Client ID and Commercial folder. This does not convert the opportunity into a paying client. Save proposal can perform this preparation after quote approval.
 
 ## SharePoint object
 
@@ -43,7 +43,7 @@ Opportunity ID is the immutable cross-system key. Business name may change while
 3. A SharePoint failure does not delete the local prospect. The app records sync state and shows a visible retry/reconcile action.
 4. Editing a prospect updates the same Sales Prospects row.
 5. Discovery does not duplicate prospect basics. Business name, contact, phone, email, primary location and employee count are inherited from the prospect record.
-6. When Create Client completes successfully, the prospect row is marked Converted and stores the resulting Client ID; it is not deleted.
+6. When Create Client completes, store the separate SharePoint Record ID without marking Converted. Only a successful work-items read that observes Client Activation or a known later stage may sync Converted plus Converted Client ID. Mark Lost syncs Lost, never Converted. The prospect is not deleted.
 7. Existing-client opportunities remain linked to the existing Clients row and do not create a new client.
 
 ## Write-path rule
@@ -53,6 +53,8 @@ Prefer the existing Workflow Requests pattern for durability and auditing:
 - Add Request Type: **Upsert Prospect**
 - Payload contains the fields above plus opportunityId.
 - Power Automate upserts Sales Prospects by Opportunity ID.
-- Add Request Type: **Convert Prospect** only if conversion bookkeeping cannot be handled by the existing Create Client flow.
+- Use the existing Upsert Prospect payload status and convertedClientId for conversion bookkeeping; remove any premature Create Client conversion step.
 
 Until the list and flow exist, do not repurpose Clients or silently write raw prospects there.
+
+Migration 011 adds sharepoint_record_id and the observed SharePoint stage locally. The setup script adds TIGP_SharePointRecordID only with explicit --apply; connection check resolves the exact internal text column, otherwise field sync is disabled. See [deployment and acceptance](PROSPECT-PROPOSALS.md) for flow mappings and retry behavior.
