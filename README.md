@@ -195,3 +195,7 @@ Apply migration 011 before deploying this version. Save proposal to SharePoint o
 ## BII and Managed IT service plans
 
 Apply migration 012 before deploying the combined-service handoff form. Both services may be planned on one opportunity, with BII first as the default and an owner-approved Managed IT-first timing exception. See [service plan scope and flow limits](docs/SERVICE-PLANS.md).
+
+## Admin prospect deletion
+
+Admins can select Delete prospect on a business record, review the affected local history, and confirm using its opportunity ID. SharePoint records and files remain in place. Active or uncertain operations must be resolved first. No migration is required. See [admin deletion behavior](docs/ADMIN-PROSPECT-DELETION.md).

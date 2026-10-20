@@ -5,6 +5,7 @@ BUSINESS RECORD · <%= p.opp %> · <%= p.stage %>
 <h1>
 <%= p.business_name %>
 </h1>
+<% if(user.is_admin===true||user.is_admin===1){ %><p class="no-print"><a href="/prospects/<%= p.id %>/delete">Delete prospect</a></p><% } %>
 <% if(p.switch_review_new){ %><span class="pill">New lead</span><% } %>
 <% if(p.source){ %><span class="pill"><%= p.source %><%= p.employee_range ? " · Staff: "+p.employee_range : "" %></span><% } %>
 <p>

@@ -1,0 +1,17 @@
+<%- include('header') %>
+<h1>Delete prospect</h1>
+<p><strong><%= p.business_name %></strong> · <%= p.opp %></p>
+<p>This permanently deletes the prospect and its related local records from the sales app. The deletion audit entry is retained.</p>
+<p>SharePoint records, documents and previously sent emails remain in place. This action does not mark the SharePoint engagement Lost.</p>
+<table><thead><tr><th>Local records to delete</th><th>Count</th></tr></thead><tbody>
+<% for(const row of rows){ %><tr><td><%= row.label %></td><td><%= row.count %></td></tr><% } %>
+</tbody></table>
+<% if(reason){ %><p class="error"><%= reason %></p><% } %>
+<form method="post" action="/prospects/<%= p.id %>/delete">
+<input type="hidden" name="_csrf" value="<%= csrf %>">
+<label>Type <strong><%= p.opp %></strong> to confirm<input name="confirmation" autocomplete="off" required <%= reason?'disabled':'' %>></label>
+<label><input type="checkbox" name="confirm_history" value="yes" required <%= reason?'disabled':'' %>>Permanently delete this prospect and all local history listed above, including any approved or sent quotes.</label>
+<button <%= reason?'disabled':'' %>>Permanently delete prospect</button>
+<a href="/prospects/<%= p.id %>">Cancel</a>
+</form>
+<%- include('footer') %>

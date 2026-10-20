@@ -110,6 +110,7 @@ app.use(async (_req, _res, next) => {
   next();
 });
 pipelineRoutes(app);
+prospectDeleteRoutes(app);
 existingClientRoutes(app);
 guidedRoutes(app);
 discoveryRoutes(app);
@@ -171,3 +172,4 @@ startSwitchPickup();
 
 import { startSwitchPickup } from "./src/switch-review-runtime.js";
 import { proposalRoutes } from "./src/docfill/proposal-routes.js";
+import { prospectDeleteRoutes } from "./src/prospect-delete.js";
