@@ -1,4 +1,5 @@
 <%- include('header') %>
+<% const filtering=Boolean(search.trim()||selectedStatus); const resultIds=new Set(rows.map(p=>String(p.id))); const relevantWaiting=filtering?waiting.filter(item=>resultIds.has(String(item.id))):waiting; %>
 <div class="row <%= today ? "" : "prospect-page-heading" %>">
 <div>
 <p class="muted">YOUR SALES WORKSPACE</p>
@@ -14,13 +15,13 @@
 </div>
 </div>
 <% if(today){ if(user.role==='owner'){ %>
-<details class="card dashboard-collapse"><summary class="dashboard-collapse-heading">Waiting for Josh <span class="pill"><%= waiting.length %></span></summary>
-<% if(!waiting.length){ %><p>Nothing waiting for review.</p><% } %>
-<% for(const item of waiting){ %><article class="card"><a href="<%= item.href %>"><%= item.business_name %> — <%= item.label %></a>
+<details class="card dashboard-collapse" <%= filtering&&relevantWaiting.length?'open':'' %>><summary class="dashboard-collapse-heading">Waiting for Josh <span class="pill"><%= relevantWaiting.length %></span></summary>
+<% if(!relevantWaiting.length){ %><p>Nothing waiting for review.</p><% } %>
+<% for(const item of relevantWaiting){ %><article class="card"><a href="<%= item.href %>"><%= item.business_name %> — <%= item.label %></a>
 <% if(item.result_message){ %><p class="error preserve-lines"><%= item.result_message %></p><% } %>
 <% if(item.request_id){ %><form method="post" action="/requests/<%= item.request_id %>/acknowledge"><input type="hidden" name="_csrf" value="<%= csrf %>"><button>Acknowledge</button></form><% } %>
 </article><% } %></details>
-<% }else{ %><p><%= waiting.length %> items waiting on Josh</p><% }} %>
+<% }else{ %><p><%= relevantWaiting.length %> items waiting on Josh</p><% }} %>
 <form method="get" class="<%= today ? "" : "prospect-page-search" %>">
 <div class="row">
 <input name="q" value="<%= search %>" placeholder="Search business or contact" aria-label="Search">
@@ -29,13 +30,14 @@
 <% if(today){ %><button>Search</button><% } %>
 </div>
 </form>
+<% if(filtering&&!rows.length){ %><p role="status">No matching opportunities. Try another search or status.</p><% } %>
 <% if(!today){ %><script src="/prospect-filters.js?v=1" defer></script><% } %>
 <% const due=rows.filter(p=>p.follow_up && String(p.follow_up).slice(0,10)<=new Date().toISOString().slice(0,10)); const upcoming=rows.filter(p=>p.follow_up && String(p.follow_up).slice(0,10)>new Date().toISOString().slice(0,10)); const unscheduled=rows.filter(p=>!p.follow_up); %><% if(today){ %><div class="dashboard-stats" aria-label="Sales dashboard shortcuts">
 <a class="dashboard-stat" href="/pipeline"><strong><%= rows.length %></strong><span>Businesses</span><span class="stat-action">View all businesses →</span></a>
 <a class="dashboard-stat" href="#needs-follow-up"><strong><%= due.length %></strong><span>Due for follow-up</span><span class="stat-action">View follow-ups →</span></a>
 <a class="dashboard-stat" href="#no-follow-up"><strong><%= unscheduled.length %></strong><span>No follow-up set</span><span class="stat-action">Schedule follow-ups →</span></a>
-</div><% } %><% if(today){ %><script src="/dashboard-shortcuts.js?v=1" defer></script><% } %><% const groups=today?[{name:'Needs follow-up',rows:due},{name:'Upcoming conversations',rows:upcoming},{name:'No follow-up scheduled',rows:unscheduled}]:[{name:'Prospects',rows}];for(const group of groups){ %>
-<details class="card dashboard-collapse" <%= !today?'open':'' %> id="<%= group.name==='Needs follow-up'?'needs-follow-up':group.name==='No follow-up scheduled'?'no-follow-up':'upcoming-conversations' %>">
+</div><% } %><% if(today){ %><script src="/dashboard-shortcuts.js?v=2" defer></script><% } %><% const groups=today?[{name:'Needs follow-up',rows:due},{name:'Upcoming conversations',rows:upcoming},{name:'No follow-up scheduled',rows:unscheduled}]:[{name:'Prospects',rows}];for(const group of groups){ %>
+<details class="card dashboard-collapse" <%= !today||(filtering&&group.rows.length)?'open':'' %> id="<%= group.name==='Needs follow-up'?'needs-follow-up':group.name==='No follow-up scheduled'?'no-follow-up':'upcoming-conversations' %>">
 <summary class="dashboard-collapse-heading">
 <%= group.name %> <span class="pill">
 <%= group.rows.length %>

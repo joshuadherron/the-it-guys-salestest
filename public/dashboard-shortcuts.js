@@ -22,5 +22,8 @@ document.querySelectorAll('.dashboard-stats a[href^="#"]').forEach((link) => {
   });
 });
 
-if (location.hash) openDashboardPanel(location.hash);
+// A search already expands every matching section on the server. An old shortcut
+// hash must not collapse those results again when the page loads.
+const dashboardFilters = new URLSearchParams(location.search);
+if (location.hash && !dashboardFilters.get('q')?.trim() && !dashboardFilters.get('status')) openDashboardPanel(location.hash);
 window.addEventListener('hashchange', () => openDashboardPanel(location.hash));
