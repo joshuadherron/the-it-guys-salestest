@@ -304,17 +304,8 @@ export function handoffRoutes(
           fail("Possible existing client found. Review the matches and select the existing client or explicitly confirm this is a different company.");
         if (p.client_id)
           fail("This opportunity already has a SharePoint client.");
-        if (
-          ![
-            "Qualified",
-            "Discovery",
-            "Proposal Sent",
-            "Closed Won",
-            "Technical Assessment",
-          ].includes(p.stage) ||
-          mvd(d.answers).length
-        )
-          fail("Qualify the opportunity and complete discovery first.");
+        if (mvd(d.answers).length)
+          fail("Complete discovery before creating the governed SharePoint structure.");
         if (await sp.client(p))
           fail(
             "A SharePoint client already exists for this opportunity; Josh must reconcile it before resubmission.",

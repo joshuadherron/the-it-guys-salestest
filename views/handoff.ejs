@@ -52,7 +52,7 @@
   <p>Creates the opportunity's SharePoint folder and tracking row so proposals can be stored. This does not make them a client.</p>
 
   <p>
-    Requires Qualified or later and completed discovery.
+    Completed discovery is required for this governed SharePoint structure. Sales preparation is available at any pipeline stage.
     Missing groups: <%= missing.join(', ') || 'none' %>.
   </p>
 
@@ -89,14 +89,7 @@
     <button
       <%= !ready || nameError ||
           missing.length ||
-          p.client_id ||
-          ![
-            'Qualified',
-            'Discovery',
-            'Proposal Sent',
-            'Closed Won',
-            'Technical Assessment'
-          ].includes(p.stage)
+          p.client_id
           ? 'disabled'
           : '' %>
     >

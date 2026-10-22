@@ -3,7 +3,7 @@ import { query, transaction, audit, json } from "./db.js";
 import { ownerOnly, integer, fail } from "./security.js";
 import { prospect } from "./pipeline.js";
 import { discovery } from "./discovery.js";
-import { answer, value } from "./discovery-rules.js";
+import { answer, value, mvd } from "./discovery-rules.js";
 import { genericEngagement } from "./engagement-types.js";
 import { platforms, oneOffItems, priceQuote, priceManagedServices } from "./pricing.js";
 
@@ -128,7 +128,8 @@ function combinedManagedQuote(input, prices) {
   return {...managed,lines:[...managed.lines,line],total:managed.total+foundation,monthlyTotal:managed.total,oneTimeTotal:foundation,includeBiiSummary:true};
 }
 
-export function quotesRoutes(app) {
+export function quotesRoutes(app,deps={query,transaction,audit,prospect,discovery,priceConfig}) {
+  const {query,transaction,audit,prospect,discovery,priceConfig}=deps;
   app.get("/prospects/:id/quotes", async (req, res) => {
     const p = await prospect(req.params.id);
     if(genericEngagement(p))return res.redirect(`/prospects/${p.id}/project-quotes`);
@@ -169,6 +170,8 @@ export function quotesRoutes(app) {
 
     res.render("quotes", {
       p,
+      missingDiscovery:mvd(d.answers),
+      assessmentFindings:selected&&Array.isArray(json(selected.stop_review))?json(selected.stop_review).filter(s=>s.selected):[],
       canApprove: canQuote(req.session.user,"quote.approve"),
       canSend: canQuote(req.session.user,"quote.send"),
       quotes,
@@ -184,18 +187,17 @@ export function quotesRoutes(app) {
   });
 
   app.post("/prospects/:id/quotes/managed/calculate", async (req,res) => {
-    const p = await prospect(req.params.id);
-    if (p.hold) fail("On Hold — Pending Josh Review.");
+    await prospect(req.params.id);
+
     res.render("quote-calculation",{calculation:combinedManagedQuote(validateManagedInputs(req.body),await priceConfig())});
   });
   app.post("/prospects/:id/quotes/managed", async (req,res) => {
     if (req.session.user.role !== "owner") fail("Owner access required.",403);
     await transaction(async c => {
       const p = await prospect(req.params.id,c);
-      if (p.hold) fail("On Hold — Pending Josh Review.");
+
       const input = validateManagedInputs(req.body);
       const calculation = combinedManagedQuote(input,await priceConfig(c));
-      await query("UPDATE quotes SET status='Draft',approved_by=NULL,approved_at=NULL WHERE prospect_id=? AND status='Approved'",[p.id],c);
       const result = await query("INSERT INTO quotes (prospect_id,inputs,line_items,total) VALUES (?,?,?,?)",[p.id,JSON.stringify(input),JSON.stringify(calculation.lines),calculation.total],c);
       await query("UPDATE quotes SET quote_number=CONCAT('Q-',YEAR(created_at),'-',LPAD(id,GREATEST(3,CHAR_LENGTH(id)),'0')) WHERE id=?",[result.insertId],c);
       await audit(c,req.session.user,"create managed services v20 draft","quote",result.insertId);
@@ -203,8 +205,8 @@ export function quotesRoutes(app) {
     res.redirect(`/prospects/${req.params.id}/quotes`);
   });
   app.post("/prospects/:id/quotes/calculate", async (req, res) => {
-    const p = await prospect(req.params.id);
-    if (p.hold) fail("On Hold — Pending Josh Review. Pricing is blocked.");
+    await prospect(req.params.id);
+
     const input = validateInputs(req.body);
     res.render("quote-calculation", {
       calculation: input.includeBii ? priceQuote(input, await priceConfig()) : {lines:[],pending:[],total:0},
@@ -221,8 +223,6 @@ export function quotesRoutes(app) {
 
       const p = await prospect(req.params.id, c);
 
-      if (p.hold) fail("On Hold — Pending Josh Review. Pricing is blocked.");
-
       const d = await discovery(p.id, c);
 
       const input =
@@ -231,12 +231,6 @@ export function quotesRoutes(app) {
           : prefill(d.answers);
 
       const calculation = input.includeBii ? priceQuote(input, await priceConfig(c)) : {lines:[],pending:[],total:0};
-
-      await query(
-        "UPDATE quotes SET status='Draft',approved_by=NULL,approved_at=NULL WHERE prospect_id=? AND status='Approved'",
-        [p.id],
-        c,
-      );
 
       const r = await query(
         "INSERT INTO quotes (prospect_id,inputs,line_items,total) VALUES (?,?,?,?)",
@@ -299,8 +293,8 @@ export function quotesRoutes(app) {
       await query("SELECT id FROM prospects WHERE id=? FOR UPDATE",[pid],c);
       const [q]=await query("SELECT * FROM quotes WHERE id=? FOR UPDATE",[initial.id],c);
       if(!q) fail("Quote not found.",404);
-      const p=await prospect(pid,c);
-      if(p.hold) fail("On Hold — Pending Josh Review.");
+      await prospect(pid,c);
+
       const old=json(q.inputs);
       const input=old.pricingMode==="managed_v20"?validateManagedInputs(req.body):validateInputs(req.body);
       if((input.pricingMode==="managed_v20")!==(old.pricingMode==="managed_v20"))
@@ -346,13 +340,9 @@ export function quotesRoutes(app) {
         c,
       );
 
-      const p = await prospect(pid, c);
-
-      if (p.hold) fail("On Hold — Pending Josh Review");
+      await prospect(pid, c);
 
       if (q.status !== "Draft") fail("Only a draft can be approved.");
-      const currentDiscovery=await discovery(p.id,c);
-      if(currentDiscovery.answers._opportunity_type&&currentDiscovery.status!=="Ready for Review")fail("Review discovery for the corrected opportunity type before approving a quote.",409);
 
       const input = json(q.inputs);
 
@@ -371,9 +361,9 @@ export function quotesRoutes(app) {
       if (req.body.reviewed !== "yes")
         fail("Complete the stop-condition review.");
 
-      if (stops.some((s) => req.body["stop_" + s.id] === "yes"))
+      if (stops.some((s) => req.body["stop_" + s.id] === "yes") && req.body.continue_anyway !== "yes")
         fail(
-          "Targeted assessment first. A selected stop condition blocks approval.",
+          "Assessment findings need review. Select Continue Anyway to approve pricing only; this does not authorize work or service activation.",
         );
 
       const calc = input.pricingMode==="managed_v20" ? combinedManagedQuote(input,await priceConfig(c)) : priceQuote(input, await priceConfig(c));
@@ -390,7 +380,8 @@ export function quotesRoutes(app) {
               id: s.id,
               label: s.label,
               status: s.status,
-              selected: false,
+              selected: req.body["stop_" + s.id] === "yes",
+              acknowledged: req.body.continue_anyway === "yes",
             })),
           ),
           JSON.stringify(input),

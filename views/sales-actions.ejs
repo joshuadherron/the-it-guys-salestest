@@ -1,0 +1,9 @@
+<section class="card no-print"><h2>What would you like to do?</h2><p>Choose any action at any pipeline stage.</p><div class="row">
+<a href="#sales-notes">Notes / activity</a>
+<a class="button" href="/prospects/<%= p.id %>/quotes">New quote / proposal</a>
+<a class="button secondary" href="/prospects/<%= p.id %>/<%= ['project','hourly'].includes(p.engagement_type)?'intake':p.relationship_type==='existing_client'?'additional-discovery':'discovery/resume' %>">Discovery</a>
+<a href="/prospects/<%= p.id %>/handoff">Create / manage SharePoint structure and documents</a>
+<a href="/prospects/<%= p.id %>/edit">Edit opportunity / business</a>
+<% if(p.business_id){ for(const [type,label] of [['project','New project'],['hourly','Hourly / break-fix'],['bii','BII opportunity'],['managed_it','Prepare Managed IT']]){ %>
+<a href="/prospects/new?business_id=<%= p.business_id %>&amp;engagement_type=<%= type %>"><%= label %></a>
+<% }} %></div><p>New work uses another opportunity under this business. Service activation uses the governed SharePoint actions.</p></section>

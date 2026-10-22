@@ -155,11 +155,6 @@ export function discoveryRoutes(app) {
         [state.hold, p.id],
         c,
       );
-      await query(
-        "UPDATE quotes SET status='Draft',approved_by=NULL,approved_at=NULL WHERE prospect_id=? AND status='Approved'",
-        [p.id],
-        c,
-      );
       await audit(c, req.session.user, "save discovery", "prospect", p.id);
       if (state.notify)
         notice = await queueNotice(c, p, "URGENT SECURITY REVIEW");

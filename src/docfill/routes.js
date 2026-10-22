@@ -33,7 +33,7 @@ export function quoteDocumentRoutes(app,dependencies={query,audit,json,transacti
   if(q.status!=="Approved")fail("Only approved quotes can generate contractual documents.");
   const p=await prospect(q.prospect_id);
   if(genericEngagement(p))return res.redirect(`/quotes/${q.id}/project-document`);
-  if(p.hold)fail("Prospect is on hold.");
+
   if(!q.quote_number){q.quote_number=formattedQuoteNumber(q);await query("UPDATE quotes SET quote_number=? WHERE id=? AND quote_number IS NULL",[q.quote_number,q.id]);}
   const input=json(q.inputs);
   const lane=quoteLane(input,req.query.lane);
@@ -49,7 +49,7 @@ export function quoteDocumentRoutes(app,dependencies={query,audit,json,transacti
   if(q.status!=="Approved")fail("Only approved quotes can generate contractual documents.");
   const p=await prospect(q.prospect_id);
   if(genericEngagement(p))fail("Use the project/hourly proposal form.",409);
-  if(p.hold)fail("Prospect is on hold.");
+
   if(!q.quote_number){q.quote_number=formattedQuoteNumber(q);await query("UPDATE quotes SET quote_number=? WHERE id=? AND quote_number IS NULL",[q.quote_number,q.id]);}
   const input=json(q.inputs);
   const lane=quoteLane(input,req.body.lane);
@@ -72,9 +72,9 @@ export function quoteDocumentRoutes(app,dependencies={query,audit,json,transacti
   assertTagset(lane.key,await listTags(template));
   const {buffer,report}=await fillDocx(template,data);
   await transaction(async c=>{
-    const currentProspect=await prospect(q.prospect_id,c);
+    await prospect(q.prospect_id,c);
     const [current]=await query("SELECT * FROM quotes WHERE id=? FOR UPDATE",[q.id],c);
-    if(currentProspect.hold||current?.status!=="Approved"||JSON.stringify(json(current.inputs))!==JSON.stringify(input)||JSON.stringify(json(current.line_items))!==JSON.stringify(quote.line_items))
+    if(current?.status!=="Approved"||JSON.stringify(json(current.inputs))!==JSON.stringify(input)||JSON.stringify(json(current.line_items))!==JSON.stringify(quote.line_items))
       fail("Quote approval or quantities changed. Reload the quote before generating.",409);
     await query("UPDATE quotes SET document_facts=? WHERE id=?",[JSON.stringify(owner),q.id],c);
     await audit(c,req.session.user,"dryrun quote document "+lane.key,"quote",q.id);

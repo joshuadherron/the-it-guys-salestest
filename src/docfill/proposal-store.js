@@ -36,10 +36,9 @@ export class ProposalStore {
       const [q]=await this.query("SELECT * FROM quotes WHERE id=? FOR UPDATE",[id],c);
       const [actor]=await this.query("SELECT * FROM allowlist WHERE email=? AND enabled=TRUE",[user.email],c);
       if(!canQuote(actor,"quote.send"))throw new Error("Permission quote.send is required.");
-      if(q.status!=="Approved"||p.hold||p.stage==="Closed Lost")throw new Error("Save proposal requires an Approved quote and an opportunity that is not On Hold or Lost.");
+      if(q.status!=="Approved"||p.hold||p.stage==="Closed Lost"||p.status==="Lost")throw new Error("Save proposal requires an Approved quote and an opportunity that is not On Hold or Lost.");
       if(genericEngagement(p)) {
-        const [intake]=await this.query(intakeSelect,[p.id],c);
-        await assertProjectApproval(p,q,intake);
+        await assertProjectApproval(p,q);
       }
       const hash=snapshot(q);
       const approvalHash=proposalApprovalSnapshot(q);
@@ -160,10 +159,9 @@ export class ProposalStore {
       Object.assign(ctx.p,{client_id:p.client_id,client_item_id:p.client_item_id});
       const [q]=await this.query("SELECT * FROM quotes WHERE id=? FOR UPDATE",[ctx.q.id],c);
       const [actor]=await this.query("SELECT * FROM allowlist WHERE email=? AND enabled=TRUE",[ctx.actor.email],c);
-      if(p.hold||p.stage==="Closed Lost"||q.status!=="Approved"||snapshot(q)!==ctx.hash||!canQuote(actor,"quote.send"))throw new Error("Approval, hold or permission changed. Reload before saving.");
+      if(p.hold||p.stage==="Closed Lost"||p.status==="Lost"||q.status!=="Approved"||snapshot(q)!==ctx.hash||!canQuote(actor,"quote.send"))throw new Error("Approval, hold or permission changed. Reload before saving.");
       if(genericEngagement(p)) {
-        const [intake]=await this.query(intakeSelect,[p.id],c);
-        await assertProjectApproval(p,q,intake);
+        await assertProjectApproval(p,q);
       }
       const [lease]=await this.query("SELECT operation_token,lease_until>UTC_TIMESTAMP() AS valid FROM quote_proposal_states WHERE quote_id=? FOR UPDATE",[q.id],c);
       if(lease?.operation_token!==ctx.token||!lease.valid)throw new Error("Save proposal operation expired. Resume from the progress page.");
@@ -173,7 +171,7 @@ export class ProposalStore {
       }
       await this.validate(ctx,lane);
       if(action==="CreateClient") {
-        if(!["Qualified","Discovery","Proposal Sent","Closed Won","Technical Assessment"].includes(p.stage))throw new Error("Qualify the opportunity and complete discovery before opening its SharePoint record.");
+
         if(await this.sp.client(p))throw new Error("A SharePoint record just became available. Click Save again to reuse it.");
         if(duplicateClients(p,await this.sp.clients(),s).length)throw new Error("Possible existing customer found. Josh must review and link the existing record on Customer relationship before saving.");
       }

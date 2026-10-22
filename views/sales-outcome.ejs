@@ -1,0 +1,7 @@
+<% if(user.role==='owner'){ %>
+<details class="card"><summary>Sales status: Won / Lost / On hold</summary>
+<p>Records this opportunity's sales status. It does not authorize work, change SharePoint service stages, close existing services or release a security hold.</p>
+<form method="post" action="/prospects/<%= p.id %>/sales-outcome"><input type="hidden" name="_csrf" value="<%= csrf %>">
+<label>Outcome<select name="outcome"><option>Won</option><option>Lost</option><option>On hold</option></select></label>
+<label>Reason / sales notes<textarea name="note" minlength="5" maxlength="2000" required></textarea></label><button>Record sales status</button></form></details>
+<% } %>

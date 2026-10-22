@@ -52,7 +52,7 @@ export function existingClientRoutes(app, deps = { query, transaction, audit, pr
     await transaction(async c => {
       const p = await prospect(req.params.id, c);
       if (!isExisting(p) || !p.client_id) fail("Link an existing SharePoint client first.");
-      if (p.hold) fail("Release the urgent hold before editing discovery.");
+
       const [record] = await query("SELECT * FROM additional_service_discoveries WHERE prospect_id=?", [p.id], c);
       if (record?.complete && req.session.user.role !== "owner") fail("Josh must reopen Additional Service Discovery before editing.", 403);
       if (integer(req.body.revision) !== (record?.revision || 0)) fail("Discovery changed in another tab. Reload first.", 409);

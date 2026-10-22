@@ -18,7 +18,7 @@ BUSINESS RECORD · <%= p.opp %> · <%= p.stage %>
 <%= p.city||'' %><%= p.city&&p.state?', ':'' %><%= p.state||'' %><%= p.zip?' '+p.zip:'' %>
 </p>
 <% } %>
-<section class="card relationship-actions no-print"><h2>What would you like to do?</h2><p class="muted">Choose any action. You don't have to finish discovery before recording a conversation or planning your next contact.</p><div class="action-grid"><a class="button" href="#log-activity">Log a conversation</a><a class="button secondary" href="/prospects/<%= p.id %>/edit">Edit business</a><a class="button secondary" href="/prospects/<%= p.id %>/<%= p.relationship_type==='existing_client'?'additional-discovery' :'discovery/resume' %>">Add discovery details</a><a class="button secondary" href="/prospects/<%= p.id %>/quotes">Open pricing worksheet</a></div><p class="muted">Pricing and onboarding may still require approvals or completed information.</p></section>
+<%- include('sales-actions') %><%- include('sales-outcome') %>
 <details class="card"><summary>SharePoint synchronization · technical details</summary>
 <% if(sync){ %>
 <p>Latest sync: <strong><%= sync.status %></strong> · <%= sync.created_at %></p>
@@ -61,7 +61,7 @@ BUSINESS RECORD · <%= p.opp %> · <%= p.stage %>
 <%= n.kind %>: <%= n.status %>
 </p>
 <% } %>
-<section class="card" id="log-activity">
+<section class="card" id="sales-notes">
 <h2>Log a conversation or note</h2>
 <form method="post" action="/prospects/<%= p.id %>/activities">
 <input type="hidden" name="_csrf" value="<%= csrf %>">

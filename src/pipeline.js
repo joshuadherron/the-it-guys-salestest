@@ -270,7 +270,7 @@ export function pipelineRoutes(app) {
     const business=req.query.business_id?businesses.find(b=>String(b.id)===String(integer(req.query.business_id))):null;
     if(req.query.business_id&&!business)fail("Business not found.",404);
     res.render("prospect-form", {
-      p: business?{...business,business_id:business.id,business_name:business.name,id:undefined,engagement_type:"project"}: {engagement_type:"project"},
+      p: business?{...business,business_id:business.id,business_name:business.name,id:undefined,engagement_type:choice(req.query.engagement_type||"project",Object.keys(engagementTypes))}: {engagement_type:choice(req.query.engagement_type||"project",Object.keys(engagementTypes))},
       businesses,
       engagementTypes,
       fields,
@@ -379,8 +379,7 @@ export function pipelineRoutes(app) {
       if(genericEngagement(p)&&data.stage!==p.stage&&["Closed Won","Closed Lost"].includes(data.stage))fail("Use explicit work authorization or Mark opportunity lost; editing the stage cannot authorize work.",409);
       if(genericEngagement(p)&&((p.sales_authorized&&data.stage!==p.stage)||(data.status==="Lost"&&p.status!=="Lost")))fail("Use the sales outcome workflow. Recorded acceptance and handoff cannot be changed by editing pipeline fields.",409);
       guardPipelineEdit(p, data);
-      if (p.hold && data.stage !== p.stage)
-        fail("Release the urgent hold before changing stage.");
+
       if (data.stage === "Closed Lost" && req.session.user.role !== "owner")
         fail("Owner access required.", 403);
       if(typeChanged)await changeOpportunityType(p,data.engagement_type,req.session.user,c,{query,audit},req.body.original_engagement_type);

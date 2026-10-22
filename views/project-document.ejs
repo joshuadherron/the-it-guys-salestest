@@ -1,4 +1,4 @@
-<%- include('header') %>
+<%- include('header') %><%- include('sales-notices') %>
 <h1>Project / hourly proposal</h1><p><a href="/prospects/<%= p.id %>/project-quotes?quote=<%= q.id %>"><%= p.business_name %> · <%= q.quote_number||q.id %></a></p>
 <p>Uses the approved scope, prices and terms saved in this quote. Quote approval does not authorize work. Customer acceptance is recorded separately on the opportunity.</p>
 <% if(error){ %><p role="alert"><%= error %></p><% } %>

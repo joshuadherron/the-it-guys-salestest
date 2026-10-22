@@ -9,7 +9,7 @@ export function engagementGuard(deps={prospect,query}) {
     const match=req.path.match(/^\/prospects\/(\d+)\/(discovery(?:\/.*)?|quotes(?:\/.*)?|handoff|mark-lost|additional-discovery|work-items|signature|workflow-panel)$/);
     if(match&&genericEngagement(await deps.prospect(match[1]))) {
       if(req.method==="POST")fail("Use the project/hourly intake, quote and authorization workflow for this opportunity.",409);
-      if(req.method==="GET")return res.redirect(`/prospects/${match[1]}/${match[2]==="handoff"?"project-sharepoint":"work"}`);
+      if(req.method==="GET")return res.redirect(`/prospects/${match[1]}/${match[2]==="handoff"?"project-sharepoint":match[2]==="quotes"?"project-quotes":"work"}`);
     }
     const quote=req.path.match(/^\/quotes\/(\d+)\/(approve|edit|print)$/);
     if(quote) {

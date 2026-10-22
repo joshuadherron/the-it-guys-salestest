@@ -6,7 +6,7 @@ import { quoteSend,adminOnly,canQuote } from "./quote-permissions.js";
 import { engagementTypes,genericEngagement } from "./engagement-types.js";
 import { intakeFields,riskFields,validateIntake,missingIntake,intakeFlags } from "./engagement-intake.js";
 import { attachBusiness } from "./businesses.js";
-import { projectConfig,assertProjectApproval } from "./project-quotes.js";
+import { projectConfig,assertProjectAuthorization } from "./project-quotes.js";
 import { snapshot } from "./docfill/delivery-store.js";
 import { isDeepStrictEqual } from "node:util";
 import { salesHandoff,handoffOutcome } from "./sales-handoff.js";
@@ -40,7 +40,8 @@ export function universalRoutes(app,deps={query,transaction,audit,prospect,sync:
     const [intake]=await query(intakeSelect,[p.id]);
     const handoff=await salesHandoff(p.id,undefined,query);
     const quotes=await query("SELECT * FROM quotes WHERE prospect_id=? ORDER BY id DESC",[p.id]);
-    res.render("opportunity",{p,intake,handoff,quotes,engagementTypes,missing:missingIntake(p.engagement_type,intake?json(intake.answers):{},p),flags:intake?json(intake.flags):[],canSend:canQuote(req.session.user,"quote.send")});
+    const activities=await query("SELECT * FROM activities WHERE prospect_id=? ORDER BY id DESC LIMIT 100",[p.id]);
+    res.render("opportunity",{p,intake,handoff,quotes,activities,engagementTypes,missing:missingIntake(p.engagement_type,intake?json(intake.answers):{},p),flags:intake?json(intake.flags):[],canSend:canQuote(req.session.user,"quote.send")});
   });
   app.get("/prospects/:id/discovery-history",async(req,res)=>{
     const p=await prospect(req.params.id);
@@ -100,12 +101,12 @@ export function universalRoutes(app,deps={query,transaction,audit,prospect,sync:
       const [q]=await query("SELECT * FROM quotes WHERE id=? AND prospect_id=? FOR UPDATE",[integer(req.body.quote_id),p.id],c);
       if(!q||!["Approved","Sent"].includes(q.status)||!q.approved_at)fail("Select an approved quote belonging to this opportunity.");
       const [intake]=await query(intakeSelect,[p.id],c);
-      const calc=await assertProjectApproval(p,q,intake);
+      const calc=await assertProjectAuthorization(p,q,intake);
       if(calc.total!==Number(q.total)||!isDeepStrictEqual(calc.lines,json(q.line_items)))fail("Approved pricing differs from the saved snapshot. Approve a new revision.",409);
       const reference=text(req.body.authorization_reference||"",2000);if(reference.length<10||req.body.confirm!=="yes")fail("Record the actual customer authorization reference and confirm it was received. Approval alone is not authorization.");
       const kind=choice(req.body.authorization_kind,["Written acceptance","Signed statement of work","Purchase order","Rate authorization"]);
       const destination=text(req.body.handoff_destination||"Existing delivery systems",200),notes=text(req.body.handoff_notes||"",2000);
-      await query("INSERT INTO activities (prospect_id,type,outcome,notes,occurred_on,actor) VALUES (?,'note',?,?,UTC_DATE(),?)",[p.id,handoffOutcome,JSON.stringify({quote_id:q.id,quote_number:q.quote_number,snapshot_hash:snapshot(q),authorization_kind:kind,authorization_reference:reference,handoff_destination:destination,handoff_notes:notes}),actor.email],c);
+      await query("INSERT INTO activities (prospect_id,type,outcome,notes,occurred_on,actor) VALUES (?,'note',?,?,UTC_DATE(),?)",[p.id,handoffOutcome,JSON.stringify({quote_id:q.id,quote_number:q.quote_number,snapshot_hash:snapshot(q),intake_revision:intake.revision,authorization_kind:kind,authorization_reference:reference,handoff_destination:destination,handoff_notes:notes}),actor.email],c);
       await query("UPDATE businesses SET relationship_status='Customer' WHERE id=?",[p.business_id],c);
       await query("UPDATE prospects SET stage='Closed Won' WHERE id=?",[p.id],c);
       await audit(c,actor,"record customer work authorization","prospect",p.id);
@@ -123,6 +124,22 @@ export function universalRoutes(app,deps={query,transaction,audit,prospect,sync:
     });
     await sync(await prospect(req.params.id),req.session.user);
     res.redirect(`/prospects/${req.params.id}/work`);
+  });
+  // Sales status never submits a lifecycle command or authorizes service delivery.
+  app.post("/prospects/:id/sales-outcome",ownerOnly,async(req,res)=>{
+    const outcome=choice(req.body.outcome,["Won","Lost","On hold"]);
+    const note=text(req.body.note||"",2000);
+    if(note.length<5)fail("Record a short reason for this sales outcome.");
+    await transaction(async c=>{
+      const p=await prospect(req.params.id,c);
+      if(outcome==="Lost"&&await salesHandoff(p.id,c,query))fail("Recorded work authorization must be reviewed in the delivery system; it cannot be erased by a sales outcome.",409);
+      if(outcome==="On hold")await query("UPDATE prospects SET hold=TRUE WHERE id=?",[p.id],c);
+      else await query("UPDATE prospects SET stage=?,status=? WHERE id=?",[outcome==="Won"?"Closed Won":"Closed Lost",outcome==="Won"?"Active":"Lost",p.id],c);
+      await query("INSERT INTO activities (prospect_id,type,outcome,notes,occurred_on,actor) VALUES (?,'note',?,?,UTC_DATE(),?)",[p.id,"Sales status: "+outcome,note,req.session.user.email],c);
+      await audit(c,req.session.user,"record sales outcome: "+outcome,"prospect",p.id);
+    });
+    await sync(await prospect(req.params.id),req.session.user);
+    res.redirect(`/prospects/${req.params.id}`);
   });
   app.get("/admin/project-pricing",adminOnly,async(_req,res)=>{
     const config=await projectConfig(query);res.render("project-pricing-config",{config});

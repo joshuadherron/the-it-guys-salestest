@@ -18,13 +18,13 @@ export function projectSharePointRoutes(app,deps={query,transaction,audit,prospe
   app.get("/prospects/:id/project-sharepoint",quoteSend,async(req,res)=>{
     const p=await prospect(req.params.id);if(!genericEngagement(p))return res.redirect(`/prospects/${p.id}/handoff`);
     let error=null,record=null,prerequisites=[];
-    try {const s=sp.ready();prerequisites=projectCapability(s,env);await refresh(p,{sp,query,transaction,audit});record=await sp.client(p);}catch(e){error=e.message;}
+    try {const s=sp.ready();await refresh(p,{sp,query,transaction,audit});record=await sp.client(p);if(!record)prerequisites=projectCapability(s,env);}catch(e){error=e.message;}
     const requests=await query("SELECT * FROM sp_requests WHERE prospect_id IN (SELECT id FROM prospects WHERE business_id=?) ORDER BY id DESC LIMIT 30",[p.business_id]);
     res.render("project-sharepoint",{p,record,error,prerequisites,requests,engagementTypes});
   });
   app.post("/prospects/:id/project-sharepoint",quoteSend,async(req,res)=>{
     let body,id;
-    const schema=sp.ready();assertProjectCapability(schema,env);
+    const schema=sp.ready();
     await transaction(async c=>{
       const p=await prospect(req.params.id,c);
       if(!genericEngagement(p)||p.hold||p.stage==="Closed Lost")fail("Only a project/hourly opportunity without a hold or loss can open a project record.",409);
@@ -40,7 +40,7 @@ export function projectSharePointRoutes(app,deps={query,transaction,audit,prospe
         return;
       }
       if(p.client_id)fail("The linked SharePoint record could not be verified. Reconcile the existing ID; another record will not be created.",409);
-      if(!["Qualified","Discovery","Proposal Sent","Closed Won"].includes(p.stage))fail("Qualify the opportunity before opening SharePoint.");
+      assertProjectCapability(schema,env);
       const [intake]=await query(intakeSelect,[p.id],c);
       const discovery=projectDiscovery(p,intake);
       if(duplicateClients(p,await sp.clients(),schema).length)fail("A possible SharePoint customer already exists. Link it on Customer relationship before creating a record.",409);

@@ -14,7 +14,7 @@ test("contract document route requires quote.send and requires approved quote",(
  assert.match(route,/app\.get\("\/quotes\/:id\/document",quoteSend/);
  assert.match(route,/app\.post\("\/quotes\/:id\/document",quoteSend/);
  assert.match(route,/q\.status!=="Approved"/);
- assert.match(route,/if\(p\.hold\)/);
+ assert.doesNotMatch(route,/if\(p\.hold\)/);
 });
 test("contract document download cannot mutate SharePoint",()=>{
  assert.doesNotMatch(route,/replaceQuoteWorkingCopy|graph\.put|fetch\(/);

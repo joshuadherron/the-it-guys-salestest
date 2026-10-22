@@ -6,23 +6,26 @@ import { quoteApprove,quoteSend,canQuote } from "./quote-permissions.js";
 import { genericEngagement,engagementTypes } from "./engagement-types.js";
 import { missingIntake } from "./engagement-intake.js";
 import { validateProjectQuote,priceProject } from "./project-pricing.js";
-import { snapshot } from "./docfill/delivery-store.js";
 
 export async function projectConfig(run=query,c) {
   const rows=await run("SELECT name,amount FROM config_prices WHERE name IN ('project_hourly_rate','project_minimum_hours')",[],c);
   return {hourly_rate:rows.find(r=>r.name==="project_hourly_rate")?.amount??null,minimum_hours:rows.find(r=>r.name==="project_minimum_hours")?.amount??0};
 }
-export async function assertProjectApproval(p,q,intake) {
+export async function assertProjectApproval(p,q) {
   if(!genericEngagement(p))fail("Use the existing Managed IT or BII quote workflow.");
-  if(p.hold)fail("On Hold — Pending Josh Review.",409);
-  if(p.stage==="Closed Lost"||p.status==="Lost")fail("This opportunity is lost. Open a new opportunity before authorizing work.",409);
-  const missing=missingIntake(p.engagement_type,intake?.answers?json(intake.answers):{},p);
-  if(!intake?.complete||missing.length)fail("Complete the appropriate intake before approval: "+(missing.map(m=>m.label+" ("+m.href+")").join("; ")||`review /prospects/${p.id}/intake`));
   const input=json(q.inputs);
-  if(["Approved","Sent"].includes(q.status)&&json(q.stop_review)?.intakeRevision!==intake.revision)fail("Intake changed after approval. Create and approve a new quote revision before preparing or authorizing work.",409);
   if(input.pricingMode!==(p.engagement_type==="hourly"?"hourly_v1":"project_v1"))fail("The saved quote type differs from this opportunity.",409);
   const calculation=priceProject(input);
   if(calculation.pending.length)fail(calculation.pending.join(" "));
+  return calculation;
+}
+// Customer acceptance is a separate boundary from internal commercial approval.
+export async function assertProjectAuthorization(p,q,intake) {
+  const calculation=await assertProjectApproval(p,q);
+  if(p.hold)fail("On Hold — Pending Josh Review.",409);
+  if(p.stage==="Closed Lost"||p.status==="Lost")fail("This opportunity is lost. Reopen it before authorizing work.",409);
+  const missing=missingIntake(p.engagement_type,intake?.answers?json(intake.answers):{},p);
+  if(!intake?.complete||missing.length)fail("Complete the appropriate intake before authorizing work: "+(missing.map(m=>m.label+" ("+m.href+")").join("; ")||`review /prospects/${p.id}/intake`));
   return calculation;
 }
 export function projectQuoteRoutes(app,deps={query,transaction,audit,prospect}) {
@@ -41,9 +44,6 @@ export function projectQuoteRoutes(app,deps={query,transaction,audit,prospect}) 
     await transaction(async c=>{
       const p=await prospect(req.params.id,c);
       if(!genericEngagement(p))fail("Use the Managed IT/BII pricing worksheet.");
-      if(p.hold)fail("On Hold — Pending Josh Review.",409);
-      if(p.stage==="Closed Lost"||p.status==="Lost")fail("Open a new opportunity before quoting lost work.",409);
-      if(p.sales_authorized||p.stage==="Closed Won")fail("This sale is already won. Open a new opportunity for additional scope.",409);
       if(req.body.revise_id) {
         const [old]=await query("SELECT * FROM quotes WHERE id=? AND prospect_id=? FOR UPDATE",[integer(req.body.revise_id),p.id],c);
         if(!old)fail("Quote revision source not found.",404);
@@ -67,8 +67,8 @@ export function projectQuoteRoutes(app,deps={query,transaction,audit,prospect}) 
       if(q.status!=="Draft")fail("Only a draft can be approved.",409);
       if(req.body.reviewed!=="yes")fail("Confirm scope, custom prices, risks and estimate/authorization terms before approval.");
       const [intake]=await query(intakeSelect,[pid],c);
-      const calc=await assertProjectApproval(p,q,intake);
-      await query("UPDATE quotes SET status='Approved',approved_by=?,approved_at=UTC_TIMESTAMP(),line_items=?,total=?,stop_review=? WHERE id=?",[actor.email,JSON.stringify(calc.lines),calc.total,JSON.stringify({engagement_type:p.engagement_type,customPricingReviewed:true,intakeRevision:intake.revision}),q.id],c);
+      const calc=await assertProjectApproval(p,q);
+      await query("UPDATE quotes SET status='Approved',approved_by=?,approved_at=UTC_TIMESTAMP(),line_items=?,total=?,stop_review=? WHERE id=?",[actor.email,JSON.stringify(calc.lines),calc.total,JSON.stringify({engagement_type:p.engagement_type,customPricingReviewed:true,intakeRevision:intake?.revision??null}),q.id],c);
       await audit(c,actor,"approve "+p.engagement_type+" pricing snapshot","quote",q.id);
     });
     res.redirect(`/prospects/${pid}/project-quotes?quote=${req.params.id}`);
@@ -88,15 +88,11 @@ export function projectQuoteRoutes(app,deps={query,transaction,audit,prospect}) 
       const p=await prospect(pid,c),[q]=await query("SELECT * FROM quotes WHERE id=? FOR UPDATE",[initial.id],c);
       const [actor]=await query("SELECT * FROM allowlist WHERE email=? AND enabled=TRUE",[req.session.user.email],c);
       if(!canQuote(actor,"quote.send"))fail("Quote send permission was revoked.",403);
-      if(!genericEngagement(p)||p.hold||q.status!=="Approved")fail("Only an approved project/hourly quote without a hold can be recorded as sent.");
-      if(p.stage==="Closed Lost"||p.stage==="Closed Won")fail("This opportunity is already closed. Sending cannot reopen it.",409);
-      const [intake]=await query(intakeSelect,[p.id],c);
-      await assertProjectApproval(p,q,intake);
+      if(!genericEngagement(p)||q.status!=="Approved")fail("Only an approved project/hourly quote can be recorded as sent.");
+      await assertProjectApproval(p,q);
       if(req.body.confirm!=="yes")fail("Confirm that you actually sent this proposal; the app does not send it automatically.");
-      const [fill]=await query("SELECT * FROM quote_fills WHERE quote_id=? ORDER BY id DESC LIMIT 1",[q.id],c);
-      if(!fill||fill.status!=="Succeeded"||fill.mode!=="live"||fill.snapshot_hash!==snapshot(q))fail("Save the current approved proposal to SharePoint before recording it as sent.");
       await query("UPDATE quotes SET status='Sent',sent_at=UTC_TIMESTAMP(),sent_by=? WHERE id=?",[req.session.user.email,q.id],c);
-      await query("UPDATE prospects SET stage='Proposal Sent' WHERE id=?",[pid],c);
+      await query("UPDATE prospects SET stage='Proposal Sent' WHERE id=? AND stage NOT IN ('Closed Won','Closed Lost') AND status<>'Lost'",[pid],c);
       await audit(c,req.session.user,"record manually sent project proposal","quote",q.id);
     });
     res.redirect(`/prospects/${pid}/project-quotes?quote=${req.params.id}`);

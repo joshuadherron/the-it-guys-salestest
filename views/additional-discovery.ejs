@@ -6,4 +6,4 @@
 <form method="post" class="card"><input type="hidden" name="_csrf" value="<%= csrf %>"><input type="hidden" name="revision" value="<%= revision %>">
 <% for(const [key,label] of fields){ %><label><%= label %><textarea name="<%= key %>" maxlength="5000" <%= complete&&user.role!=='owner'?'readonly':'' %>><%= answers[key]||'' %></textarea></label><% } %>
 <label><input type="checkbox" name="complete" value="yes" <%= complete?'checked':'' %>>Sales context complete (service, reason, decision maker and timeframe required)</label>
-<button <%= p.hold||(complete&&user.role!=='owner')?'disabled':'' %>>Save discovery</button></form><%- include('footer') %>
+<button <%= complete&&user.role!=='owner'?'disabled':'' %>>Save discovery</button></form><%- include('footer') %>

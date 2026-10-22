@@ -7,7 +7,7 @@ import { validateProspect,insertProspect } from "../src/pipeline.js";
 import { engagementTypes } from "../src/engagement-types.js";
 import { validateIntake,missingIntake,intakeFlags,intakeFields,riskFields } from "../src/engagement-intake.js";
 import { validateProjectQuote,priceProject } from "../src/project-pricing.js";
-import { projectQuoteRoutes,assertProjectApproval } from "../src/project-quotes.js";
+import { projectQuoteRoutes,assertProjectApproval,assertProjectAuthorization } from "../src/project-quotes.js";
 import { universalRoutes } from "../src/universal-routes.js";
 import { projectSharePointRoutes } from "../src/project-sharepoint.js";
 import { projectDocument,projectTags,projectDiscovery,projectCapability } from "../src/project-contract.js";
@@ -73,12 +73,14 @@ test("invalid, negative, nonfinite and over-limit saved prices are rejected",()=
   for(const value of [-1,"NaN",Infinity,10000001])assert.throws(()=>priceProject({...input,lines:[{...input.lines[0],unitPrice:value}]}));
   assert.throws(()=>priceProject({...input,lines:[]}),/at least one/);
 });
-test("approval requires matching intake revision, resolved hold, complete scope and the appropriate type",async()=>{
+test("commercial approval is independent of intake and holds; authorization preserves lifecycle checks",async()=>{
   assert.equal((await assertProjectApproval(p,q,intake)).total,3000);
-  await assert.rejects(()=>assertProjectApproval({...p,hold:true},q,intake),/On Hold/);
-  await assert.rejects(()=>assertProjectApproval({...p,stage:"Closed Lost"},q,intake),/lost/);
-  await assert.rejects(()=>assertProjectApproval(p,q,{...intake,revision:4}),/Intake changed/);
-  await assert.rejects(()=>assertProjectApproval(p,q,{...intake,complete:0}),/Complete the appropriate intake/);
+  assert.equal((await assertProjectApproval({...p,hold:true,stage:"Prospecting"},q,null)).total,3000);
+  assert.equal((await assertProjectApproval(p,q,{...intake,revision:4})).total,3000);
+  await assert.rejects(()=>assertProjectAuthorization({...p,hold:true},q,intake),/On Hold/);
+  await assert.rejects(()=>assertProjectAuthorization({...p,stage:"Closed Lost"},q,intake),/lost/);
+  assert.equal((await assertProjectAuthorization(p,q,{...intake,revision:4})).total,3000);
+  await assert.rejects(()=>assertProjectAuthorization(p,q,{...intake,complete:0}),/Complete the appropriate intake/);
   await assert.rejects(()=>assertProjectApproval({...p,engagement_type:"hourly"},q,intake),/quote type differs/);
 });
 test("Project-Based client payload is independent of managed enrollment and rejects legacy actions",()=>{
@@ -138,6 +140,7 @@ function harness(register,options={}) {
     if(sql.startsWith("SELECT * FROM businesses"))return [business];
     if(sql.startsWith("SELECT * FROM activities WHERE prospect_id=? AND outcome=?"))return handoff?[handoff]:[];
     if(sql.startsWith("SELECT r.id FROM sp_requests"))return pending;
+    if(sql.startsWith("SELECT * FROM sp_requests"))return pending;
     if(sql.startsWith("SELECT id FROM quotes"))return [];
     if(sql.startsWith("SELECT id FROM businesses WHERE client_id"))return [];
     if(sql.startsWith("SELECT * FROM quotes"))return options.noQuote?[]:[quote];
@@ -182,6 +185,53 @@ test("project approval captures intake revision and requires an owner with appro
   assert.equal(h.quote.status,"Approved");assert.equal(h.quote.stop_review.intakeRevision,3);assert.ok(!h.writes.some(w=>w.sql.includes("businesses")||w.sql.includes("engagements")));
   const denied=harness(projectQuoteRoutes,{quote:{...q,status:"Draft"},actor:{role:"sales"}});denied.req.body={reviewed:"yes"};await assert.rejects(()=>denied.call("POST /quotes/:id/project-approve"),/Owner approval/);
 });
+
+test("early held project can save and approve commercial pricing without completed intake",async()=>{
+  const options={p:{hold:true,stage:"Prospecting"},intake:{complete:0,answers:{}},quote:{...q,status:"Draft"}};
+  const draft=harness(projectQuoteRoutes,options);draft.req.body=quoteBody;
+  await draft.call("POST /prospects/:id/project-quotes");
+  assert.ok(draft.writes.some(w=>w.sql.startsWith("INSERT INTO quotes")));
+  const approval=harness(projectQuoteRoutes,options);approval.req.body={reviewed:"yes"};
+  await approval.call("POST /quotes/:id/project-approve");
+  assert.equal(approval.quote.stop_review.customPricingReviewed,true);
+  assert.ok(!approval.writes.some(w=>/activities|businesses|sp_requests/.test(w.sql)));
+});
+
+test("commercial approval survives intake edits; current complete intake remains required for authorization",async()=>{
+  const commercial={...q,stop_review:{customPricingReviewed:true,intakeRevision:3}};
+  assert.equal((await assertProjectAuthorization(p,commercial,{...intake,revision:4})).total,3000);
+  await assert.rejects(()=>assertProjectAuthorization(p,commercial,{...intake,complete:0,revision:4}),/before authorizing work/);
+});
+
+test("manual project send records actual send without SharePoint fill and does not reopen a closed sale",async()=>{
+  const h=harness(projectQuoteRoutes,{p:{hold:true,stage:"Closed Lost"},intake:{complete:0,answers:{}}});
+  h.req.body={confirm:"yes"};await h.call("POST /quotes/:id/project-sent");
+  assert.ok(h.writes.some(w=>w.sql.startsWith("UPDATE quotes SET status='Sent'")));
+  assert.ok(h.writes.some(w=>w.sql.includes("stage NOT IN ('Closed Won','Closed Lost')")));
+  assert.equal(h.graphCalls.length,0);
+  const unconfirmed=harness(projectQuoteRoutes);await assert.rejects(()=>unconfirmed.call("POST /quotes/:id/project-sent"),/actually sent/);
+  assert.equal(unconfirmed.writes.length,0);
+});
+
+test("sales outcomes need no intake, quote or SharePoint request; Won is not work authorization",async()=>{
+  for(const outcome of ["Won","Lost","On hold"]){
+    const h=harness(universalRoutes,{p:{stage:"Prospecting",hold:true},noQuote:true,intake:{complete:0,answers:{}}});
+    h.req.body={outcome,note:"Customer discussed this outcome"};await h.call("POST /prospects/:id/sales-outcome");
+    assert.equal(h.graphCalls.length,0);
+    assert.ok(!h.writes.some(w=>/sp_requests|businesses|hold=FALSE|service_lane/.test(w.sql)));
+    const note=h.writes.find(w=>w.sql.startsWith("INSERT INTO activities"));assert.equal(note.args[1],"Sales status: "+outcome);assert.notEqual(note.args[1],handoffOutcome);
+  }
+  const denied=harness(universalRoutes,{actor:{role:"sales"}});denied.req.body={outcome:"Won",note:"Do not allow"};
+  await denied.call("POST /prospects/:id/sales-outcome");assert.match(denied.res.sent,/Owner/);
+  assert.equal(denied.writes.length,0);
+});
+
+test("project SharePoint creation accepts early sales stage but still requires complete intake and no hold",async()=>{
+  const h=harness(projectSharePointRoutes,{p:{stage:"Prospecting"}});await h.call("POST /prospects/:id/project-sharepoint");assert.equal(h.graphCalls.length,1);
+  for(const options of [{p:{hold:true}},{intake:{complete:0,answers:{}}}]){
+    const blocked=harness(projectSharePointRoutes,options);await assert.rejects(()=>blocked.call("POST /prospects/:id/project-sharepoint"));assert.equal(blocked.graphCalls.length,0);
+  }
+});
 test("work authorization accepts reordered MySQL JSON keys, records a customer and never activates Managed IT",async()=>{
   const reordered={...q,line_items:q.line_items.map(l=>Object.fromEntries(Object.entries(l).reverse()))};
   const h=harness(universalRoutes,{quote:reordered});h.req.body={quote_id:"51",confirm:"yes",authorization_kind:"Written acceptance",authorization_reference:"Email from Pat dated 2026-10-21"};await h.call("POST /prospects/:id/authorize");
@@ -190,8 +240,8 @@ test("work authorization accepts reordered MySQL JSON keys, records a customer a
   assert.ok(!h.writes.some(w=>/Managed IT|Client Activation|Onboarding|service_lane=/.test(w.sql)));
   await assert.rejects(()=>h.call("POST /prospects/:id/authorize"),/already has a recorded authorization/);
 });
-test("authorization rejects absent evidence, changed pricing, stale intake and revoked permissions",async()=>{
-  for(const options of [{},{quote:{...q,total:"1.00"}},{intake:{revision:4}},{revoked:true}]) {
+test("authorization rejects absent evidence, changed pricing, incomplete current intake and revoked permissions",async()=>{
+  for(const options of [{},{quote:{...q,total:"1.00"}},{intake:{complete:0,revision:4}},{revoked:true}]) {
     const h=harness(universalRoutes,options);h.req.body={quote_id:"51",confirm:"yes",authorization_kind:"Written acceptance",authorization_reference:Object.keys(options).length?"Actual acceptance email":""};
     await assert.rejects(()=>h.call("POST /prospects/:id/authorize"));assert.equal(h.writes.length,0);
   }
@@ -205,6 +255,14 @@ test("second project reuses the shared customer's SharePoint identity without cr
   const remoteRecord={id:"12",fields:{"Client ID":"CL-9"}};
   const h=harness(projectSharePointRoutes,{clientId:"CL-9",remoteRecord});await h.call("POST /prospects/:id/project-sharepoint");
   assert.equal(h.graphCalls.length,0);assert.ok(h.writes.some(w=>w.sql.startsWith("UPDATE businesses SET client_id")));assert.ok(h.writes.some(w=>w.sql.includes("WHERE business_id=?")));
+});
+
+test("existing business record reuse does not depend on unneeded new-record flow configuration",async()=>{
+  const remoteRecord={id:"12",fields:{"Client ID":"CL-9"}};
+  const h=harness(projectSharePointRoutes,{clientId:"CL-9",remoteRecord,env:{PROJECT_WORKFLOW_CONTRACT:"",SHAREPOINT_WRITE_MODE:"dryrun"}});
+  await h.call("GET /prospects/:id/project-sharepoint");assert.deepEqual(h.res.data.prerequisites,[]);
+  await h.call("POST /prospects/:id/project-sharepoint");assert.equal(h.graphCalls.length,0);
+  assert.ok(h.writes.some(w=>w.sql.startsWith("UPDATE businesses SET client_id")));
 });
 test("duplicate prevention blocks simultaneous and uncertain business requests before dispatch",async()=>{
   for(const status of ["Preparing","Pending","Processing","Unknown"]) {

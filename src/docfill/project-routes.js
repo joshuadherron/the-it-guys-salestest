@@ -1,4 +1,3 @@
-import { intakeSelect } from "../engagement-intake.js";
 import { query,transaction,audit,json } from "../db.js";
 import { prospect } from "../pipeline.js";
 import { integer,fail } from "../security.js";
@@ -20,9 +19,8 @@ export function projectDocumentRoutes(app,deps={query,transaction,audit,prospect
     if(!q)fail("Quote not found.",404);
     const p=await prospect(q.prospect_id);
     if(!genericEngagement(p))fail("Use the Managed IT/BII document workflow.");
-    if(q.status!=="Approved"||p.hold||p.stage==="Closed Lost")fail("Approve the project/hourly quote and resolve holds before preparing a document.",409);
-    const [intake]=await query(intakeSelect,[p.id]);
-    await assertProjectApproval(p,q,intake);
+    if(q.status!=="Approved")fail("Approve the project/hourly quote before preparing a document.",409);
+    await assertProjectApproval(p,q);
     return {q,p};
   }
   app.get("/quotes/:id/project-document",quoteSend,async(req,res)=>{
@@ -40,9 +38,10 @@ export function projectDocumentRoutes(app,deps={query,transaction,audit,prospect
     const {buffer,report}=await fillDocx(master.content,buildProjectFill({quote:{...q,inputs:json(q.inputs)},prospect:p}));
     if(report.unfilled.length)fail("The proposed template has unresolved fields: "+report.unfilled.join(", "),409);
     await transaction(async c=>{
-      const currentP=await prospect(p.id,c),[current]=await query("SELECT * FROM quotes WHERE id=? FOR UPDATE",[q.id],c);
+      await prospect(p.id,c);
+      const [current]=await query("SELECT * FROM quotes WHERE id=? FOR UPDATE",[q.id],c);
       const [actor]=await query("SELECT * FROM allowlist WHERE email=? AND enabled=TRUE",[req.session.user.email],c);
-      if(currentP.hold||currentP.stage==="Closed Lost"||current?.status!=="Approved"||snapshot(current)!==hash||!canQuote(actor,"quote.send"))fail("Approval, pricing, hold or permission changed. Reload before preparing.",409);
+      if(current?.status!=="Approved"||snapshot(current)!==hash||!canQuote(actor,"quote.send"))fail("Approval, pricing or permission changed. Reload before preparing.",409);
       await audit(c,actor,"preview project document "+lane.key,"quote",q.id);
     });
     if(req.body.action==="FillSharePoint") {

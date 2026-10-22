@@ -562,11 +562,8 @@ test("Admin lost-reason configuration is owner-only", () => {
   assert.equal(res.code, 403);
 });
 
-test("Create Client still requires qualification and MVD and blocks unsafe names before writing", async () => {
+test("Create Client requires MVD, safe names and no hold regardless of pipeline stage", async () => {
   for (const change of [
-    (h) => {
-      h.p.stage = "Prospecting";
-    },
     (h) => {
       h.d.answers["Q1.5"] = { state: "not_discussed", value: null };
     },
@@ -589,6 +586,9 @@ test("Create Client still requires qualification and MVD and blocks unsafe names
       !h.writes.some((w) => w.sql.startsWith("INSERT INTO sp_requests")),
     );
   }
+  const early = routeHarness();early.p.stage="Prospecting";
+  await early.call("POST /prospects/:id/handoff",{action:"CreateClient",service_lane:prospect.service_lane});
+  assert.ok(early.writes.some(w=>w.sql.startsWith("INSERT INTO sp_requests")));
   const h = routeHarness();
   h.p.business_name = "A/C Pros";
   const locals = await h.call("GET /prospects/:id/handoff");
