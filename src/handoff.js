@@ -197,6 +197,7 @@ export function handoffRoutes(
     const d = await discovery(p.id);
     const schema = sp.cache;
     const missing = isExisting(p) ? [] : mvd(d.answers);
+    if(d.answers._opportunity_type&&d.status!=="Ready for Review")missing.push("Review discovery after correcting the opportunity type");
     const [additional] = isExisting(p) ? await query("SELECT complete FROM additional_service_discoveries WHERE prospect_id=?", [p.id]) : [];
     let duplicates = [];
     if (!p.client_id && !isExisting(p)) {
@@ -294,6 +295,7 @@ export function handoffRoutes(
         lanes,
       );
       const d = await discovery(p.id, c);
+      if(action==="CreateClient"&&d.answers._opportunity_type&&d.status!=="Ready for Review")fail("Review discovery for the corrected opportunity type and send it to Josh before opening SharePoint.",409);
       const options = {};
       if (action === "CreateClient") {
         if (isExisting(p)) fail("Existing-customer opportunities never create a SharePoint client.");

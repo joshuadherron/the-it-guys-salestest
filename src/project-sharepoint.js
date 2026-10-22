@@ -7,7 +7,7 @@ import { sp,lookupId } from "./sharepoint-runtime.js";
 import { refresh } from "./handoff.js";
 import { quoteSend,canQuote } from "./quote-permissions.js";
 import { fail } from "./security.js";
-import { genericEngagement,projectLane } from "./engagement-types.js";
+import { genericEngagement,projectLane,engagementTypes } from "./engagement-types.js";
 import { assertProjectCapability,projectCapability,projectDiscovery } from "./project-contract.js";
 import { buildFields,assertNoPending,submitRequest } from "./sharepoint.js";
 import { duplicateClients } from "./existing-client-rules.js";
@@ -20,7 +20,7 @@ export function projectSharePointRoutes(app,deps={query,transaction,audit,prospe
     let error=null,record=null,prerequisites=[];
     try {const s=sp.ready();prerequisites=projectCapability(s,env);await refresh(p,{sp,query,transaction,audit});record=await sp.client(p);}catch(e){error=e.message;}
     const requests=await query("SELECT * FROM sp_requests WHERE prospect_id IN (SELECT id FROM prospects WHERE business_id=?) ORDER BY id DESC LIMIT 30",[p.business_id]);
-    res.render("project-sharepoint",{p,record,error,prerequisites,requests});
+    res.render("project-sharepoint",{p,record,error,prerequisites,requests,engagementTypes});
   });
   app.post("/prospects/:id/project-sharepoint",quoteSend,async(req,res)=>{
     let body,id;

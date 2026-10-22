@@ -168,6 +168,11 @@ test("lightweight intake reuses discovery revisions and exposes no execution-man
 test("stale lightweight intake submissions cannot overwrite a newer discovery revision",async()=>{
   const h=harness(universalRoutes);h.req.body={...answers,revision:"2",complete:"yes"};await assert.rejects(()=>h.call("POST /prospects/:id/intake"),/another tab/);assert.equal(h.writes.length,0);
 });
+test("saving corrected intake cannot discard prior discovery concerns through posted fields",async()=>{
+  const prior=[{code:"URGENT SECURITY REVIEW"}],h=harness(universalRoutes,{intake:{answers:{...answers,_prior_discovery_flags:prior}}});
+  h.req.body={...answers,revision:"3",complete:"yes",_prior_discovery_flags:[]};await h.call("POST /prospects/:id/intake");
+  const saved=JSON.parse(h.writes.find(w=>w.sql.startsWith("INSERT INTO discoveries")).args[1]);assert.deepEqual(saved._prior_discovery_flags,prior);assert.equal(saved._opportunity_type,"project");
+});
 test("project quotes save a new draft and never invalidate historical approvals",async()=>{
   const h=harness(projectQuoteRoutes);h.req.body={...quoteBody,revise_id:"51"};await h.call("POST /prospects/:id/project-quotes");
   assert.equal(h.writes.filter(w=>w.sql.startsWith("INSERT INTO quotes")).length,1);assert.ok(!h.writes.some(w=>w.sql.includes("approved_at=NULL")));assert.match(h.res.redirected,/quote=88/);

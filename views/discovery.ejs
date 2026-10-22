@@ -8,6 +8,7 @@
 <%= screens[screen-1] %>
 </h1>
 <p>Section <%= screen %> of 3 · <%= d.status %> · Internal only</p>
+<%- include('prior-discovery',{discoveryAnswers:d.answers}) %>
 <div class="no-print">
 <nav class="screen-nav">
 <% for(const [i,name] of screens.entries()){ %>

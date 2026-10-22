@@ -1,0 +1,27 @@
+# Opportunity type correction and SharePoint routing
+
+## Confirmed cause
+
+The reported screen was `/prospects/86/handoff`. The user confirmed that OPP-0086 was saved as **BII / Standardization**. The MIT/BII service choices were therefore the expected legacy handoff template for its saved classification. This was not evidence that a correctly classified Project/Hourly opportunity rendered the MIT/BII form. The public universal-pipeline scripts matched main commit 6ddb7f6, although asset checks alone do not identify a running server process. Migration 013 conservatively classifies legacy opportunities as BII unless their saved lane was Managed IT.
+
+The attempt to correct the saved type exposed a separate implementation restriction: editing rejected all type changes once discovery existed. A further routing issue sent generic `/handoff` GET links to the overview before the dedicated Project-Based route could handle them.
+
+## Changes
+
+- The owner can correct an open opportunity before quotes or non-dry-run SharePoint requests exist. Shared customer identity is retained. Closed sales, recorded authorization, quote history, started workflows and an opportunity's own existing client linkage remain protected. Existing-customer opportunities explicitly linked through the shared business may be corrected without replacing that customer.
+- The correction and normal opportunity edit run in one transaction under the opportunity row lock, with a fresh enabled-owner check. The form records its original type, so a stale type selection is rejected.
+- Existing discovery is archived in an appended `discovery_versions` revision, including its original answers, status, flags and original revision number. No old revision is overwritten/deleted. The active discovery gets a new revision and Draft status. Compatible fields remain when changing within a questionnaire family; changing between detailed MIT/BII and lightweight Project/Hourly starts the appropriate fresh questionnaire.
+- Earlier flags are retained as historical concerns, displayed with a discovery history link, and cannot be stripped by posting client-controlled fields. The prospect hold is never cleared by changing type. Normal owner hold-review and quote-approval protections remain in force.
+- The previous service plan is saved in an activity before stale lane/sequence selections are cleared. The new service lane derives from the saved opportunity type. Project/Hourly always uses Project-Based and never submits MIT/BII enrollment requests. Any Managed IT-only Technical Assessment pipeline selection is returned to Discovery when correcting to another service type, subject to the existing hold restriction.
+- Generic `/handoff` GET links now lead directly to `/project-sharepoint`. Legacy handoff POST commands remain blocked for generic opportunities. Managed IT/BII retain their existing service choices.
+- SharePoint screens show the saved type. Project/Hourly identifies the automatically selected Project-Based lane and the existing-record reuse behavior. Missing schema/flow configuration is displayed explicitly and disables the unavailable button while the server continues enforcing the same prerequisites.
+
+## Data and deployment
+
+No new migration, SharePoint schema edit, Power Automate edit or production data correction is performed by this patch. It reuses `discoveries`, `discovery_versions`, `activities` and the business identity introduced in migration 013. Existing Project-Based prerequisites from UNIVERSAL-PIPELINE-ROLLOUT.md still apply; this patch does not bypass them or implement live flow changes.
+
+After deploying this patch, Josh can open OPP-0086 → Edit opportunity, select One-Time Project or Hourly / Break-Fix, and save, provided it still has no quotes or started SharePoint workflow. Review the new intake and any earlier concerns, complete its required questions, then open SharePoint. The screen should show Project-Based with no MIT/BII service selector. If the business has a record, the existing identity is reused. Missing Project-Based configuration remains visible and blocks new requests until resolved.
+
+Tests cover archive preservation, compatible/incompatible questionnaire changes, old risk preservation, stale edits, permissions, commercial-history restrictions, shared identity, rollback, correct GET routing, rejected legacy POSTs, configuration messaging and escaped discovery history. The full test suite, lint and production source/view validation are required before release.
+
+Verified locally: all **486 tests passed**, lint passed, and the production validation checked 94 JavaScript sources, 36 EJS views and both pinned legacy DOCX masters. No production records or external workflows were changed during these checks.

@@ -145,6 +145,7 @@ export class ProposalStore {
       return projectDiscovery(ctx.p,intake);
     }
     const d=await this.discoveryData(ctx.p.id);
+    if(d.answers._opportunity_type&&d.status!=="Ready for Review")throw new Error("Review discovery for the corrected opportunity type before saving its proposal.");
     if(mvd(d.answers).length)throw new Error("Complete discovery before opening the SharePoint record.");
     const [capture]=await this.query("SELECT actor FROM discovery_versions WHERE prospect_id=? AND revision=?",[ctx.p.id,d.revision]);
     const [release]=await this.query("SELECT actor,notes FROM activities WHERE prospect_id=? AND type='note' AND notes LIKE 'Release hold: %' ORDER BY id DESC LIMIT 1",[ctx.p.id]);

@@ -42,6 +42,11 @@ export function universalRoutes(app,deps={query,transaction,audit,prospect,sync:
     const quotes=await query("SELECT * FROM quotes WHERE prospect_id=? ORDER BY id DESC",[p.id]);
     res.render("opportunity",{p,intake,handoff,quotes,engagementTypes,missing:missingIntake(p.engagement_type,intake?json(intake.answers):{},p),flags:intake?json(intake.flags):[],canSend:canQuote(req.session.user,"quote.send")});
   });
+  app.get("/prospects/:id/discovery-history",async(req,res)=>{
+    const p=await prospect(req.params.id);
+    const versions=await query("SELECT * FROM discovery_versions WHERE prospect_id=? ORDER BY revision DESC LIMIT 200",[p.id]);
+    res.render("discovery-history",{p,versions,json,engagementTypes});
+  });
   const intakePage=async(req,res,override)=>{
     const p=await prospect(req.params.id);
     if(!genericEngagement(p))return res.redirect(`/prospects/${p.id}/discovery/resume`);
@@ -58,6 +63,8 @@ export function universalRoutes(app,deps={query,transaction,audit,prospect,sync:
         if(!genericEngagement(p))fail("Use the detailed Managed IT/BII discovery.");
         if(p.sales_authorized)fail("This opportunity is already handed off. Open a new opportunity for additional discovery or scope.",409);
         const [record]=await query(intakeSelect+" FOR UPDATE",[p.id],c);
+        if(record)answers._prior_discovery_flags=json(record.answers)._prior_discovery_flags||[];
+        answers._opportunity_type=p.engagement_type;
         if(integer(req.body.revision)!==(record?.revision||0))fail("Intake changed in another tab. Reload before saving.",409);
         if(record?.complete&&req.session.user.role!=="owner")fail("Josh must revise completed intake.",403);
         const complete=req.body.complete==="yes",missing=missingIntake(p.engagement_type,answers,p),flags=intakeFlags(answers);

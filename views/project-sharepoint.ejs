@@ -1,11 +1,13 @@
 <%- include('header') %>
 <h1>SharePoint business record</h1>
 <p><a href="/prospects/<%= p.id %>/work"><%= p.opp %> — <%= p.business_name %></a></p>
+<p>Opportunity type: <strong><%= engagementTypes[p.engagement_type] %></strong>. Service lane: <strong>Project-Based</strong> (selected automatically).</p>
 <p>This stores project proposals under the shared business. It does not enroll the business in Managed IT or BII, start managed onboarding, or authorize work.</p>
 <% if(error){ %><p role="alert"><%= error %></p><% } %>
 <% if(prerequisites.length){ %><h2>Configuration required</h2><ul><% for(const item of prerequisites){ %><li><%= item %></li><% } %></ul><% } %>
 <p>Customer record: <%= p.client_id|| (record?'Created; awaiting local linkage':'Not linked') %></p>
-<form method="post"><input type="hidden" name="_csrf" value="<%= csrf %>"><button>Open or reuse SharePoint business record</button></form>
+<p><%= p.client_id||record?'This business already has a SharePoint record. It will be reused; another client record will not be created.':'The app checks this business for an existing SharePoint record before creating one.' %></p>
+<form method="post"><input type="hidden" name="_csrf" value="<%= csrf %>"><button <%= error||prerequisites.length?'disabled':'' %>>Open or reuse SharePoint business record</button></form>
 <p><a href="/prospects/<%= p.id %>/relationship">Owner: link an existing SharePoint customer</a></p>
 <p>Reload this page to check an outstanding request. An uncertain request must be reconciled before another is sent.</p>
 <table><thead><tr><th>Request</th><th>Opportunity</th><th>Status</th><th>Result</th></tr></thead><tbody><% for(const r of requests){ %><tr><td><%= r.action %> #<%= r.id %></td><td><%= r.prospect_id %></td><td><%= r.status %></td><td><%= r.result_message||'' %></td></tr><% } %></tbody></table>

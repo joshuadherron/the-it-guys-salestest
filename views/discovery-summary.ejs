@@ -1,6 +1,7 @@
 <%- include('header') %>
 <a href="/prospects/<%= p.id %>">Back to prospect</a>
 <h1>Discovery review · <%= p.business_name %></h1>
+<p><a href="/prospects/<%= p.id %>/discovery-history">Discovery history</a></p><%- include('prior-discovery',{discoveryAnswers:d.answers}) %>
 <p><%= p.hold?'On Hold':d.status %> · <%= completedGroups %> of 8 groups complete</p>
 <% if(user.role==='owner'){ %>
 <% if(d.status==='Ready for Review'){ %><form method="post" action="/prospects/<%= p.id %>/discovery/reopen"><input type="hidden" name="_csrf" value="<%= csrf %>"><button>Reopen for Alanna</button></form><% } %>

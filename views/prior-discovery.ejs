@@ -1,0 +1,3 @@
+<% const priorFlags=typeof discoveryAnswers==='object'&&Array.isArray(discoveryAnswers?._prior_discovery_flags)?discoveryAnswers._prior_discovery_flags:[];if(priorFlags.length){ %>
+<section class="card"><h2>Concerns from prior discovery</h2><p>The opportunity type changed. Review these earlier findings before approval. Changing type does not resolve a security hold.</p><ul><% for(const flag of priorFlags){ %><li><%= flag.label||flag.code %><%= flag.detail?' — '+flag.detail:'' %></li><% } %></ul><a href="/prospects/<%= p.id %>/discovery-history">Review preserved discovery history</a></section>
+<% } %>

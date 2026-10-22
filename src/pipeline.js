@@ -33,6 +33,7 @@ import { servicePlan } from "./service-plan.js";
 import { engagementType, genericEngagement, projectLane, engagementTypes } from "./engagement-types.js";
 import { attachBusiness } from "./businesses.js";
 import { salesHandoff } from "./sales-handoff.js";
+import { changeOpportunityType } from "./opportunity-type.js";
 export const fields = [
   ...pipelineFields.map(([key, label]) =>
     key === "likely_tier" ? ["likely_service", "Likely Service"] : [key, label],
@@ -371,9 +372,8 @@ export function pipelineRoutes(app) {
         likely_tier: p.likely_tier,
       };
       const data = await validateProspect(body, c);
-      if(data.engagement_type!==p.engagement_type && p.engagement_type && (await query("SELECT id FROM quotes WHERE prospect_id=? LIMIT 1",[p.id],c)).length)
-        fail("This opportunity already has quotes. Open a new opportunity under the same business for a different engagement type.",409);
-      if(data.engagement_type!==p.engagement_type&&p.engagement_type&&(await query("SELECT prospect_id FROM discoveries WHERE prospect_id=? LIMIT 1",[p.id],c)).length)fail("This opportunity already has discovery. Preserve its history and open another opportunity for a different service type.",409);
+      const typeChanged=data.engagement_type!==p.engagement_type;
+      if(typeChanged&&data.service_lane!=="Managed IT"&&data.stage==="Technical Assessment")data.stage="Discovery";
       if ((p.client_id||p.business_id) && data.business_name !== p.business_name)
         fail("Client name is locked after SharePoint creation.");
       if(genericEngagement(p)&&data.stage!==p.stage&&["Closed Won","Closed Lost"].includes(data.stage))fail("Use explicit work authorization or Mark opportunity lost; editing the stage cannot authorize work.",409);
@@ -383,6 +383,7 @@ export function pipelineRoutes(app) {
         fail("Release the urgent hold before changing stage.");
       if (data.stage === "Closed Lost" && req.session.user.role !== "owner")
         fail("Owner access required.", 403);
+      if(typeChanged)await changeOpportunityType(p,data.engagement_type,req.session.user,c,{query,audit},req.body.original_engagement_type);
       const keys = [
         ...fields.map((x) => x[0]),
         ...locationFields.map(([key]) => key),

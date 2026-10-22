@@ -351,6 +351,8 @@ export function quotesRoutes(app) {
       if (p.hold) fail("On Hold — Pending Josh Review");
 
       if (q.status !== "Draft") fail("Only a draft can be approved.");
+      const currentDiscovery=await discovery(p.id,c);
+      if(currentDiscovery.answers._opportunity_type&&currentDiscovery.status!=="Ready for Review")fail("Review discovery for the corrected opportunity type before approving a quote.",409);
 
       const input = json(q.inputs);
 

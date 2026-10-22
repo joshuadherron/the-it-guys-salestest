@@ -26,3 +26,5 @@ Implement schema/domain rules, business navigation/intake, generic quote lifecyc
 ## Scope clarification applied before completion
 
 The user clarified this is CRM, discovery, quoting and sales handoff, not a PSA or accounting replacement. Removed the initially drafted engagement execution table, start/complete-work controls and tax engine. Generic discovery now reuses discoveries/discovery_versions, estimate defaults reuse config_prices, and customer acceptance/handoff reuses activities. Only the shared business identity and opportunity classification require migration 013. No task, time, inventory, billing, invoice, payment or tax functionality is introduced. Detailed rollout prerequisites and acceptance steps are in UNIVERSAL-PIPELINE-ROLLOUT.md.
+
+Follow-up: owners may correct an open opportunity's type after discovery, before commercial workflow activity, with an archived questionnaire and a new draft review. See OPPORTUNITY-TYPE-CORRECTION.md for the confirmed OPP-0086 diagnosis and preserved-history safeguards.
