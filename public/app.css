@@ -1049,3 +1049,18 @@ body:has(.dashboard-stats) .dashboard-collapse>summary.dashboard-collapse-headin
 body:has(.dashboard-stats) .dashboard-collapse>summary.dashboard-collapse-heading .pill{
   font-size:.858rem;
 }
+
+.sales-action-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
+  grid-auto-rows: 1fr;
+  gap: 12px;
+}
+.sales-action-grid > .button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 80px;
+  margin: 0;
+  text-align: center;
+}
