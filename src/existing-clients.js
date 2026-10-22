@@ -6,7 +6,7 @@ import { lanes } from "./config.js";
 import { isExisting, additionalFields, additionalAnswers, clientSummary, selectClient } from "./existing-client-rules.js";
 import { genericEngagement,projectLane,engagementTypes } from "./engagement-types.js";
 import { linkBusinessRecord } from "./businesses.js";
-import { changeOpportunityType } from "./opportunity-type.js";
+import { changeOpportunityType,assertOpportunityRequestHistory } from "./opportunity-type.js";
 export function existingClientRoutes(app, deps = { query, transaction, audit, prospect, sp }) {
   const { query, transaction, audit, prospect, sp } = deps;
   app.get("/prospects/:id/relationship", ownerOnly, async (req, res) => {
@@ -25,8 +25,9 @@ export function existingClientRoutes(app, deps = { query, transaction, audit, pr
       const p = await prospect(req.params.id, c);
       if (p.hold) fail("Release the urgent hold before changing the relationship.");
       if (p.client_id) fail("This opportunity already has a client. Its relationship cannot be reassigned.");
-      if ((await query("SELECT id FROM sp_requests WHERE prospect_id=? AND status NOT IN ('Failed','Rejected','Dryrun')", [p.id], c)).length)
-        fail("Reconcile existing SharePoint requests before linking a client.");
+      // Preserve owner reconciliation/linking after a failed service request.
+      // A type correction below performs the stricter history check again.
+      await assertOpportunityRequestHistory(p,c,query,{allowFailedService:true});
       const type = choice(req.body.relationship_type, ["new_client", "existing_client"]);
       const client = type === "existing_client" ? selectClient(await sp.clients(), text(req.body.client_id || "", 80), sp.ready()) : null;
       const lane = genericEngagement(p)?projectLane:choice(req.body.service_lane||p.service_lane,[...lanes,projectLane]);

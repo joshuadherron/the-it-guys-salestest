@@ -4,6 +4,17 @@ import { engagementTypes,genericEngagement } from "./engagement-types.js";
 import { emptyAnswers,flags } from "./discovery-rules.js";
 import { validateIntake,intakeFlags } from "./engagement-intake.js";
 
+export async function assertOpportunityRequestHistory(p,c,run=query,{allowFailedService=false}={}) {
+  const requests=await run("SELECT id,action,status FROM sp_requests WHERE prospect_id=? ORDER BY id DESC",[p.id],c);
+  // CRM sync is not enrollment. Its completed/unsuccessful history is retained,
+  // while active, uncertain and unrecognized request states still fail closed.
+  const blocked=requests.find(r=>r.status!=="Dryrun"&&!(r.action==="UpsertProspect"&&["Done","Failed","Rejected"].includes(r.status))&&!(allowFailedService&&["Failed","Rejected"].includes(r.status)));
+  if(blocked) {
+    const active=["Preparing","Pending","Processing","Unknown"].includes(blocked.status);
+    fail(`SharePoint request #${blocked.id} (${blocked.action||"unknown action"} / ${blocked.status||"unknown status"}) blocks this change. ${active?"Wait for completion or reconcile the uncertain request":"Review the service workflow and any records it created"} at /prospects/${p.id}/handoff. The opportunity type was not changed.`,409);
+  }
+}
+
 // Caller holds the opportunity row in the same transaction as the final edit.
 // Archive the current discovery before changing questionnaire families. Nothing
 // external is submitted and existing revisions are never replaced or deleted.
@@ -16,7 +27,7 @@ export async function changeOpportunityType(p,next,user,c,storage={query,audit},
   if(actor?.role!=="owner")fail("Owner access is required to change an opportunity type.",403);
   if(p.sales_authorized||["Closed Won","Closed Lost"].includes(p.stage))fail("This sale is closed. Open a new opportunity under the same business for different work.",409);
   if((await run("SELECT id FROM quotes WHERE prospect_id=? LIMIT 1",[p.id],c)).length)fail("This opportunity has quotes. Preserve their pricing and approvals by opening a new opportunity, or remove unneeded drafts before correcting the type.",409);
-  if((await run("SELECT id FROM sp_requests WHERE prospect_id=? AND status<>'Dryrun' LIMIT 1",[p.id],c)).length)fail("This opportunity has SharePoint workflow history. Reconcile it before changing its service type; no workflow was started.",409);
+  await assertOpportunityRequestHistory(p,c,run);
   if(p.client_id&&p.relationship_type!=="existing_client")fail("This opportunity already opened a SharePoint record. Review its workflow before changing type, or open another opportunity under the business.",409);
   const [record]=await run("SELECT * FROM discoveries WHERE prospect_id=? FOR UPDATE",[p.id],c);
   if(record) {

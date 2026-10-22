@@ -8,7 +8,7 @@ The attempt to correct the saved type exposed a separate implementation restrict
 
 ## Changes
 
-- The owner can correct an open opportunity before quotes or non-dry-run SharePoint requests exist. Shared customer identity is retained. Closed sales, recorded authorization, quote history, started workflows and an opportunity's own existing client linkage remain protected. Existing-customer opportunities explicitly linked through the shared business may be corrected without replacing that customer.
+- The owner can correct an open opportunity before quotes or service workflow history exists. Completed/unsuccessful CRM-only syncs are not service enrollment and do not lock the type. Shared customer identity is retained. Closed sales, recorded authorization, quote history, started workflows and an opportunity's own existing client linkage remain protected. Existing-customer opportunities explicitly linked through the shared business may be corrected without replacing that customer.
 - The correction and normal opportunity edit run in one transaction under the opportunity row lock, with a fresh enabled-owner check. The form records its original type, so a stale type selection is rejected.
 - Existing discovery is archived in an appended `discovery_versions` revision, including its original answers, status, flags and original revision number. No old revision is overwritten/deleted. The active discovery gets a new revision and Draft status. Compatible fields remain when changing within a questionnaire family; changing between detailed MIT/BII and lightweight Project/Hourly starts the appropriate fresh questionnaire.
 - Earlier flags are retained as historical concerns, displayed with a discovery history link, and cannot be stripped by posting client-controlled fields. The prospect hold is never cleared by changing type. Normal owner hold-review and quote-approval protections remain in force.
@@ -25,4 +25,16 @@ After deploying this patch, Josh can open OPP-0086 → Edit opportunity, select 
 
 Tests cover archive preservation, compatible/incompatible questionnaire changes, old risk preservation, stale edits, permissions, commercial-history restrictions, shared identity, rollback, correct GET routing, rejected legacy POSTs, configuration messaging and escaped discovery history. The full test suite, lint and production source/view validation are required before release.
 
-Verified locally, including the relationship lane follow-up: all **491 tests passed**, lint passed, and the production validation checked 94 JavaScript sources, 36 EJS views and both pinned legacy DOCX masters. No production records or external workflows were changed during these checks.
+## Completed CRM sync history correction
+
+The user then reported the workflow-history guard blocking OPP-0086 and supplied request history showing `UpsertProspect · Done`, with results confirming updates to Sales Prospects. The guard incorrectly treated every non-dry-run request as service workflow history. Both the opportunity edit and relationship selection paths now use an action-aware check:
+
+- Dry-run requests remain nonblocking.
+- `UpsertProspect` with Done, Failed or Rejected is CRM-only history and does not block classification changes or relationship linking.
+- Preparing, Pending, Processing, Unknown and unrecognized CRM states still block until completed or reconciled.
+- Non-dry-run service requests still protect type changes, including Done/Failed/Rejected service work that may have created records. Errors now identify the exact request ID, action, status and handoff path instead of the blanket history message.
+- The existing owner ability to reconcile a failed service attempt by linking an existing client without changing type is preserved. If that relationship submission also changes type, the stricter service-history check runs again.
+
+No history is deleted or marked successful to bypass a guard. No migration, production record changes or live workflow actions are part of this patch.
+
+Verified locally, including the relationship lane and CRM sync follow-ups: all **508 tests passed**, lint passed, and the production validation checked 94 JavaScript sources, 36 EJS views and both pinned legacy DOCX masters. No production records or external workflows were changed during these checks.

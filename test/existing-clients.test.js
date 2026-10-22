@@ -33,6 +33,7 @@ function harness({existing=true, linked=true, active=false, missing=false, role=
     if(sql.startsWith("SELECT * FROM additional")) return [];
     if(sql.includes("action='TechnicalAssessment' AND status='Done'")) return records.filter(r=>r.status==="Done"&&r.action==="TechnicalAssessment");
     if(sql.startsWith("SELECT id FROM sp_requests")) return records.filter(r=>["Preparing","Pending","Processing","Unknown"].includes(r.status)).map(r=>({id:r.id}));
+    if(sql.startsWith("SELECT id,action,status FROM sp_requests"))return records;
     if(sql.startsWith("SELECT * FROM sp_requests")) return records;
     if(sql.startsWith("INSERT INTO sp_requests")){records.push({id:records.length+1,action:params[1],body:JSON.parse(params[2]),status:"Preparing"});return {insertId:records.length};}
     if(sql.startsWith("UPDATE sp_requests SET status=?,item_id")){records[params[2]-1].status=params[0];return [];}
@@ -174,4 +175,24 @@ test("Project-Based lane selection cannot bypass protected quote history or a st
     await assert.rejects(()=>h.call("POST /prospects/:id/relationship",{relationship_type:"existing_client",client_id:"CL-0007",service_lane:"Project-Based",original_engagement_type:original}),pattern);
     assert.equal(h.p.client_id,undefined);assert.equal(h.p.engagement_type,"bii");assert.equal(h.records.length,0);assert.ok(!h.writes.some(w=>w.sql.startsWith("UPDATE prospects SET relationship_type")));
   }
+});
+test("relationship Project-Based selection accepts completed CRM sync history and creates no external requests",async()=>{
+  const h=harness({existing:false,linked:false,engagementType:"bii",savedDiscovery:true});h.p.service_lane="Business IT Integration";
+  h.records.push({id:202,action:"UpsertProspect",status:"Done"},{id:201,action:"UpsertProspect",status:"Done"});
+  await h.call("POST /prospects/:id/relationship",{relationship_type:"existing_client",client_id:"CL-0007",service_lane:"Project-Based",original_engagement_type:"bii"});
+  assert.equal(h.p.engagement_type,"project");assert.equal(h.p.client_id,"CL-0007");assert.equal(h.records.length,2);assert.ok(h.records.every(r=>r.action==="UpsertProspect"&&r.status==="Done"));
+});
+test("relationship type correction still blocks a completed service request among CRM syncs",async()=>{
+  const h=harness({existing:false,linked:false,engagementType:"bii"});h.p.service_lane="Business IT Integration";
+  h.records.push({id:202,action:"UpsertProspect",status:"Done"},{id:190,action:"CreateClient",status:"Done"});
+  await assert.rejects(()=>h.call("POST /prospects/:id/relationship",{relationship_type:"existing_client",client_id:"CL-0007",service_lane:"Project-Based"}),/#190 \(CreateClient \/ Done\)/);assert.equal(h.p.client_id,undefined);assert.equal(h.p.engagement_type,"bii");
+});
+test("failed service history can still be reconciled by linking an existing customer without changing its type",async()=>{
+  const h=harness({existing:false,linked:false,engagementType:"managed_it"});h.records.push({id:190,action:"CreateClient",status:"Failed"});
+  await h.call("POST /prospects/:id/relationship",{relationship_type:"existing_client",client_id:"CL-0007",service_lane:"Managed IT"});
+  assert.equal(h.p.client_id,"CL-0007");assert.equal(h.p.engagement_type,"managed_it");assert.equal(h.records.length,1);
+});
+test("failed service history is not a bypass for a relationship type correction",async()=>{
+  const h=harness({existing:false,linked:false,engagementType:"bii"});h.p.service_lane="Business IT Integration";h.records.push({id:190,action:"CreateClient",status:"Failed"});
+  await assert.rejects(()=>h.call("POST /prospects/:id/relationship",{relationship_type:"existing_client",client_id:"CL-0007",service_lane:"Project-Based"}),/#190 \(CreateClient \/ Failed\)/);assert.equal(h.p.client_id,undefined);assert.equal(h.p.engagement_type,"bii");
 });

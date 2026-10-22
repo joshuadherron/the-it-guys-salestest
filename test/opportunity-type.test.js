@@ -15,7 +15,7 @@ function harness(options={}) {
     assert.ok(c,"every check and write belongs to the edit transaction");sql.push(statement);
     if(statement.startsWith("SELECT * FROM allowlist"))return options.actor===null?[]:[options.actor||owner];
     if(statement.startsWith("SELECT id FROM quotes"))return options.quotes?[{id:1}]:[];
-    if(statement.startsWith("SELECT id FROM sp_requests"))return options.requests?[{id:2}]:[];
+    if(statement.startsWith("SELECT id,action,status FROM sp_requests"))return Array.isArray(options.requests)?options.requests:options.requests?[{id:2,action:"CreateClient",status:"Pending"}]:[];
     if(statement.startsWith("SELECT * FROM discoveries"))return data.record?[data.record]:[];
     if(statement.startsWith("INSERT INTO discovery_versions")) {
       assert.ok(!data.versions.some(v=>v.revision===args[1]),"revision identities must remain unique");
@@ -59,11 +59,26 @@ test("changing a generic opportunity to Managed IT starts the detailed questionn
 test("same-family Managed IT/BII correction retains detailed answers and resets review",async()=>{
   const h=harness();await h.change("managed_it");assert.equal(JSON.parse(h.data.record.answers)["Q6.3b"].value,"Yes");assert.equal(h.data.record.status,"Draft");
 });
+for(const status of ["Done","Failed","Rejected"])test(`terminal CRM sync ${status} does not lock opportunity type`,async()=>{
+  const requests=[{id:202,action:"UpsertProspect",status},{id:201,action:"UpsertProspect",status:"Done"}],h=harness({requests});
+  await h.change();assert.equal(h.data.record.status,"Draft");assert.equal(h.data.versions.length,3);assert.equal(requests[0].status,status);assert.ok(!h.sql.some(sql=>/UPDATE sp_requests|DELETE FROM sp_requests/.test(sql)));
+});
+for(const status of ["Preparing","Pending","Processing","Unknown","Unexpected"])test(`CRM sync ${status} remains blocked with the exact request identity`,async()=>{
+  const h=harness({requests:[{id:202,action:"UpsertProspect",status}]}),before=structuredClone(h.data);
+  await assert.rejects(()=>h.change(),error=>error.status===409&&error.message.includes(`#202 (UpsertProspect / ${status})`)&&error.message.includes("/prospects/86/handoff"));assert.deepEqual(h.data,before);
+});
+for(const status of ["Done","Failed","Rejected","Unknown"])test(`service request ${status} is not mistaken for routine CRM history`,async()=>{
+  const h=harness({requests:[{id:202,action:"UpsertProspect",status:"Done"},{id:190,action:"CreateClient",status}]}),before=structuredClone(h.data);
+  await assert.rejects(()=>h.change(),error=>error.status===409&&error.message.includes(`#190 (CreateClient / ${status})`));assert.deepEqual(h.data,before);
+});
+test("dry-run service request history remains safe to correct",async()=>{
+  const h=harness({requests:[{id:12,action:"CreateClient",status:"Dryrun"}]});await h.change();assert.equal(h.data.record.status,"Draft");
+});
 for(const [name,options,pattern] of [
   ["revoked user",{actor:null},/Owner access/],
   ["sales account",{actor:{role:"sales"}},/Owner access/],
   ["quoted opportunity",{quotes:true},/has quotes/],
-  ["started workflow",{requests:true},/SharePoint workflow history/],
+  ["started workflow",{requests:true},/SharePoint request #2 \(CreateClient \/ Pending\)/],
   ["own linked record",{p:{client_id:"CL-86",relationship_type:"new_client"}},/already opened a SharePoint record/],
   ["won sale",{p:{stage:"Closed Won"}},/sale is closed/],
   ["lost sale",{p:{stage:"Closed Lost"}},/sale is closed/],
