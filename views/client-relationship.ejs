@@ -9,5 +9,5 @@
 <label><input type="radio" name="relationship_type" value="existing_client">Existing customer / additional service</label>
 <label>Existing SharePoint client<select name="client_id"><option value="">Explicitly select a client</option><% for(const c of clients){ %><option value="<%= c['Client ID'] %>"><%= c.Title %> - <%= c['Client ID'] %> - <%= c['Current Stage'] %> - <%= c['Service Lanes'] %> - <%= c['Stage Status'] %> - <%= c['Next Action'] %></option><% } %></select></label>
 <label>New service workflow lane<select name="service_lane"><% for(const lane of lanes){ %><option <%= p.service_lane===lane?'selected':'' %>><%= lane %></option><% } %></select></label>
-<p>Only the BII to Managed IT transition is supported for existing clients today. Other relationships can be recorded for future workflows.</p><button>Save customer relationship</button></form><% } %>
+<p>Project/hourly opportunities reuse the selected customer and their own work authorization. Managed IT/BII opportunities retain their additional-service discovery and transition checks.</p><button>Save customer relationship</button></form><% } %>
 <%- include('footer') %>

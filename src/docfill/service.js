@@ -11,7 +11,7 @@ export async function prepareQuoteDocument({
   canSend, quote, clientId, workingCopies, requestsPending, signatureStatus,
   completionStatus, masterCopies, expectedKey, data
 }) {
-  if(!quote || !["BII-QSOW","COM-PRP"].includes(expectedKey))
+  if(!quote || !["BII-QSOW","COM-PRP","ENG-PRJ","ENG-HRLY"].includes(expectedKey))
     throw new Error("Unsupported quote document.");
   const working = assertQuoteFillEligible({
     canSend,status:quote.status,clientId,workingCopies,requestsPending,

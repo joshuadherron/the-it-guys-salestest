@@ -5,6 +5,8 @@ import { buildManagedFill,buildBiiFill } from "./quote-fields.js";
 import { prepareQuoteDocument,deliverQuoteDocument } from "./service.js";
 import { inspectPdfText,senderMailbox,senderProfile,sendMode,recipients,quoteEmail } from "./send-policy.js";
 import { chicagoDate } from "./chicago-date.js";
+import { buildProjectFill } from "./project-fields.js";
+import { genericPricing } from "../engagement-types.js";
 const uncertain=e=>!e.status||e.status>=500||e.status===408;
 export class QuoteDelivery {
   constructor({store,resolver,graph,extractText,prices,config,env=process.env}){Object.assign(this,{store,resolver,graph,extractText,prices,config,env});}
@@ -12,10 +14,10 @@ export class QuoteDelivery {
     const ctx=await this.store.begin(id,user,"Fill");let fillId,writing=false;
     try{
       const mode=quoteFillMode(this.env);if(mode==="off")throw new Error("Quote fill is disabled.");
-      const quote={...ctx.q,inputs:json(ctx.q.inputs),line_items:json(ctx.q.line_items)},key=quoteLane(quote.inputs).key;
+      const quote={...ctx.q,inputs:json(ctx.q.inputs),line_items:json(ctx.q.line_items)},key=quoteLane(quote.inputs,undefined,this.env).key;
       const {working,master}=await this.resolver.resolve(quote,ctx.p,key,instanceRef);
       const owner=ctx.q.document_facts?json(ctx.q.document_facts):{};
-      const data=key==="COM-PRP"?buildManagedFill({quote,prospect:ctx.p,owner}):buildBiiFill({quote,prospect:ctx.p,owner,prices:await this.prices()});
+      const data=genericPricing(quote.inputs)?buildProjectFill({quote,prospect:ctx.p}):key==="COM-PRP"?buildManagedFill({quote,prospect:ctx.p,owner}):buildBiiFill({quote,prospect:ctx.p,owner,prices:await this.prices()});
       const prepared=await prepareQuoteDocument({canSend:true,quote,clientId:ctx.p.client_id,workingCopies:[working],requestsPending:false,completionStatus:"Open",signatureStatus:key==="BII-QSOW"?working.signatureStatus:undefined,masterCopies:[master],expectedKey:key,data});
       fillId=await this.store.createFill(ctx,key,working,{report:prepared.report,fields:data.fields},mode);
       await this.store.current(ctx);

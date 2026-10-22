@@ -15,6 +15,11 @@ import { quoteDocumentRoutes } from "./src/docfill/routes.js";
 import { discoveryRoutes } from "./src/discovery.js";
 import { pipelineRoutes } from "./src/pipeline.js";
 import { authRoutes } from "./src/auth.js";
+import { universalRoutes } from "./src/universal-routes.js";
+import { projectQuoteRoutes } from "./src/project-quotes.js";
+import { projectSharePointRoutes } from "./src/project-sharepoint.js";
+import { projectDocumentRoutes } from "./src/docfill/project-routes.js";
+import { engagementGuard } from "./src/engagement-guard.js";
 export const app = express();
 const mode = process.env.SHAREPOINT_WRITE_MODE || "dryrun";
 if (!["dryrun", "live"].includes(mode))
@@ -109,7 +114,12 @@ app.use(async (_req, _res, next) => {
   await sharePointStartup;
   next();
 });
+app.use(engagementGuard());
 pipelineRoutes(app);
+universalRoutes(app);
+projectQuoteRoutes(app);
+projectSharePointRoutes(app);
+projectDocumentRoutes(app);
 prospectDeleteRoutes(app);
 existingClientRoutes(app);
 guidedRoutes(app);

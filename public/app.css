@@ -1039,6 +1039,9 @@ details.dashboard-collapse .prospect-panel-toolbar .prospect-sort-form select{
   }
 }
 
+.table-scroll{overflow-x:auto;max-width:100%}
+[data-project-quote] .table-scroll table{min-width:760px}
+[data-project-quote] .table-scroll input:not([type="checkbox"]){min-width:5rem}
 /* Dashboard accordion titles and count badges: 10% larger. */
 body:has(.dashboard-stats) .dashboard-collapse>summary.dashboard-collapse-heading{
   font-size:1.1rem;

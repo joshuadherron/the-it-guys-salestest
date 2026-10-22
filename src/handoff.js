@@ -20,6 +20,8 @@ import { mvd, flags } from "./discovery-rules.js";
 import { ownerOnly, integer, choice, text, fail } from "./security.js";
 import { lanes } from "./config.js";
 import { servicePlan, validateServicePlan, applyServicePlan } from "./service-plan.js";
+import { genericEngagement } from "./engagement-types.js";
+import { linkBusinessRecord,lockBusinessRequests } from "./businesses.js";
 export { sp, lookupId } from "./sharepoint-runtime.js";
 export async function refresh(
   p,
@@ -81,6 +83,7 @@ export async function refresh(
               [id, client.id, id, p.id],
               c,
             );
+            await linkBusinessRecord(p,id,client.id,c,query);
             await audit(
               c,
               { email: "system" },
@@ -133,11 +136,12 @@ export async function applyRequestStatus(
       );
     if (status === "Done" && r.action === "TechnicalAssessment") {
       await query(
-        "UPDATE prospects SET service_lane='Managed IT' WHERE id=?",
+        "UPDATE prospects SET service_lane='Managed IT',engagement_type='managed_it' WHERE id=?",
         [p.id],
         c,
       );
       p.service_lane = "Managed IT";
+      p.engagement_type = "managed_it";
     }
     if (status === "Done" && r.action === "MarkLost") {
       const applied = await query(
@@ -181,6 +185,7 @@ export function handoffRoutes(
 
   app.get("/prospects/:id/handoff", async (req, res) => {
     const p = await prospect(req.params.id);
+    if(genericEngagement(p))return res.redirect(`/prospects/${p.id}/project-sharepoint`);
     let client = null,
       error = null;
     try {
@@ -262,6 +267,7 @@ export function handoffRoutes(
         c,
       );
       let p = await prospect(req.params.id, c);
+      await lockBusinessRequests(p,query,c);
       if (p.hold) fail("On Hold — Pending Josh Review");
       schema = sp.ready();
       await lockClientRequests(p, query, c);
@@ -426,8 +432,8 @@ export function handoffRoutes(
       }
       if (action !== "TechnicalAssessment" || p.service_lane === lane)
         await query(
-          "UPDATE prospects SET service_lane=? WHERE id=?",
-          [lane, p.id],
+          "UPDATE prospects SET service_lane=?,engagement_type=CASE WHEN ?='Managed IT' THEN 'managed_it' ELSE 'bii' END WHERE id=?",
+          [lane, lane, p.id],
           c,
         );
       await audit(c, req.session.user, "prepare handoff", "sp_request", id);

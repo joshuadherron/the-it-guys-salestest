@@ -1,10 +1,17 @@
+import { genericPricing } from "../engagement-types.js";
+import { projectDocument } from "../project-contract.js";
 // Quote document generation is deliberately read-only until explicitly enabled.
 export const quoteFillMode = (env = process.env) => {
   const mode = env.QUOTE_FILL_MODE || "dryrun";
   if (!["off", "dryrun", "live"].includes(mode)) throw new Error("Invalid QUOTE_FILL_MODE; expected off, dryrun or live.");
   return mode;
 };
-export const quoteLane = (input, requestedKey) => {
+export const quoteLane = (input, requestedKey, env=process.env) => {
+  if(genericPricing(input)) {
+    const key=input.pricingMode==="hourly_v1"?"ENG-HRLY":"ENG-PRJ";
+    if(requestedKey&&requestedKey!==key)throw new Error("The document must match the approved engagement type.");
+    return projectDocument(key,env);
+  }
   if (requestedKey && !["COM-PRP", "BII-QSOW"].includes(requestedKey)) throw new Error("Unsupported quote document key.");
   if (requestedKey === "COM-PRP" && input?.pricingMode !== "managed_v20") throw new Error("Managed IT template requires a Managed IT quote.");
   if (requestedKey === "BII-QSOW" && input?.pricingMode === "managed_v20") throw new Error("Combined quotes require a separately approved and priced BII scope before BII document generation.");

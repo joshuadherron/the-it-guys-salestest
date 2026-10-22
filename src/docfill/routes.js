@@ -10,6 +10,7 @@ import {priceConfig} from "../quotes.js";
 import {quoteLane,quoteFillMode} from "./policy.js";
 import {buildManagedFill,buildBiiFill} from "./quote-fields.js";
 import {documentPrefill} from "./prefill.js";
+import { genericEngagement } from "../engagement-types.js";
 
 const root=join(dirname(fileURLToPath(import.meta.url)),"../..");
 const templateNames={"COM-PRP":"COM-PRP-v1.8.docx","BII-QSOW":"BII-QSOW-v1.6.docx"};
@@ -31,6 +32,7 @@ export function quoteDocumentRoutes(app,dependencies={query,audit,json,transacti
   if(!q)fail("Quote not found.",404);
   if(q.status!=="Approved")fail("Only approved quotes can generate contractual documents.");
   const p=await prospect(q.prospect_id);
+  if(genericEngagement(p))return res.redirect(`/quotes/${q.id}/project-document`);
   if(p.hold)fail("Prospect is on hold.");
   if(!q.quote_number){q.quote_number=formattedQuoteNumber(q);await query("UPDATE quotes SET quote_number=? WHERE id=? AND quote_number IS NULL",[q.quote_number,q.id]);}
   const input=json(q.inputs);
@@ -46,6 +48,7 @@ export function quoteDocumentRoutes(app,dependencies={query,audit,json,transacti
   if(!q)fail("Quote not found.",404);
   if(q.status!=="Approved")fail("Only approved quotes can generate contractual documents.");
   const p=await prospect(q.prospect_id);
+  if(genericEngagement(p))fail("Use the project/hourly proposal form.",409);
   if(p.hold)fail("Prospect is on hold.");
   if(!q.quote_number){q.quote_number=formattedQuoteNumber(q);await query("UPDATE quotes SET quote_number=? WHERE id=? AND quote_number IS NULL",[q.quote_number,q.id]);}
   const input=json(q.inputs);

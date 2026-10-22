@@ -40,7 +40,9 @@ import {
 } from "../src/prospect-data.js";
 import { importNames, needsLane } from "../src/sales-import.js";
 import { relationshipLabel } from "../src/prospect-lifecycle.js";
+import { engagementTypes } from "../src/engagement-types.js";
 const common = {
+  engagementTypes,
   relationshipLabel,
   structuredFields,
   locationFields,

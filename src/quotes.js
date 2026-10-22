@@ -4,6 +4,7 @@ import { ownerOnly, integer, fail } from "./security.js";
 import { prospect } from "./pipeline.js";
 import { discovery } from "./discovery.js";
 import { answer, value } from "./discovery-rules.js";
+import { genericEngagement } from "./engagement-types.js";
 import { platforms, oneOffItems, priceQuote, priceManagedServices } from "./pricing.js";
 
 export async function priceConfig(c) {
@@ -130,6 +131,7 @@ function combinedManagedQuote(input, prices) {
 export function quotesRoutes(app) {
   app.get("/prospects/:id/quotes", async (req, res) => {
     const p = await prospect(req.params.id);
+    if(genericEngagement(p))return res.redirect(`/prospects/${p.id}/project-quotes`);
     const d = await discovery(p.id);
 
     const quotes = await query(

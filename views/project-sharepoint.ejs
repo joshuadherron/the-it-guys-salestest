@@ -1,0 +1,13 @@
+<%- include('header') %>
+<h1>SharePoint business record</h1>
+<p><a href="/prospects/<%= p.id %>/work"><%= p.opp %> — <%= p.business_name %></a></p>
+<p>This stores project proposals under the shared business. It does not enroll the business in Managed IT or BII, start managed onboarding, or authorize work.</p>
+<% if(error){ %><p role="alert"><%= error %></p><% } %>
+<% if(prerequisites.length){ %><h2>Configuration required</h2><ul><% for(const item of prerequisites){ %><li><%= item %></li><% } %></ul><% } %>
+<p>Customer record: <%= p.client_id|| (record?'Created; awaiting local linkage':'Not linked') %></p>
+<form method="post"><input type="hidden" name="_csrf" value="<%= csrf %>"><button>Open or reuse SharePoint business record</button></form>
+<p><a href="/prospects/<%= p.id %>/relationship">Owner: link an existing SharePoint customer</a></p>
+<p>Reload this page to check an outstanding request. An uncertain request must be reconciled before another is sent.</p>
+<table><thead><tr><th>Request</th><th>Opportunity</th><th>Status</th><th>Result</th></tr></thead><tbody><% for(const r of requests){ %><tr><td><%= r.action %> #<%= r.id %></td><td><%= r.prospect_id %></td><td><%= r.status %></td><td><%= r.result_message||'' %></td></tr><% } %></tbody></table>
+<% if(user.role==='owner'){for(const r of requests.filter(r=>['Unknown','Preparing'].includes(r.status))){ %><form method="post" action="/requests/<%= r.id %>/reconcile" class="card"><input type="hidden" name="_csrf" value="<%= csrf %>"><p>Reconcile request #<%= r.id %> against its exact saved title. Wait two minutes after submission.</p><label>Reconciliation note<textarea name="note" required></textarea></label><label><input type="checkbox" name="confirm_absent" value="yes">I confirmed the remote request is absent, if no exact match is found.</label><button>Reconcile existing request</button></form><% }} %>
+<%- include('footer') %>

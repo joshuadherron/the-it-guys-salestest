@@ -11,7 +11,8 @@
     "migrate": "node scripts/migrate.js",
     "seed": "node scripts/seed.js",
     "test": "node --test",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "build": "node scripts/check-build.js"
   },
   "dependencies": {
     "@azure/msal-node": "^7.0.0",

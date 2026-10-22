@@ -30,6 +30,9 @@ import { commitImport } from "./import-commit.js";
 import { dispatchProspectSync, syncStatus } from "./prospect-sync.js";
 import { relationshipLabel } from "./prospect-lifecycle.js";
 import { servicePlan } from "./service-plan.js";
+import { engagementType, genericEngagement, projectLane, engagementTypes } from "./engagement-types.js";
+import { attachBusiness } from "./businesses.js";
+import { salesHandoff } from "./sales-handoff.js";
 export const fields = [
   ...pipelineFields.map(([key, label]) =>
     key === "likely_tier" ? ["likely_service", "Likely Service"] : [key, label],
@@ -84,6 +87,17 @@ export async function prospect(id, c) {
     c,
   );
   if (!p) fail("Opportunity not found.", 404);
+  if(p.business_id) {
+    const [business]=await query("SELECT * FROM businesses WHERE id=?",[p.business_id],c);
+    if(!business)fail("The opportunity's business identity is missing. Ask an admin to reconcile it.",409);
+    p.business_relationship_status=business.relationship_status;
+    p.client_id ||= business.client_id;
+    p.client_item_id ||= business.client_item_id;
+    p.sharepoint_record_id ||= business.client_id;
+  }
+  if(genericEngagement(p)) {
+    p.sales_authorized=!!await salesHandoff(p.id,c);
+  }
   p.opp = opportunity(p.id);
   return p;
 }
@@ -127,7 +141,9 @@ export async function validateProspect(body, c, runQuery = query) {
   result.stage = stage.name;
   if (result.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(result.email))
     fail("Enter a valid email address.");
-  result.service_lane = body.service_lane
+  result.engagement_type=engagementType(body.engagement_type || (body.service_lane==="Managed IT"?"managed_it":"bii"));
+  result.opportunity_title=text(body.opportunity_title||"",255);
+  result.service_lane = genericEngagement(result) ? projectLane : body.engagement_type ? (result.engagement_type==="managed_it"?"Managed IT":"Business IT Integration") : body.service_lane
     ? choice(body.service_lane, lanes)
     : null;
   result.legacy_stage = body.legacy_stage ? text(body.legacy_stage, 80) : null;
@@ -147,6 +163,11 @@ export async function insertProspect(
   c,
   storage = { query, audit },
 ) {
+  if(body.business_id) {
+    const [business]=await storage.query("SELECT * FROM businesses WHERE id=? FOR UPDATE",[integer(body.business_id)],c);
+    if(!business)fail("Business not found.",404);
+    body={...body,business_name:business.name,contact_name:body.contact_name||business.contact_name,email:body.email||business.email,phone:body.phone||business.phone};
+  }
   const p = await validateProspect(body, c, storage.query);
   if (p.stage === "Closed Lost" && user.role !== "owner")
     fail("Owner access required.", 403);
@@ -158,6 +179,8 @@ export async function insertProspect(
     "legacy_stage",
     "import_source",
     "likely_tier",
+    "engagement_type",
+    "opportunity_title",
   ];
   const r = await storage.query(
     `INSERT INTO prospects (${keys.join(",")}) VALUES (${keys.map(() => "?").join(",")})`,
@@ -165,6 +188,7 @@ export async function insertProspect(
     c,
   );
   await storage.audit(c, user, "create", "prospect", r.insertId);
+  await attachBusiness({...p,id:r.insertId},body.business_id,user,c,{...storage,legacyImport:!body.engagement_type&&!body.business_id});
   return r.insertId;
 }
 export async function weekly(week) {
@@ -228,6 +252,7 @@ export function pipelineRoutes(app) {
     );
     res.render("pipeline", {
       rows,
+      engagementTypes,
       stages,
       search,
       opportunity,
@@ -239,9 +264,14 @@ export function pipelineRoutes(app) {
       sortOptions,
     });
   });
-  app.get("/prospects/new", async (req, res) =>
+  app.get("/prospects/new", async (req, res) => {
+    const businesses=await query("SELECT * FROM businesses ORDER BY name,id");
+    const business=req.query.business_id?businesses.find(b=>String(b.id)===String(integer(req.query.business_id))):null;
+    if(req.query.business_id&&!business)fail("Business not found.",404);
     res.render("prospect-form", {
-      p: {},
+      p: business?{...business,business_id:business.id,business_name:business.name,id:undefined,engagement_type:"project"}: {engagement_type:"project"},
+      businesses,
+      engagementTypes,
       fields,
       frequencies,
       services,
@@ -249,8 +279,8 @@ export function pipelineRoutes(app) {
       structuredFields,
       stages: await query("SELECT * FROM config_stages ORDER BY sort_order"),
       owners: await query("SELECT email FROM allowlist WHERE enabled=TRUE"),
-    }),
-  );
+    });
+  });
   app.get("/zip-lookup/:zip", async (req, res) => {
     const zip = String(req.params.zip || "").trim();
     if (!/^\d{5}$/.test(zip))
@@ -294,6 +324,7 @@ export function pipelineRoutes(app) {
   });
   app.get("/prospects/:id", async (req, res) => {
     const p = await prospect(req.params.id);
+    if(genericEngagement(p))return res.redirect(`/prospects/${p.id}/work`);
     const activities = await query(
       "SELECT * FROM activities WHERE prospect_id=? ORDER BY occurred_on DESC,id DESC",
       [p.id],
@@ -318,6 +349,7 @@ export function pipelineRoutes(app) {
   app.get("/prospects/:id/edit", async (req, res) =>
     res.render("prospect-form", {
       p: await prospect(req.params.id),
+      engagementTypes,
       fields,
       frequencies,
       services,
@@ -339,8 +371,13 @@ export function pipelineRoutes(app) {
         likely_tier: p.likely_tier,
       };
       const data = await validateProspect(body, c);
-      if (p.client_id && data.business_name !== p.business_name)
+      if(data.engagement_type!==p.engagement_type && p.engagement_type && (await query("SELECT id FROM quotes WHERE prospect_id=? LIMIT 1",[p.id],c)).length)
+        fail("This opportunity already has quotes. Open a new opportunity under the same business for a different engagement type.",409);
+      if(data.engagement_type!==p.engagement_type&&p.engagement_type&&(await query("SELECT prospect_id FROM discoveries WHERE prospect_id=? LIMIT 1",[p.id],c)).length)fail("This opportunity already has discovery. Preserve its history and open another opportunity for a different service type.",409);
+      if ((p.client_id||p.business_id) && data.business_name !== p.business_name)
         fail("Client name is locked after SharePoint creation.");
+      if(genericEngagement(p)&&data.stage!==p.stage&&["Closed Won","Closed Lost"].includes(data.stage))fail("Use explicit work authorization or Mark opportunity lost; editing the stage cannot authorize work.",409);
+      if(genericEngagement(p)&&((p.sales_authorized&&data.stage!==p.stage)||(data.status==="Lost"&&p.status!=="Lost")))fail("Use the sales outcome workflow. Recorded acceptance and handoff cannot be changed by editing pipeline fields.",409);
       guardPipelineEdit(p, data);
       if (p.hold && data.stage !== p.stage)
         fail("Release the urgent hold before changing stage.");
@@ -350,6 +387,7 @@ export function pipelineRoutes(app) {
         ...fields.map((x) => x[0]),
         ...locationFields.map(([key]) => key),
         ...structuredFields.map(([key]) => key),
+        "engagement_type","opportunity_title","service_lane",
       ];
       await query(
         `UPDATE prospects SET ${keys.map((k) => k + "=?").join(",")} WHERE id=?`,

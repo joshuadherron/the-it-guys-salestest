@@ -2,6 +2,7 @@ import { quoteLane } from "./policy.js";
 import { assertNoPending } from "../sharepoint.js";
 import { assertTagset } from "./tagsets.js";
 import { listTags } from "./fill-docx.js";
+import { projectDocument,projectDocumentKeys,assertProjectCapability } from "../project-contract.js";
 const masterNames={
   "COM-PRP":["COM-PRP-v1.8.docx","The_IT_Guys_Managed_IT_Quote_Template_v1.8.docx"],
   "BII-QSOW":["BII-QSOW-v1.6.docx","The_IT_Guys_BII_Short_Form_Quote_SOW_Template_v1.6.docx"],
@@ -11,7 +12,9 @@ export class SharePointQuotes {
   async working(prospect,key,quoteId,itemId){
     const schema=this.sp.ready();
     if(!prospect.client_id||!await this.sp.client(prospect))throw new Error("The linked SharePoint client could not be read.");
-    const workflow=key==="COM-PRP"?"MIT-05":"BII-05";
+    const generic=projectDocumentKeys.includes(key);
+    if(generic)assertProjectCapability(schema,this.env);
+    const workflow=generic?projectDocument(key,this.env).workflow:key==="COM-PRP"?"MIT-05":"BII-05";
     const allItems=await this.sp.workItems(prospect.client_id,true);
     assertNoPending(await this.sp.requests(),schema,{...prospect,work_item_ids:allItems.map(i=>i.id)});
     const items=allItems.filter(i=>i.workflowId===workflow&&i.clientId===prospect.client_id&&!["Complete","Cancelled","Not Required"].includes(i.status) && (!quoteId || String(i.instanceRef)===String(quoteId)));
@@ -39,12 +42,13 @@ export class SharePointQuotes {
     return {...fresh,driveId:drive.parentReference.driveId,itemId:drive.id,folderId:folder.id,workflowId:workflow,status:"Open",signatureStatus:item.signatureStatus};
   }
   async resolve(quote,prospect,key,quoteId){
-    quoteLane(quote.inputs,key);
+    quoteLane(quote.inputs,key,this.env);
     const working=await this.working(prospect,key,quoteId);
     return {working,master:await this.master(key)};
   }
   async master(key){
-    if(!masterNames[key])throw new Error("Unsupported quote master key.");
+    const names=projectDocumentKeys.includes(key)?[projectDocument(key,this.env).name]:masterNames[key];
+    if(!names)throw new Error("Unsupported quote master key.");
     const schema=this.sp.ready();
     const lists=await this.graph.all(`/sites/${schema.siteId}/lists?$select=id,displayName`);
     const matches=lists.filter(l=>l.displayName==="Operational Standards & Templates");
@@ -57,8 +61,8 @@ export class SharePointQuotes {
     };
     const keyColumn=column(this.env.QUOTE_MASTER_KEY_COLUMN,"Document Key"),statusColumn=column(this.env.QUOTE_MASTER_STATUS_COLUMN,"Status");
     const candidates=(await this.graph.all(`/sites/${schema.siteId}/lists/${list.id}/items?$expand=fields,driveItem`)).filter(r=>r.fields?.[keyColumn]===key&&r.fields?.[statusColumn]==="Approved");
-    const rows=candidates.filter(r=>masterNames[key].includes(r.driveItem?.name));
-    if(rows.length!==1)throw new Error(`Expected exactly one promoted Approved ${key} master of the pinned quote version; found ${rows.length}. Expected filename: ${masterNames[key].join(" or ")}. Approved filenames found: ${candidates.map(r=>r.driveItem?.name||"(no drive item)").join(", ")||"none"}.`);
+    const rows=candidates.filter(r=>names.includes(r.driveItem?.name));
+    if(rows.length!==1)throw new Error(`Expected exactly one promoted Approved ${key} master of the pinned quote version; found ${rows.length}. Expected filename: ${names.join(" or ")}. Approved filenames found: ${candidates.map(r=>r.driveItem?.name||"(no drive item)").join(", ")||"none"}.`);
     const row=rows[0],d=row.driveItem;
     if(!d.id||!d.parentReference?.driveId)throw new Error("Approved master drive item is unavailable.");
     const content=await this.graph.quoteContent(d.parentReference.driveId,d.id);

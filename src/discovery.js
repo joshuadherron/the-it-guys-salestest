@@ -20,6 +20,7 @@ import {
 } from "./discovery-prefill.js";
 import { integer, ownerOnly, text, fail } from "./security.js";
 import { queueNotice, deliverNotice } from "./notifications.js";
+import { genericEngagement } from "./engagement-types.js";
 export async function discovery(id, c) {
   const [d] = await query(
     "SELECT * FROM discoveries WHERE prospect_id=?",
@@ -52,6 +53,7 @@ export async function renderDiscoverySummary(
 ) {
   const p = await loaders.prospect(req.params.id),
     d = await loaders.discovery(p.id);
+  if(genericEngagement(p))return res.redirect(`/prospects/${p.id}/intake`);
   res.render("discovery-summary", {
     p,
     d,
@@ -65,6 +67,7 @@ export async function renderDiscoverySummary(
 export function discoveryRoutes(app) {
   app.get("/prospects/:id/discovery/resume", async (req, res) => {
     const p = await prospect(req.params.id);
+    if(genericEngagement(p))return res.redirect(`/prospects/${p.id}/intake`);
     const d = await discovery(p.id);
     // Resume at the first unanswered visible question if no saved page exists.
     const next = schema.find(q =>
@@ -80,6 +83,7 @@ export function discoveryRoutes(app) {
   );
   app.get("/prospects/:id/discovery/:screen", async (req, res) => {
     const p = await prospect(req.params.id);
+    if(genericEngagement(p))return res.redirect(`/prospects/${p.id}/intake`);
     const d = await discovery(p.id);
     const screen = integer(req.params.screen, 9);
     if (screen < 1) fail("Unknown screen.");

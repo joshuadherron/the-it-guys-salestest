@@ -7,6 +7,8 @@ import {
 } from "./workflow-contract.js";
 import { lanes } from "./config.js";
 import { prospectLifecycle } from "./prospect-lifecycle.js";
+import { genericEngagement,projectLane } from "./engagement-types.js";
+import { assertProjectCapability,projectDocument } from "./project-contract.js";
 export const sitePath =
   "/sites/theitguys713.sharepoint.com:/sites/TheITGuysOperations";
 export const required = {
@@ -166,7 +168,10 @@ function payloadData(action, p, lane, options) {
       syncedAt: new Date().toISOString(),
     };
   }
-  if (!lanes.includes(lane)) throw new Error("Choose a service lane.");
+  const project=lane===projectLane;
+  if(project&&(!genericEngagement(p)||!p.business_id||!["CreateClient","CreateWorkingCopy"].includes(action)))throw new Error("Project-Based requests require a linked project/hourly opportunity and the project request contract.");
+  if(project&&action==="CreateWorkingCopy"&&(!/^PRJ-[A-Z0-9-]+$/.test(options.workflowId||"")||!/^\d+$/.test(options.instanceRef||"")))throw new Error("Project working copies require a PRJ workflow and a quote-specific numeric instance reference.");
+  if (!lanes.includes(lane)&&!project) throw new Error("Choose a service lane.");
   if (action === "CreateClient") {
     if (p.client_id || p.relationship_type === "existing_client")
       throw new Error("Existing or linked customers cannot create another SharePoint client.");
@@ -177,16 +182,18 @@ function payloadData(action, p, lane, options) {
       Array.isArray(options.discovery)
     )
       throw new Error("A discovery snapshot is required to create the client.");
+    if(project&&(options.discovery.contractVersion!=="project-v1"||String(options.discovery.businessId)!==String(p.business_id)))throw new Error("Project creation requires the completed, versioned project intake snapshot.");
     return {
       opportunityId: p.opp,
       client: p.business_name,
       stage: "Sales Discovery",
       serviceLane: lane,
       discovery: options.discovery,
+      ...(project?{contractVersion:"project-v1",businessId:String(p.business_id),engagementType:p.engagement_type}:{}),
     };
   }
   if (action === "MarkLost") return lostPayload(p, options);
-  if (actionTypes[action]) return workPayload(action, p, lane, options);
+  if (actionTypes[action]) return {...workPayload(action, p, lane, options),...(project?{contractVersion:"project-v1",serviceLane:projectLane,businessId:String(p.business_id),opportunityId:p.opp,engagementType:p.engagement_type}: {})};
   if (!p.client_id) throw new Error("Open the SharePoint record first.");
   if (action === "Quoting" && lane === "Business IT Integration")
     return {
@@ -212,7 +219,10 @@ export function buildFields(
   at = new Date(),
   userLookupId,
   options = {},
+  env=process.env,
 ) {
+  if(lane===projectLane)assertProjectCapability(schema,env);
+  if(lane===projectLane&&action==="CreateWorkingCopy"&&options.workflowId!==projectDocument(p.engagement_type==="hourly"?"ENG-HRLY":"ENG-PRJ",env).workflow)throw new Error("The project working-copy workflow must match the approved quote type.");
   if (schema.actionErrors?.[action]?.length)
     throw new Error(schema.actionErrors[action].join(" "));
   const body = payload(action, p, lane, options);
@@ -348,6 +358,7 @@ export class SharePoint {
         requestListId,
         clientListId,
         checkedAt: new Date().toISOString(),
+        businessColumn:clients.find(c=>c.name==="TIG_SalesBusinessID"&&c.text&&c.enforceUniqueValues&&c.indexed)?.name||null,
       };
       await this.work.check(lists);
       this.cache.prospectRecordColumn=null;
@@ -417,6 +428,7 @@ export class SharePoint {
     const matches = rows.filter(
       (row) =>
         (p.client_id ? row.fields[m["Client ID"].name] === p.client_id :
+          (s.businessColumn&&p.business_id&&String(row.fields[s.businessColumn])===String(p.business_id)) ||
           p.relationship_type !== "existing_client" && row.fields[m["Opportunity ID"].name] === p.opp),
     );
     if (matches.length > 1)

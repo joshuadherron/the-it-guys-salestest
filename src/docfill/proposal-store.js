@@ -1,3 +1,4 @@
+import { intakeSelect } from "../engagement-intake.js";
 import { randomUUID, createHash } from "node:crypto";
 import { query,transaction,audit,json } from "../db.js";
 import { prospect } from "../pipeline.js";
@@ -12,6 +13,10 @@ import { quoteLane } from "./policy.js";
 import { servicePlan } from "../service-plan.js";
 import { duplicateClients } from "../existing-client-rules.js";
 import { dispatchProspectSync } from "../prospect-sync.js";
+import { genericEngagement,projectLane } from "../engagement-types.js";
+import { assertProjectCapability,projectDiscovery } from "../project-contract.js";
+import { linkBusinessRecord,lockBusinessRequests } from "../businesses.js";
+import { assertProjectApproval } from "../project-quotes.js";
 
 const canonical = value => Array.isArray(value) ? value.map(canonical)
   : value && typeof value === "object" ? Object.fromEntries(Object.keys(value).sort().map(key=>[key,canonical(value[key])])) : value;
@@ -32,6 +37,10 @@ export class ProposalStore {
       const [actor]=await this.query("SELECT * FROM allowlist WHERE email=? AND enabled=TRUE",[user.email],c);
       if(!canQuote(actor,"quote.send"))throw new Error("Permission quote.send is required.");
       if(q.status!=="Approved"||p.hold||p.stage==="Closed Lost")throw new Error("Save proposal requires an Approved quote and an opportunity that is not On Hold or Lost.");
+      if(genericEngagement(p)) {
+        const [intake]=await this.query(intakeSelect,[p.id],c);
+        await assertProjectApproval(p,q,intake);
+      }
       const hash=snapshot(q);
       const approvalHash=proposalApprovalSnapshot(q);
       await this.query("INSERT IGNORE INTO quote_proposal_states (quote_id,snapshot_hash) VALUES (?,?)",[id,approvalHash],c);
@@ -72,8 +81,9 @@ export class ProposalStore {
   }
   async validate(ctx,lane) {
     const s=this.sp.ready();
+    if(genericEngagement(ctx.p))assertProjectCapability(s,this.env);
     if(s.workErrors?.length||s.definitionErrors?.length)throw new Error([...(s.workErrors||[]),...(s.definitionErrors||[])].join(" "));
-    const definitions=s.definitions.filter(d=>d.id===lane.workflow&&d.lane===(lane.key==="COM-PRP"?"Managed IT":"Business IT Integration"));
+    const definitions=s.definitions.filter(d=>d.id===lane.workflow&&d.lane===(lane.lane||(lane.key==="COM-PRP"?"Managed IT":"Business IT Integration")));
     if(definitions.length!==1||!definitions[0].active||!definitions[0].createCopy)
       throw new Error(`Set ${lane.workflow} in Client Workflow Definitions to Active = Yes and Create Client Copy = Yes. Josh must change the SharePoint row before Save can continue.`);
     // Existing successful legacy fills have their own unambiguous drive-item linkage.
@@ -95,15 +105,17 @@ export class ProposalStore {
     if(!clientId)throw new Error("SharePoint record has no Client ID. Wait for the flow to finish.");
     const stage=row.fields[s.maps.clients["Current Stage"].name]||null;
     if(String(stage).startsWith("Closed"))throw new Error("This SharePoint engagement is closed. Josh must review it before saving a proposal.");
-    const lane=quoteLane(json(ctx.q.inputs)).key==="COM-PRP"?"Managed IT":"Business IT Integration";
+    const spec=quoteLane(json(ctx.q.inputs),undefined,this.env);
+    const lane=spec.lane||(spec.key==="COM-PRP"?"Managed IT":"Business IT Integration");
     const configured=s.maps.clients["Service Lanes"];
     if(configured) {
       const value=row.fields[configured.name],lanes=Array.isArray(value)?value:[value];
-      if(!lanes.includes(lane))throw new Error("The quote lane is not enabled on this SharePoint record. Complete the existing additional-service transition before creating its proposal copy.");
+      if(!lanes.includes(lane)&&!genericEngagement(ctx.p))throw new Error("The quote lane is not enabled on this SharePoint record. Complete the existing additional-service transition before creating its proposal copy.");
     }
     const changed=ctx.p.client_id!==clientId||ctx.p.sharepoint_record_id!==clientId||String(ctx.p.client_item_id)!==String(row.id);
     if(changed)await this.transaction(async c=>{
       await this.query("UPDATE prospects SET client_id=?,sharepoint_record_id=?,client_item_id=? WHERE id=?",[clientId,clientId,row.id,ctx.p.id],c);
+      await linkBusinessRecord(ctx.p,clientId,row.id,c,this.query);
       await this.audit(c,ctx.actor,"link SharePoint opportunity record","prospect",ctx.p.id);
     });
     Object.assign(ctx.p,{client_id:clientId,sharepoint_record_id:clientId,client_item_id:row.id});
@@ -116,7 +128,7 @@ export class ProposalStore {
     const all=(await this.sp.workItems(ctx.p.client_id,true)).filter(i=>i.workflowId===lane.workflow);
     let items=all.filter(i=>String(i.instanceRef)===String(ctx.q.id));
     if(!items.length&&ctx.state.working_item_id)items=all.filter(i=>String(i.id)===String(ctx.state.working_item_id));
-    if(!items.length&&!ctx.state.copy_request_id) {
+    if(!items.length&&!ctx.state.copy_request_id&&!genericEngagement(ctx.p)) {
       const legacy=all.filter(i=>!i.instanceRef&&!["Complete","Cancelled","Not Required"].includes(i.status));
       const claims=await this.query("SELECT working_item_id FROM quote_proposal_states WHERE working_item_id IS NOT NULL AND quote_id<>?",[ctx.q.id]);
       const fills=await this.query("SELECT item_id FROM quote_fills WHERE client_id=? AND quote_id<>? AND status='Succeeded'",[ctx.p.client_id,ctx.q.id]);
@@ -128,6 +140,10 @@ export class ProposalStore {
     return items[0];
   }
   async discovery(ctx) {
+    if(genericEngagement(ctx.p)) {
+      const [intake]=await this.query(intakeSelect,[ctx.p.id]);
+      return projectDiscovery(ctx.p,intake);
+    }
     const d=await this.discoveryData(ctx.p.id);
     if(mvd(d.answers).length)throw new Error("Complete discovery before opening the SharePoint record.");
     const [capture]=await this.query("SELECT actor FROM discovery_versions WHERE prospect_id=? AND revision=?",[ctx.p.id,d.revision]);
@@ -139,9 +155,15 @@ export class ProposalStore {
     const s=this.sp.ready(); let body,id;
     await this.transaction(async c=>{
       const p=await this.prospect(ctx.p.id,c);
+      if(p.business_id)await lockBusinessRequests(p,this.query,c,[ctx.state.record_request_id,ctx.state.record_sync_request_id,ctx.state.copy_request_id].filter(Boolean));
+      Object.assign(ctx.p,{client_id:p.client_id,client_item_id:p.client_item_id});
       const [q]=await this.query("SELECT * FROM quotes WHERE id=? FOR UPDATE",[ctx.q.id],c);
       const [actor]=await this.query("SELECT * FROM allowlist WHERE email=? AND enabled=TRUE",[ctx.actor.email],c);
       if(p.hold||p.stage==="Closed Lost"||q.status!=="Approved"||snapshot(q)!==ctx.hash||!canQuote(actor,"quote.send"))throw new Error("Approval, hold or permission changed. Reload before saving.");
+      if(genericEngagement(p)) {
+        const [intake]=await this.query(intakeSelect,[p.id],c);
+        await assertProjectApproval(p,q,intake);
+      }
       const [lease]=await this.query("SELECT operation_token,lease_until>UTC_TIMESTAMP() AS valid FROM quote_proposal_states WHERE quote_id=? FOR UPDATE",[q.id],c);
       if(lease?.operation_token!==ctx.token||!lease.valid)throw new Error("Save proposal operation expired. Resume from the progress page.");
       if(p.client_id) {
@@ -155,8 +177,8 @@ export class ProposalStore {
         if(duplicateClients(p,await this.sp.clients(),s).length)throw new Error("Possible existing customer found. Josh must review and link the existing record on Customer relationship before saving.");
       }
       const planned=servicePlan(p);
-      const requestLane=action==="CreateClient"&&p.planned_service_lanes?planned.startingLane:lane.key==="COM-PRP"?"Managed IT":"Business IT Integration";
-      body=buildFields(s,action,p,requestLane,actor.email,new Date(),lookupId(actor.email),options);
+      const requestLane=genericEngagement(p)?projectLane:action==="CreateClient"&&p.planned_service_lanes?planned.startingLane:lane.key==="COM-PRP"?"Managed IT":"Business IT Integration";
+      body=buildFields(s,action,p,requestLane,actor.email,new Date(),lookupId(actor.email),options,this.env);
       // Stable, quote-specific title supports exact reconciliation after transport uncertainty.
       body.fields[s.maps.requests.Title.name]=`SALESAPP-${p.opp}-QUOTE-${q.id}-${action}-${randomUUID()}`;
       const r=await this.query("INSERT INTO sp_requests (prospect_id,action,request_json,status) VALUES (?,?,?,'Preparing')",[p.id,action,JSON.stringify(body)],c);id=r.insertId;

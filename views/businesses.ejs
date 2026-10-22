@@ -1,0 +1,3 @@
+<%- include('header') %><h1>Businesses</h1><p>One business can have multiple opportunities, quotes and sales handoffs.</p>
+<form method="get"><label>Search businesses<input name="q" value="<%= search %>"></label><button>Search</button></form><p><a href="/prospects/new">New business / opportunity</a></p>
+<table><thead><tr><th>Business</th><th>Relationship</th><th>SharePoint ID</th><th>Opportunities</th></tr></thead><tbody><% for(const b of businesses){ %><tr><td><a href="/businesses/<%= b.id %>"><%= b.name %></a></td><td><%= b.relationship_status %></td><td><%= b.client_id||'Not linked' %></td><td><%= b.opportunities %></td></tr><% } %></tbody></table><%- include('footer') %>

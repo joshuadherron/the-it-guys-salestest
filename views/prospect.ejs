@@ -1,4 +1,5 @@
 <%- include('header') %>
+<% if(p.business_id){ %><p><a href="/businesses/<%= p.business_id %>">Business and all opportunities</a> · <a href="/prospects/new?business_id=<%= p.business_id %>">New opportunity for this business</a></p><% } %>
 <p class="muted">
 BUSINESS RECORD · <%= p.opp %> · <%= p.stage %>
 </p>

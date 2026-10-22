@@ -279,6 +279,8 @@ test("prepared SQL persistence retains every structured value after review", asy
   const storage = {
     audit: async () => {},
     query: async (sql, values) => {
+      if(sql.startsWith("INSERT INTO businesses"))return {insertId:1};
+      if(sql.includes("business_identity_locks")||sql.startsWith("SELECT id FROM businesses")||sql.startsWith("UPDATE prospects SET business_id"))return [];
       if (sql.startsWith("INSERT INTO prospects")) {
         const columns = sql.match(/\((.*?)\) VALUES/)[1].split(",");
         assert.equal(new Set(columns).size, columns.length);

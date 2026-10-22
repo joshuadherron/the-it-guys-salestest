@@ -1,8 +1,11 @@
+import { intakeSelect } from "../engagement-intake.js";
 import { randomUUID, createHash } from "node:crypto";
 import { query, transaction, audit, json } from "../db.js";
 import { prospect } from "../pipeline.js";
 import { canQuote } from "../quote-permissions.js";
 import { lockClientRequests } from "../existing-client-rules.js";
+import { genericEngagement } from "../engagement-types.js";
+import { assertProjectApproval } from "../project-quotes.js";
 export const snapshot = q => createHash("sha256").update(JSON.stringify([q.quote_number,json(q.inputs),json(q.line_items),String(q.total),String(q.approved_at),q.document_facts?json(q.document_facts):null])).digest("hex");
 export class DeliveryStore {
   constructor(deps={query,transaction,audit,prospect}){Object.assign(this,deps);}
@@ -16,6 +19,10 @@ export class DeliveryStore {
       const [actor]=await this.query("SELECT * FROM allowlist WHERE email=? AND enabled=TRUE",[user.email],c);
       if(!canQuote(actor,"quote.send"))throw new Error("Permission quote.send is required.");
       if(q.status!=="Approved"||p.hold)throw new Error("Quote must be Approved and not On Hold.");
+      if(genericEngagement(p)) {
+        const [intake]=await this.query(intakeSelect,[p.id],c);
+        await assertProjectApproval(p,q,intake);
+      }
       if(!p.client_id)throw new Error("Save proposal to SharePoint first to create the opportunity record and quote copy.");
       await lockClientRequests(p,this.query,c);
       const pending=await this.query("SELECT id FROM quote_send_attempts WHERE client_id=? AND (status IN ('Preparing','PdfSaved','Sending','Unknown') OR (status='Failed' AND pdf_item_id IS NOT NULL)) FOR UPDATE",[p.client_id],c);
@@ -36,6 +43,10 @@ export class DeliveryStore {
     const p=await this.prospect(ctx.p.id);
     const [actor]=await this.query("SELECT * FROM allowlist WHERE email=? AND enabled=TRUE",[ctx.actor.email]);
     if(!q||q.status!=="Approved"||snapshot(q)!==ctx.hash||p.hold||p.client_id!==ctx.p.client_id||String(p.email||"").toLowerCase()!==String(ctx.p.email||"").toLowerCase()||!canQuote(actor,"quote.send"))throw new Error("Quote approval, hold, linkage or sender permission changed. Reload before acting.");
+    if(genericEngagement(p)) {
+      const [intake]=await this.query(intakeSelect,[p.id]);
+      await assertProjectApproval(p,q,intake);
+    }
     return {q,p,actor};
   }
   async release(ctx,unknown=false){if(!unknown)await this.query("DELETE FROM quote_operation_locks WHERE client_id=? AND token=?",[ctx.p.client_id,ctx.token]);}

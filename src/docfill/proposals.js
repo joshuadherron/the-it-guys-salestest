@@ -3,6 +3,8 @@ import { quoteLane, quoteFillMode } from "./policy.js";
 import { buildManagedFill, buildBiiFill } from "./quote-fields.js";
 import { assertTagset } from "./tagsets.js";
 import { listTags, fillDocx } from "./fill-docx.js";
+import { buildProjectFill } from "./project-fields.js";
+import { genericPricing } from "../engagement-types.js";
 
 // One bounded step per POST. The browser polls only after an explicit Save click.
 // Request identities are committed before dispatch; uncertain requests are never replayed.
@@ -14,8 +16,8 @@ export class ProposalPreparation {
       if(quoteFillMode(this.env)!=="live")
         throw new Error("Save proposal requires live quote fill mode. Ask Josh to configure it; download a draft meanwhile.");
       const quote={...ctx.q,inputs:json(ctx.q.inputs),line_items:json(ctx.q.line_items)};
-      const lane=quoteLane(quote.inputs),key=lane.key;
-      const data=key==="COM-PRP"?buildManagedFill({quote,prospect:ctx.p,owner:json(quote.document_facts)||{}})
+      const lane=quoteLane(quote.inputs,undefined,this.env),key=lane.key;
+      const data=genericPricing(quote.inputs)?buildProjectFill({quote,prospect:ctx.p}):key==="COM-PRP"?buildManagedFill({quote,prospect:ctx.p,owner:json(quote.document_facts)||{}})
         :buildBiiFill({quote,prospect:ctx.p,owner:json(quote.document_facts)||{},prices:await this.prices()});
       const master=await this.resolver.master(key);
       assertTagset(key,await listTags(master.content));

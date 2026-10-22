@@ -75,6 +75,7 @@
 <% if(p.legacy_stage){ %><span class="prospect-meta"><span class="prospect-meta-label">Source stage:</span> <%= p.legacy_stage %></span><% } %>
 <% if(p.next_action){ %><span class="prospect-meta"><span class="prospect-meta-label">Next action:</span> <%= p.next_action %> <%= [p.next_action_date,p.next_action_time,p.next_action_method].filter(Boolean).join(' · ') %></span><% } %>
 <span class="prospect-meta"><span class="prospect-meta-label">Interest:</span> <%= p.likely_service||'Not specified' %></span>
+<% if(p.engagement_type){ %><span class="prospect-meta"><span class="prospect-meta-label">Opportunity:</span> <%= engagementTypes[p.engagement_type] %><%= p.opportunity_title?' · '+p.opportunity_title:'' %></span><% } %>
 <span class="prospect-meta"><span class="prospect-meta-label">Follow-up:</span> <%= p.follow_up||'Not scheduled' %></span>
 <% if(p.hold){ %><strong class="error">On Hold — Pending Josh Review</strong><% } %>
 </div>
