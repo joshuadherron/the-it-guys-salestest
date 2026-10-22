@@ -148,44 +148,44 @@ test("additional discovery and relationship views render current client details"
  assert.ok(form.includes("Major infrastructure changes"));assert.ok(form.includes("BII-08"));
 });
 
-test("relationship lane list offers Project-Based alongside the existing Managed IT/BII choices",async()=>{
+test("relationship lane list offers Business Technology Projects alongside the existing Managed IT/BII choices",async()=>{
   const h=harness({existing:false,linked:false,engagementType:"bii"});h.p.service_lane="Business IT Integration";
   const page=await h.call("GET /prospects/:id/relationship"),html=await ejs.renderFile("views/client-relationship.ejs",{...page.data,csrf:"token",user:h.session.user,mode:"dryrun"});
-  assert.deepEqual(page.data.lanes,["Business IT Integration","Managed IT","Project-Based"]);assert.ok(html.includes('value="Project-Based"'));assert.ok(html.includes("Project-Based (Project / Hourly)"));assert.ok(html.includes("BII / Standardization"));
+  assert.deepEqual(page.data.lanes,["Business IT Integration","Managed IT","Business Technology Projects"]);assert.ok(html.includes('value="Business Technology Projects"'));assert.ok(html.includes("Business Technology Projects (Project / Hourly)"));assert.ok(html.includes("BII / Standardization"));
 });
 
-test("selecting Project-Based corrects a BII opportunity and links the existing client without creating a record",async()=>{
+test("selecting Business Technology Projects corrects a BII opportunity and links the existing client without creating a record",async()=>{
   const h=harness({existing:false,linked:false,engagementType:"bii",savedDiscovery:true});h.p.service_lane="Business IT Integration";
-  await h.call("POST /prospects/:id/relationship",{relationship_type:"existing_client",client_id:"CL-0007",service_lane:"Project-Based",original_engagement_type:"bii"});
-  assert.equal(h.p.engagement_type,"project");assert.equal(h.p.service_lane,"Project-Based");assert.equal(h.p.client_id,"CL-0007");assert.equal(h.records.length,0);
+  await h.call("POST /prospects/:id/relationship",{relationship_type:"existing_client",client_id:"CL-0007",service_lane:"Business Technology Projects",original_engagement_type:"bii"});
+  assert.equal(h.p.engagement_type,"project");assert.equal(h.p.service_lane,"Business Technology Projects");assert.equal(h.p.client_id,"CL-0007");assert.equal(h.records.length,0);
   assert.equal(h.writes.filter(w=>w.sql.startsWith("INSERT INTO discovery_versions")).length,2);assert.ok(h.writes.some(w=>w.sql.startsWith("UPDATE discoveries")&&w.sql.includes("status='Draft'")));assert.ok(!h.writes.some(w=>w.sql.startsWith("INSERT INTO sp_requests")));
 });
 
-for(const type of ["project","hourly"])test(`${type} relationship locks Project-Based and ignores a forged Managed IT lane`,async()=>{
-  const h=harness({existing:false,linked:false,engagementType:type});h.p.service_lane="Project-Based";
+for(const type of ["project","hourly"])test(`${type} relationship locks Business Technology Projects and ignores a forged Managed IT lane`,async()=>{
+  const h=harness({existing:false,linked:false,engagementType:type});h.p.service_lane="Business Technology Projects";
   const page=await h.call("GET /prospects/:id/relationship"),html=await ejs.renderFile("views/client-relationship.ejs",{...page.data,csrf:"token",user:h.session.user,mode:"dryrun"});
-  assert.deepEqual(page.data.lanes,["Project-Based"]);assert.match(html,/<select name="service_lane" disabled/);assert.ok(html.includes("selected automatically"));
+  assert.deepEqual(page.data.lanes,["Business Technology Projects"]);assert.match(html,/<select name="service_lane" disabled/);assert.ok(html.includes("selected automatically"));
   await h.call("POST /prospects/:id/relationship",{relationship_type:"existing_client",client_id:"CL-0007",service_lane:"Managed IT"});
-  assert.equal(h.p.service_lane,"Project-Based");assert.equal(h.p.engagement_type,type);assert.equal(h.p.client_id,"CL-0007");assert.equal(h.records.length,0);
+  assert.equal(h.p.service_lane,"Business Technology Projects");assert.equal(h.p.engagement_type,type);assert.equal(h.p.client_id,"CL-0007");assert.equal(h.records.length,0);
 });
 
-test("Project-Based lane selection cannot bypass protected quote history or a stale type",async()=>{
+test("Business Technology Projects lane selection cannot bypass protected quote history or a stale type",async()=>{
   for(const [quoted,original,pattern] of [[true,"bii",/has quotes/],[false,"managed_it",/another tab/]]) {
     const h=harness({existing:false,linked:false,engagementType:"bii",quoted});h.p.service_lane="Business IT Integration";
-    await assert.rejects(()=>h.call("POST /prospects/:id/relationship",{relationship_type:"existing_client",client_id:"CL-0007",service_lane:"Project-Based",original_engagement_type:original}),pattern);
+    await assert.rejects(()=>h.call("POST /prospects/:id/relationship",{relationship_type:"existing_client",client_id:"CL-0007",service_lane:"Business Technology Projects",original_engagement_type:original}),pattern);
     assert.equal(h.p.client_id,undefined);assert.equal(h.p.engagement_type,"bii");assert.equal(h.records.length,0);assert.ok(!h.writes.some(w=>w.sql.startsWith("UPDATE prospects SET relationship_type")));
   }
 });
-test("relationship Project-Based selection accepts completed CRM sync history and creates no external requests",async()=>{
+test("relationship Business Technology Projects selection accepts completed CRM sync history and creates no external requests",async()=>{
   const h=harness({existing:false,linked:false,engagementType:"bii",savedDiscovery:true});h.p.service_lane="Business IT Integration";
   h.records.push({id:202,action:"UpsertProspect",status:"Done"},{id:201,action:"UpsertProspect",status:"Done"});
-  await h.call("POST /prospects/:id/relationship",{relationship_type:"existing_client",client_id:"CL-0007",service_lane:"Project-Based",original_engagement_type:"bii"});
+  await h.call("POST /prospects/:id/relationship",{relationship_type:"existing_client",client_id:"CL-0007",service_lane:"Business Technology Projects",original_engagement_type:"bii"});
   assert.equal(h.p.engagement_type,"project");assert.equal(h.p.client_id,"CL-0007");assert.equal(h.records.length,2);assert.ok(h.records.every(r=>r.action==="UpsertProspect"&&r.status==="Done"));
 });
 test("relationship type correction still blocks a completed service request among CRM syncs",async()=>{
   const h=harness({existing:false,linked:false,engagementType:"bii"});h.p.service_lane="Business IT Integration";
   h.records.push({id:202,action:"UpsertProspect",status:"Done"},{id:190,action:"CreateClient",status:"Done"});
-  await assert.rejects(()=>h.call("POST /prospects/:id/relationship",{relationship_type:"existing_client",client_id:"CL-0007",service_lane:"Project-Based"}),/#190 \(CreateClient \/ Done\)/);assert.equal(h.p.client_id,undefined);assert.equal(h.p.engagement_type,"bii");
+  await assert.rejects(()=>h.call("POST /prospects/:id/relationship",{relationship_type:"existing_client",client_id:"CL-0007",service_lane:"Business Technology Projects"}),/#190 \(CreateClient \/ Done\)/);assert.equal(h.p.client_id,undefined);assert.equal(h.p.engagement_type,"bii");
 });
 test("failed service history can still be reconciled by linking an existing customer without changing its type",async()=>{
   const h=harness({existing:false,linked:false,engagementType:"managed_it"});h.records.push({id:190,action:"CreateClient",status:"Failed"});
@@ -194,5 +194,5 @@ test("failed service history can still be reconciled by linking an existing cust
 });
 test("failed service history is not a bypass for a relationship type correction",async()=>{
   const h=harness({existing:false,linked:false,engagementType:"bii"});h.p.service_lane="Business IT Integration";h.records.push({id:190,action:"CreateClient",status:"Failed"});
-  await assert.rejects(()=>h.call("POST /prospects/:id/relationship",{relationship_type:"existing_client",client_id:"CL-0007",service_lane:"Project-Based"}),/#190 \(CreateClient \/ Failed\)/);assert.equal(h.p.client_id,undefined);assert.equal(h.p.engagement_type,"bii");
+  await assert.rejects(()=>h.call("POST /prospects/:id/relationship",{relationship_type:"existing_client",client_id:"CL-0007",service_lane:"Business Technology Projects"}),/#190 \(CreateClient \/ Failed\)/);assert.equal(h.p.client_id,undefined);assert.equal(h.p.engagement_type,"bii");
 });

@@ -4,7 +4,7 @@ import ejs from "ejs";
 import { changeOpportunityType } from "../src/opportunity-type.js";
 import { emptyAnswers,mvd } from "../src/discovery-rules.js";
 import { missingIntake } from "../src/engagement-intake.js";
-import { engagementTypes } from "../src/engagement-types.js";
+import { engagementTypes,projectLane } from "../src/engagement-types.js";
 import { engagementGuard } from "../src/engagement-guard.js";
 const owner={email:"josh@example.test",role:"owner",enabled:1};
 const prospect={id:86,opp:"OPP-0086",business_id:9,business_name:"Example business",contact_name:"Pat",engagement_type:"bii",service_lane:"Business IT Integration",stage:"Qualified",hold:true,planned_service_lanes:'["Business IT Integration","Managed IT"]',starting_service_lane:"Managed IT",service_sequence_reason:"Prior timing exception"};
@@ -47,12 +47,12 @@ for(const target of ["project","hourly"])test(`legacy OPP-0086 can change from B
   assert.ok(!h.sql.some(sql=>/DELETE|hold=|client_id=|business_id=|status='Approved'/.test(sql)));
 });
 test("project/hourly correction retains applicable answers but requires a fresh completion review",async()=>{
-  const h=harness({p:{engagement_type:"project",service_lane:"Project-Based"},record:{answers:JSON.stringify({contact:"Pat",issue:"Mail issue",scope:"Repair",deliverables:"Working Outlook",access:"Remote"}),flags:"[]"}});
+  const h=harness({p:{engagement_type:"project",service_lane:"Business Technology Projects"},record:{answers:JSON.stringify({contact:"Pat",issue:"Mail issue",scope:"Repair",deliverables:"Working Outlook",access:"Remote"}),flags:"[]"}});
   await h.change("hourly","project");const answers=JSON.parse(h.data.record.answers);
   assert.equal(answers.issue,"Mail issue");assert.equal(answers.access,"Remote");assert.equal(h.data.record.status,"Draft");assert.ok(missingIntake("hourly",answers,h.p).some(m=>m.key==="rate_authorization"));
 });
 test("changing a generic opportunity to Managed IT starts the detailed questionnaire without fabricating standardization",async()=>{
-  const h=harness({p:{engagement_type:"hourly",service_lane:"Project-Based"},record:{answers:JSON.stringify({contact:"Pat",issue:"Repair",scope:"Outlook"}),flags:"[]"}});
+  const h=harness({p:{engagement_type:"hourly",service_lane:"Business Technology Projects"},record:{answers:JSON.stringify({contact:"Pat",issue:"Repair",scope:"Outlook"}),flags:"[]"}});
   await h.change("managed_it","hourly");const answers=JSON.parse(h.data.record.answers);
   assert.ok(mvd(answers).length);assert.equal(h.data.record.status,"Draft");assert.ok(!h.sql.some(s=>/Client Activation|TechnicalAssessment|CreateClient/.test(s)));
 });
@@ -101,7 +101,7 @@ test("type correction before discovery needs no invented answers or schema migra
 test("failed reset rolls the archive and audit back with the edit transaction",async()=>{
   const h=harness({failUpdate:true}),before=structuredClone(h.data);await assert.rejects(()=>h.change(),/database failure/);assert.deepEqual(h.data,before);
 });
-for(const type of ["project","hourly"])test(`${type} handoff GET goes directly to Project-Based while POST refuses legacy lane commands`,async()=>{
+for(const type of ["project","hourly"])test(`${type} handoff GET goes directly to Business Technology Projects while POST refuses legacy lane commands`,async()=>{
   const guard=engagementGuard({prospect:async()=>({...prospect,engagement_type:type}),query:async()=>[]}),res={redirect(url){this.url=url;}};
   await guard({path:"/prospects/86/handoff",method:"GET"},res,()=>assert.fail("must redirect"));assert.equal(res.url,"/prospects/86/project-sharepoint");
   await assert.rejects(()=>guard({path:"/prospects/86/handoff",method:"POST"},res,()=>assert.fail("must refuse")),e=>e.status===409);
@@ -109,10 +109,10 @@ for(const type of ["project","hourly"])test(`${type} handoff GET goes directly t
 test("legacy handoff still receives Managed IT/BII opportunities",async()=>{
   for(const type of ["bii","managed_it"]) {let next=false;await engagementGuard({prospect:async()=>({...prospect,engagement_type:type}),query:async()=>[]})({path:"/prospects/86/handoff",method:"GET"},{},()=>{next=true;});assert.equal(next,true);}
 });
-test("SharePoint UI shows the actual type, locked Project-Based lane, record reuse and configuration blockers",async()=>{
+test("SharePoint UI shows the actual type, locked Business Technology Projects lane, record reuse and configuration blockers",async()=>{
   for(const type of ["project","hourly"]) {
-    const html=await ejs.renderFile("views/project-sharepoint.ejs",{p:{...prospect,engagement_type:type,client_id:"CL-9"},engagementTypes,user:owner,csrf:"csrf",mode:"dryrun",record:{id:9},error:null,prerequisites:["Clients needs a unique business identity column."],requests:[]});
-    assert.ok(html.includes(engagementTypes[type]));assert.ok(html.includes("Project-Based</strong> (selected automatically)"));assert.ok(html.includes("will be reused"));assert.ok(html.includes("Clients needs a unique business identity column."));assert.match(html,/<button disabled/);assert.ok(!html.includes('name="service_scope"'));
+    const html=await ejs.renderFile("views/project-sharepoint.ejs",{p:{...prospect,engagement_type:type,client_id:"CL-9"},engagementTypes,projectLane,user:owner,csrf:"csrf",mode:"dryrun",record:{id:9},error:null,prerequisites:["Clients needs a unique business identity column."],requests:[]});
+    assert.ok(html.includes(engagementTypes[type]));assert.ok(html.includes("Business Technology Projects</strong> (selected automatically)"));assert.ok(html.includes("will be reused"));assert.ok(html.includes("Clients needs a unique business identity column."));assert.match(html,/<button disabled/);assert.ok(!html.includes('name="service_scope"'));
   }
 });
 test("prior flags and archived answers are visible and HTML-escaped",async()=>{

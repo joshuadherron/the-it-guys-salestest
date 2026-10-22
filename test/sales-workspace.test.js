@@ -62,11 +62,11 @@ test("approved Managed IT document previews download on hold without SharePoint;
   await assert.rejects(()=>draft.call("GET /quotes/:id/document"),/Only approved/);
 });
 
-test("project preview reaches template configuration without intake, hold or stage prerequisite",async()=>{
+test("project preview uses pinned constants without intake, hold or stage prerequisite; master approval remains required",async()=>{
   const input={pricingMode:"project_v1",scope:"Repair Outlook",terms:"Written authorization",lines:[{label:"Repair",kind:"labor",quantity:1,unitPrice:150,billing:"one_time"}]};
   const h=harness(projectDocumentRoutes,{p:{engagement_type:"project",stage:"Closed Lost"},q:{...quote,inputs:input}});
-  await h.call("GET /quotes/:id/project-document");assert.equal(h.res.view,"project-document");assert.match(h.res.data.error,/owner-approved ENG-PRJ/);
-  await assert.rejects(()=>h.call("POST /quotes/:id/project-document"),/owner-approved ENG-PRJ/);
+  await h.call("GET /quotes/:id/project-document");assert.equal(h.res.view,"project-document");assert.equal(h.res.data.error,null);assert.equal(h.res.data.lane.workflow,"PRJ-05");
+  await assert.rejects(()=>h.call("POST /quotes/:id/project-document"),/No approved master configured/);
 });
 
 test("live preparation and delivery retain holds and lost-opportunity hard stops",async()=>{

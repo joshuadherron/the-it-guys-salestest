@@ -169,7 +169,7 @@ function payloadData(action, p, lane, options) {
     };
   }
   const project=lane===projectLane;
-  if(project&&(!genericEngagement(p)||!p.business_id||!["CreateClient","CreateWorkingCopy"].includes(action)))throw new Error("Project-Based requests require a linked project/hourly opportunity and the project request contract.");
+  if(project&&(!genericEngagement(p)||!p.business_id||!["CreateClient","CreateWorkingCopy"].includes(action)))throw new Error(`${projectLane} requests require a linked project/hourly opportunity and the project request contract.`);
   if(project&&action==="CreateWorkingCopy"&&(!/^PRJ-[A-Z0-9-]+$/.test(options.workflowId||"")||!/^\d+$/.test(options.instanceRef||"")))throw new Error("Project working copies require a PRJ workflow and a quote-specific numeric instance reference.");
   if (!lanes.includes(lane)&&!project) throw new Error("Choose a service lane.");
   if (action === "CreateClient") {

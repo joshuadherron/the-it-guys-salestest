@@ -20,7 +20,7 @@ export function projectSharePointRoutes(app,deps={query,transaction,audit,prospe
     let error=null,record=null,prerequisites=[];
     try {const s=sp.ready();await refresh(p,{sp,query,transaction,audit});record=await sp.client(p);if(!record)prerequisites=projectCapability(s,env);}catch(e){error=e.message;}
     const requests=await query("SELECT * FROM sp_requests WHERE prospect_id IN (SELECT id FROM prospects WHERE business_id=?) ORDER BY id DESC LIMIT 30",[p.business_id]);
-    res.render("project-sharepoint",{p,record,error,prerequisites,requests,engagementTypes});
+    res.render("project-sharepoint",{p,record,error,prerequisites,requests,engagementTypes,projectLane});
   });
   app.post("/prospects/:id/project-sharepoint",quoteSend,async(req,res)=>{
     let body,id;
@@ -49,7 +49,7 @@ export function projectSharePointRoutes(app,deps={query,transaction,audit,prospe
       body=buildFields(schema,"CreateClient",p,projectLane,actor.email,new Date(),lookupId(actor.email),{discovery},env);
       body.fields[schema.maps.requests.Title.name]=`SALESAPP-${p.opp}-BUSINESS-${p.business_id}-${randomUUID()}`;
       const r=await query("INSERT INTO sp_requests (prospect_id,action,request_json,status) VALUES (?,'CreateClient',?,'Preparing')",[p.id,JSON.stringify(body)],c);id=r.insertId;
-      await audit(c,actor,"prepare Project-Based business record","sp_request",id);
+      await audit(c,actor,"prepare "+projectLane+" business record","sp_request",id);
     });
     if(body)try {
       const result=await submitRequest(graph,env.SHAREPOINT_WRITE_MODE,schema,body);

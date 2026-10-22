@@ -4,7 +4,7 @@ import { readFile } from "node:fs/promises";
 import ejs from "ejs";
 import JSZip from "jszip";
 import { validateProspect,insertProspect } from "../src/pipeline.js";
-import { engagementTypes } from "../src/engagement-types.js";
+import { engagementTypes,projectLane } from "../src/engagement-types.js";
 import { validateIntake,missingIntake,intakeFlags,intakeFields,riskFields } from "../src/engagement-intake.js";
 import { validateProjectQuote,priceProject } from "../src/project-pricing.js";
 import { projectQuoteRoutes,assertProjectApproval,assertProjectAuthorization } from "../src/project-quotes.js";
@@ -22,25 +22,26 @@ import { handoffOutcome } from "../src/sales-handoff.js";
 import { applyRequestStatus } from "../src/handoff.js";
 import { engagementGuard } from "../src/engagement-guard.js";
 import { prospectLifecycle,relationshipLabel } from "../src/prospect-lifecycle.js";
+import { projectQuoteMaster } from "../src/docfill/master-names.js";
 
 const owner={email:"owner@example.test",role:"owner",quote_approve:1,quote_send:1,is_admin:1,enabled:1};
-const p={id:17,opp:"OPP-0017",business_id:9,business_name:"Example Technology",contact_name:"Pat",engagement_type:"project",service_lane:"Project-Based",stage:"Qualified",hold:false};
+const p={id:17,opp:"OPP-0017",business_id:9,business_name:"Example Technology",contact_name:"Pat",engagement_type:"project",service_lane:"Business Technology Projects",stage:"Qualified",hold:false};
 const answers=validateIntake({contact:"Pat",issue:"Email errors",scope:"Migrate two mailboxes",deliverables:"Mailboxes available",dependencies:"Admin consent",schedule:"Saturday",authorization:"Pat, owner",access:"Remote session",rate_authorization:"Two hours approved at the quoted rate"});
 const intake={answers,complete:1,revision:3,flags:[],updated_by:owner.email};
 const quoteBody={scope:"Migrate mailboxes",terms:"Written acceptance required; limited to the stated deliverables.",basis:"fixed",lines:[{label:"Migration",kind:"deliverable",quantity:1,unitPrice:3000,billing:"one_time"}]};
 const config={hourly_rate:150,minimum_hours:1};
 const input=validateProjectQuote(quoteBody,"project",config);
 const q={id:51,prospect_id:17,quote_number:"Q-2026-051",inputs:input,line_items:priceProject(input).lines,total:"3000.00",status:"Approved",approved_at:"2026-10-21 12:00:00",stop_review:{intakeRevision:3}};
-const env={PROJECT_WORKFLOW_CONTRACT:"v1",SHAREPOINT_WRITE_MODE:"live",PROJECT_QUOTE_MASTER_FILENAME:"Owner-approved-project-v1.docx",PROJECT_QUOTE_WORKFLOW_ID:"PRJ-05",PROJECT_QUOTE_TEMPLATE_VERSION:"v1",HOURLY_QUOTE_MASTER_FILENAME:"Owner-approved-hourly-v1.docx",HOURLY_QUOTE_WORKFLOW_ID:"PRJ-06",HOURLY_QUOTE_TEMPLATE_VERSION:"v1"};
+const env={PROJECT_WORKFLOW_CONTRACT:"v1",SHAREPOINT_WRITE_MODE:"live",HOURLY_QUOTE_MASTER_FILENAME:"Owner-approved-hourly-v1.docx",HOURLY_QUOTE_WORKFLOW_ID:"PRJ-06",HOURLY_QUOTE_TEMPLATE_VERSION:"v1"};
 const schema={siteId:"test",requestListId:"requests",businessColumn:"TIG_SalesBusinessID",maps:{
-  requests:Object.fromEntries(["Title","Request Type","Processing Status","Source","Requested By","Client","Payload","Result Message","Service Lane"].map(name=>[name,{name,choice:{choices:name==="Service Lane"?["Project-Based"]:[]},...(name==="Client"?{lookup:{}}:{text:{}})}])),
-  clients:{"Service Lanes":{name:"Service Lanes",choice:{choices:["Project-Based"]}},"Client ID":{name:"Client ID"},"Opportunity ID":{name:"Opportunity ID"},"Current Stage":{name:"Current Stage"},Title:{name:"Title"}},
+  requests:Object.fromEntries(["Title","Request Type","Processing Status","Source","Requested By","Client","Payload","Result Message","Service Lane"].map(name=>[name,{name,choice:{choices:name==="Service Lane"?["Business Technology Projects"]:[]},...(name==="Client"?{lookup:{}}:{text:{}})}])),
+  clients:{"Service Lanes":{name:"Service Lanes",choice:{choices:["Business Technology Projects"]}},"Client ID":{name:"Client ID"},"Opportunity ID":{name:"Opportunity ID"},"Current Stage":{name:"Current Stage"},Title:{name:"Title"}},
 }};
 const lookup=async sql=>sql.includes("allowlist")?[{email:owner.email}]:[{name:"Qualified"},{name:"Prospecting"}];
 
 for(const type of ["project","hourly"])test(`${type} prospect has an independent lane and no Managed IT/BII prerequisite`,async()=>{
   const value=await validateProspect({business_name:p.business_name,owner:owner.email,engagement_type:type},null,lookup);
-  assert.equal(value.engagement_type,type);assert.equal(value.service_lane,"Project-Based");assert.equal(value.stage,"Prospecting");
+  assert.equal(value.engagement_type,type);assert.equal(value.service_lane,"Business Technology Projects");assert.equal(value.stage,"Prospecting");
 });
 test("legacy Managed IT/BII opportunities preserve their inferred types and lanes",async()=>{
   for(const [lane,type] of [["Managed IT","managed_it"],["Business IT Integration","bii"]]) {
@@ -83,22 +84,23 @@ test("commercial approval is independent of intake and holds; authorization pres
   await assert.rejects(()=>assertProjectAuthorization(p,q,{...intake,complete:0}),/Complete the appropriate intake/);
   await assert.rejects(()=>assertProjectApproval({...p,engagement_type:"hourly"},q,intake),/quote type differs/);
 });
-test("Project-Based client payload is independent of managed enrollment and rejects legacy actions",()=>{
-  const discovery=projectDiscovery(p,intake),body=payload("CreateClient",p,"Project-Based",{discovery});
+test("Business Technology Projects client payload is independent of managed enrollment and rejects legacy actions",()=>{
+  const discovery=projectDiscovery(p,intake),body=payload("CreateClient",p,"Business Technology Projects",{discovery});
   assert.equal(body.businessId,"9");assert.equal(body.stage,"Sales Discovery");assert.equal(body.contractVersion,"project-v1");assert.equal(body.engagementType,"project");assert.ok(!JSON.stringify(body).includes("MIT-05"));
-  assert.throws(()=>payload("CreateClient",{...p,client_id:"CL-1"},"Project-Based",{discovery}),/another SharePoint client/);
-  assert.throws(()=>payload("TechnicalAssessment",p,"Project-Based",{}),/project request contract/);
-  assert.throws(()=>payload("CreateClient",{...p,engagement_type:"managed_it"},"Project-Based",{discovery}),/project request contract/);
-  assert.throws(()=>payload("CreateClient",p,"Project-Based",{discovery:{}}),/versioned project intake/);
+  assert.throws(()=>payload("CreateClient",{...p,client_id:"CL-1"},"Business Technology Projects",{discovery}),/another SharePoint client/);
+  assert.throws(()=>payload("TechnicalAssessment",p,"Business Technology Projects",{}),/project request contract/);
+  assert.throws(()=>payload("CreateClient",{...p,engagement_type:"managed_it"},"Business Technology Projects",{discovery}),/project request contract/);
+  assert.throws(()=>payload("CreateClient",p,"Business Technology Projects",{discovery:{}}),/versioned project intake/);
 });
 test("optional project capability fails closed without altering existing required lane choices",()=>{
   assert.equal(projectCapability(schema,env).length,0);assert.equal(projectCapability(schema,{}).length,1);
-  assert.throws(()=>buildFields(schema,"CreateClient",p,"Project-Based",owner.email,new Date(),null,{discovery:projectDiscovery(p,intake)},{}),/Power Automate/);
-  const fields=buildFields(schema,"CreateClient",p,"Project-Based",owner.email,new Date(),null,{discovery:projectDiscovery(p,intake)},env);
+  assert.throws(()=>buildFields(schema,"CreateClient",p,"Business Technology Projects",owner.email,new Date(),null,{discovery:projectDiscovery(p,intake)},{}),/Power Automate/);
+  const fields=buildFields(schema,"CreateClient",p,"Business Technology Projects",owner.email,new Date(),null,{discovery:projectDiscovery(p,intake)},env);
   assert.equal(fields.fields["Request Type"],"Create Client");assert.equal(JSON.parse(fields.fields.Payload).businessId,"9");
 });
 test("no generic document pretends to be an existing approved master",()=>{
-  assert.throws(()=>quoteLane(input,undefined,{}),/owner-approved ENG-PRJ template/);
+  assert.equal(quoteLane(input,undefined,{}).name,projectQuoteMaster.name);
+  assert.throws(()=>quoteLane({pricingMode:"hourly_v1"},undefined,{}),/owner-approved ENG-HRLY template/);
   assert.equal(quoteLane(input,undefined,env).workflow,"PRJ-05");
   assert.equal(quoteLane({pricingMode:"hourly_v1"},undefined,env).key,"ENG-HRLY");
   assert.throws(()=>quoteLane(input,"COM-PRP",env),/match the approved engagement/);
@@ -120,13 +122,13 @@ for(const type of ["project","hourly"])test(`${type} DOCX contract fills all pro
   const result=await fillDocx(source,buildProjectFill({quote:{...q,inputs},prospect:p}));
   assert.deepEqual(result.report.unfilled,[]);
   const xml=await (await JSZip.loadAsync(result.buffer)).file("word/document.xml").async("string");
-  assert.ok(xml.includes(type==="project"?"3000.00":"300.00"));assert.ok(!xml.includes("[value]"));assert.ok(!xml.includes("MIT."));
+  assert.ok(xml.includes(type==="project"?"3,000.00":"300.00"));assert.ok(!xml.includes("[value]"));assert.ok(!xml.includes("MIT."));
 });
 test("SharePoint project master resolution requires the exact configured approved filename",async()=>{
   const source=await syntheticMaster();let promoted=false;
-  const resolver=new SharePointQuotes({ready:()=>schema},{all:async path=>path.endsWith("/columns")?[{name:"Key",displayName:"Document Key"},{name:"Status",displayName:"Status"}]:path.includes("/items?")?[{fields:{Key:"ENG-PRJ",Status:"Approved"},driveItem:{id:"doc",parentReference:{driveId:"drive"},name:promoted?env.PROJECT_QUOTE_MASTER_FILENAME:"unapproved-version.docx"}}]:[{id:"library",displayName:"Operational Standards & Templates"}],quoteContent:async()=>source},env);
+  const resolver=new SharePointQuotes({ready:()=>schema},{all:async path=>path.endsWith("/columns")?[{name:"Key",displayName:"Document Key"},{name:"Status",displayName:"Status"}]:path.includes("/items?")?[{fields:{Key:"ENG-PRJ",Status:"Approved"},driveItem:{id:"doc",parentReference:{driveId:"drive"},name:promoted?projectQuoteMaster.name:"unapproved-version.docx"}}]:[{id:"library",displayName:"Operational Standards & Templates"}],quoteContent:async()=>source},env);
   await assert.rejects(()=>resolver.master("ENG-PRJ"),/Expected exactly one promoted Approved/);
-  promoted=true;assert.equal((await resolver.master("ENG-PRJ")).name,env.PROJECT_QUOTE_MASTER_FILENAME);
+  promoted=true;assert.equal((await resolver.master("ENG-PRJ")).name,projectQuoteMaster.name);
 });
 
 function harness(register,options={}) {
@@ -246,10 +248,10 @@ test("authorization rejects absent evidence, changed pricing, incomplete current
     await assert.rejects(()=>h.call("POST /prospects/:id/authorize"));assert.equal(h.writes.length,0);
   }
 });
-test("project-only record creation sends only Project-Based v1 identity and intake",async()=>{
+test("project-only record creation sends only Business Technology Projects v1 identity and intake",async()=>{
   const h=harness(projectSharePointRoutes);await h.call("POST /prospects/:id/project-sharepoint");
   assert.equal(h.graphCalls.length,1);const fields=h.graphCalls[0][2],body=JSON.parse(fields.Payload);
-  assert.equal(fields["Service Lane"],"Project-Based");assert.equal(body.businessId,"9");assert.equal(body.stage,"Sales Discovery");assert.ok(!JSON.stringify(fields).includes("MIT-05"));
+  assert.equal(fields["Service Lane"],"Business Technology Projects");assert.equal(body.businessId,"9");assert.equal(body.stage,"Sales Discovery");assert.ok(!JSON.stringify(fields).includes("MIT-05"));
 });
 test("second project reuses the shared customer's SharePoint identity without creating or enrolling anything",async()=>{
   const remoteRecord={id:"12",fields:{"Client ID":"CL-9"}};
@@ -317,7 +319,7 @@ test("migration is additive and preserves existing opportunity IDs, quote/audit 
 });
 
 test("all universal views render escaped business data, appropriate forms and missing-question links",async()=>{
-  const unsafe={...p,business_name:"<script>unsafe</script>"},common={p:unsafe,user:owner,csrf:"test",mode:"dryrun",engagementTypes};
+  const unsafe={...p,business_name:"<script>unsafe</script>"},common={p:unsafe,user:owner,csrf:"test",mode:"dryrun",engagementTypes,projectLane};
   const cases={
     businesses:{businesses:[{id:9,name:unsafe.business_name,relationship_status:"Prospect",opportunities:2}],search:""},
     business:{business:{id:9,name:unsafe.business_name,relationship_status:"Customer"},opportunities:[unsafe],},

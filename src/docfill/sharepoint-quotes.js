@@ -3,10 +3,7 @@ import { assertNoPending } from "../sharepoint.js";
 import { assertTagset } from "./tagsets.js";
 import { listTags } from "./fill-docx.js";
 import { projectDocument,projectDocumentKeys,assertProjectCapability } from "../project-contract.js";
-const masterNames={
-  "COM-PRP":["COM-PRP-v1.8.docx","The_IT_Guys_Managed_IT_Quote_Template_v1.8.docx"],
-  "BII-QSOW":["BII-QSOW-v1.6.docx","The_IT_Guys_BII_Short_Form_Quote_SOW_Template_v1.6.docx"],
-};
+import { masterNames } from "./master-names.js";
 export class SharePointQuotes {
   constructor(sp,graph,env=process.env){this.sp=sp;this.graph=graph;this.env=env;}
   async working(prospect,key,quoteId,itemId){
@@ -47,7 +44,7 @@ export class SharePointQuotes {
     return {working,master:await this.master(key)};
   }
   async master(key){
-    const names=projectDocumentKeys.includes(key)?[projectDocument(key,this.env).name]:masterNames[key];
+    const names=key==="ENG-HRLY"?[projectDocument(key,this.env).name]:masterNames[key];
     if(!names)throw new Error("Unsupported quote master key.");
     const schema=this.sp.ready();
     const lists=await this.graph.all(`/sites/${schema.siteId}/lists?$select=id,displayName`);

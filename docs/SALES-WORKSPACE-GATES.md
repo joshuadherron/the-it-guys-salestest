@@ -24,7 +24,7 @@ terms, not work. Existing authentication, CSRF, roles and quote permissions appl
 | Approved quote and valid scope/pricing/terms required for contractual documents | Prevent inaccurate customer commitments | Preserve; project master approval/configuration is a real prerequisite |
 | Project customer authorization requires current intake, no hold/loss, approved snapshot and actual acceptance evidence | Authorize work and hand off | Preserve; internal pricing approval and local Won status cannot satisfy it |
 | Duplicate clients, business identity locks, active/uncertain requests | Prevent duplicate or ambiguous external writes | Preserve |
-| Existing Project-Based record reuse requires new-record flow configuration | Ensure new-record routing | Remove for verified existing-record reuse; keep before creating any new external record |
+| Existing Business Technology Projects record reuse requires new-record flow configuration | Ensure new-record routing | Remove for verified existing-record reuse; keep before creating any new external record |
 | Quote instance references, eTags, immutable hashes, unresolved fields, send/PDF reconciliation | Prevent wrong documents, overwrites and duplicate email | Preserve |
 | Signed agreements, BAA flags, stage blockers, standardization and transition checks in guided-workflow/work-items/SharePoint | Contractual, compliance and managed responsibility | Preserve |
 | Client identity/type changes with commercial or workflow history; completed discovery owner controls | Preserve identity and reviewed history | Preserve permissions, archives and reconciliation |
@@ -42,7 +42,7 @@ the sales status form.
 No migration or production configuration change is required. No SharePoint or
 Power Automate changes are made by this implementation. Existing CreateClient
 flows still receive complete versioned snapshots; their hard boundary is retained
-because record creation can issue operational documents. Project-Based requires
+because record creation can issue operational documents. Business Technology Projects requires
 the existing verified project-v1 flow/schema contract and reuses shared business
 records. ENG-PRJ/ENG-HRLY approved master and routing prerequisites remain.
 

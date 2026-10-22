@@ -1,5 +1,13 @@
 # Universal sales pipeline — review and rollout
 
+> October 22 update: the owner-supplied schema/flow packages use the existing
+> Business Technology Projects lane and PRJ-05. ENG-PRJ is a standalone form,
+> Signature Required No, with no MSA/PSA prerequisite. Its filename/workflow/version
+> now live in code constants, not three environment variables. Blank or conflicting
+> Clients Sales Business IDs reject project copy requests. This document retains
+> the original launch audit below; use [PROJECT-QUOTE-IMPLEMENTATION.md](PROJECT-QUOTE-IMPLEMENTATION.md)
+> and the current gate audit for current setup and flexible sales behavior.
+
 ## Scope and decisions
 
 This remains a CRM, discovery, estimating and sales handoff app. Projects and hourly repairs can enter the existing pipeline without selecting MIT or BII. Sales ends at accepted/won and handoff to existing delivery systems. There are no invoices, payments, taxes, accounting calculations, timers, timesheets, stock records, tasks, tickets, dispatch, work execution statuses or PSA integrations.
@@ -45,28 +53,28 @@ Expected: no unlinked legacy OPPs, no duplicate nonempty Client IDs. Duplicate n
 
 ## SharePoint schema prerequisites
 
-These changes are **proposed and not applied**. Existing MIT/BII connections continue without Project-Based support; project writes fail with configuration guidance until verified.
+These changes are **proposed and not applied**. Existing MIT/BII connections continue without Business Technology Projects support; project writes fail with configuration guidance until verified.
 
-1. Add **Project-Based** to Workflow Requests → Service Lane and Clients → Service Lanes. Preserve all existing choices.
-2. Add Clients **TIG_SalesBusinessID**, optional single-line text, indexed with unique values enforced. It holds the stable decimal app Business ID. Do not put an OPP or quote ID here. Existing clients can retain a blank value until verified linking; never overwrite another business key.
+1. Verify the existing **Business Technology Projects** choice on Workflow Requests → Service Lane and Clients → Service Lanes; do not add a Project-Based choice. Preserve all existing choices.
+2. Add Clients **TIG_SalesBusinessID**, optional single-line text, indexed with unique values enforced. It holds the stable decimal app Business ID. Do not put an OPP or quote ID here. Legacy clients must have this field deliberately set on their Clients row before project copy requests; blank or different keys reject. App linkage alone does not populate the SharePoint field.
 3. Verify Client Operations has a single text **Instance Reference** column. Set `QUOTE_INSTANCE_REF_COLUMN` to its actual internal name; the copy flow must populate it with the app's Quote ID.
-4. After approving templates, add distinct **PRJ-…** definitions in Client Workflow Definitions for project and hourly proposals, lane Project-Based, Active Yes, Create Client Copy Yes. They create only proposal working copies in `/Commercial`. No managed/BII onboarding tasks or stage gates are attached to these definitions.
+4. After approving templates, add distinct **PRJ-…** definitions in Client Workflow Definitions for project and hourly proposals, lane Business Technology Projects, Active Yes, Create Client Copy Yes. They create only proposal working copies in `/Commercial`. No managed/BII onboarding tasks or stage gates are attached to these definitions.
 5. Promote the new owner-approved templates with the exact document keys and filenames below. Existing MIT/BII definitions, masters and tags stay intact.
 
 ## Power Automate routing contract v1
 
 The repository has the app-side dispatcher and validations, but no exported deployed-flow definitions. The live flows were not modified or claimed as tested. Implement and test the following branches in the existing Workflow Request processor in staging before opting in.
 
-### Create Client — Project-Based branch
+### Create Client — Business Technology Projects branch
 
-Use the resolved **Request Type = Create Client** and **Service Lane = Project-Based** fields to select this branch, before MIT/BII stage routing. Parse this payload (example identifiers only):
+Use the resolved **Request Type = Create Client** and **Service Lane = Business Technology Projects** fields to select this branch, before MIT/BII stage routing. Parse this payload (example identifiers only):
 
 ```json
 {
   "opportunityId": "OPP-0017",
   "client": "Example Technology",
   "stage": "Sales Discovery",
-  "serviceLane": "Project-Based",
+  "serviceLane": "Business Technology Projects",
   "contractVersion": "project-v1",
   "businessId": "9",
   "engagementType": "project",
@@ -83,11 +91,11 @@ Use the resolved **Request Type = Create Client** and **Service Lane = Project-B
 }
 ```
 
-The actual app supplies the completed appropriate answers; `{}` above illustrates structure only. Reject missing/mismatched contract/business IDs, unexpected types (only `project`/`hourly`), missing intake, or a lane other than Project-Based. Query Clients by `TIG_SalesBusinessID` before allocation. Reuse a single exact match. Serialize client allocation or use the unique business column and reread after a duplicate-key conflict. Multiple matches must reject for owner review. Repeated requests for one Business ID must yield one Client ID/folder, even across different OPPs.
+The actual app supplies the completed appropriate answers; `{}` above illustrates structure only. Reject missing/mismatched contract/business IDs, unexpected types (only `project`/`hourly`), missing intake, or a lane other than Business Technology Projects. Query Clients by `TIG_SalesBusinessID` before allocation. Reuse a single exact match. Serialize client allocation or use the unique business column and reread after a duplicate-key conflict. Multiple matches must reject for owner review. Repeated requests for one Business ID must yield one Client ID/folder, even across different OPPs.
 
-For a new identity allocate the existing Client ID/folder convention, store `TIG_SalesBusinessID`, keep the originating OPP, set Sales Discovery and Project-Based, and create storage including `/Commercial`. Store the versioned discovery snapshot through the existing discovery export mechanism. Return the existing normal result fields and Client link, with Processing Status Done only after identity and storage are available. A reused business must preserve its Client ID, folder and current operational stage. This branch must not run MIT-05/BII-05, issue managed contracts, enroll any service, or activate support/security/backup responsibility.
+For a new identity allocate the existing Client ID/folder convention, store `TIG_SalesBusinessID`, keep the originating OPP, set Sales Discovery and Business Technology Projects, and create storage including `/Commercial`. Store the versioned discovery snapshot through the existing discovery export mechanism. Return the existing normal result fields and Client link, with Processing Status Done only after identity and storage are available. A reused business must preserve its Client ID, folder and current operational stage. This branch must not run MIT-05/BII-05, issue managed contracts, enroll any service, or activate support/security/backup responsibility.
 
-### Create Working Copy — Project-Based branch
+### Create Working Copy — Business Technology Projects branch
 
 ```json
 {
@@ -95,24 +103,24 @@ For a new identity allocate the existing Client ID/folder convention, store `TIG
   "workflowId": "PRJ-05",
   "instanceRef": "51",
   "contractVersion": "project-v1",
-  "serviceLane": "Project-Based",
+  "serviceLane": "Business Technology Projects",
   "businessId": "9",
   "opportunityId": "OPP-0017",
   "engagementType": "project"
 }
 ```
 
-Resolve the exact existing Client ID and verify its business key (or deliberately link a blank legacy key after owner selection). Reject conflicting keys, absent clients, wrong lane, a MIT/BII workflow ID, or a workflow that differs from the configured project/hourly definition. Require an active Create Client Copy definition and the approved pinned master. Reuse a copy only by **Client ID + Workflow ID + Instance Reference**; duplicates reject. New copies go only in that customer's `/Commercial`, populate Instance Reference, Client ID, Workflow ID and Open completion status, and keep the client stage unchanged. App work creation stops at the proposal copy. This is not a project-task branch. Preserve existing MIT/BII routing and the normal result/audit/error behavior. Unknown requests must be reconciled by their exact unique title before retries.
+Resolve the exact existing Client ID and require a nonblank matching Sales Business ID. For a legacy customer, the owner must deliberately set the key on the Clients row; selecting the customer in the app is insufficient. Reject conflicting keys, absent clients, wrong lane, a MIT/BII workflow ID, or a workflow that differs from the configured project/hourly definition. Require an active Create Client Copy definition and the approved pinned master. Reuse a copy only by **Client ID + Workflow ID + Instance Reference**; duplicates reject. New copies go only in that customer's `/Commercial`, populate Instance Reference, Client ID, Workflow ID and Open completion status, and keep the client stage unchanged. App work creation stops at the proposal copy. This is not a project-task branch. Preserve existing MIT/BII routing and the normal result/audit/error behavior. Unknown requests must be reconciled by their exact unique title before retries.
 
-After staging tests and owner approval, set `PROJECT_WORKFLOW_CONTRACT=v1` in the deployment environment. This is an operator assertion that these branches are installed; the app additionally reads the schema, unique business column, active definition and instance-reference capability. Do not set this variable solely to bypass the prerequisite messages. Keep the existing write modes unchanged until explicitly approved.
+After staging tests and owner approval, have Josh set the `PROJECT_WORKFLOW_CONTRACT` opt-in to `v1` in Hostinger in the deployment environment. This is an operator assertion that these branches are installed; the app additionally reads the schema, unique business column, active definition and instance-reference capability. Do not set this variable solely to bypass the prerequisite messages. Keep the existing write modes unchanged until explicitly approved.
 
 ## New DOCX templates — owner approval required
 
-No project/hourly master is bundled or assumed approved. Synthetic test controls are test-only and are not customer documents. Approve the language/layout separately, then promote:
+An unchanged ENG-PRJ v1.0 fixture is now bundled for validation; no hourly master is bundled. Bundling does not assert live SharePoint approval. Synthetic test controls are test-only and are not customer documents. Approve the language/layout separately, then promote:
 
 | Document key | Purpose | Required deployment variables |
 |---|---|---|
-| `ENG-PRJ` | Project quote / statement of work | `PROJECT_QUOTE_MASTER_FILENAME`, `PROJECT_QUOTE_WORKFLOW_ID`, `PROJECT_QUOTE_TEMPLATE_VERSION` |
+| `ENG-PRJ` | Project quote / statement of work | Pinned in `src/docfill/master-names.js`: `The_IT_Guys_Project_Quote_SOW_Template_v1.0.docx`, `PRJ-05`, `v1.0` |
 | `ENG-HRLY` | Hourly estimate / work authorization | `HOURLY_QUOTE_MASTER_FILENAME`, `HOURLY_QUOTE_WORKFLOW_ID`, `HOURLY_QUOTE_TEMPLATE_VERSION` |
 
 Workflow IDs must be distinct PRJ-… IDs, filenames must pin an exact `.docx` version, and keys must resolve to exactly one Approved master in Operational Standards & Templates. `…_TEMPLATE_VERSION` labels that pinned version; select its immutable/versioned filename when promoting. Quotes never select arbitrary files or drive IDs. Masters are always read-only; working-copy replacement keeps the existing If-Match and delivery audit safeguards.
@@ -135,10 +143,10 @@ Local verification: `npm ci` succeeded (0 reported vulnerabilities) for the univ
 1. Review the feature branch and take backups. Apply migration 013 manually in staging. Verify backfill counts and existing Client ID groups. Test against the actual supported MySQL/MariaDB version; no database server was available in this workspace for executing the migration.
 2. Install with `npm ci`, run tests/lint/build, and start the app against isolated staging settings. The build validates source syntax, all EJS templates and both pinned legacy DOCX tag sets; this Node app requires no transpilation.
 3. Test CRM intake, estimates and acceptance/handoff with SharePoint writes disabled. Configure an owner-approved proposed hourly default/minimum if desired. No tax or accounting settings exist in this feature.
-4. Implement the SharePoint schema and flow branches above in staging, approve/promote the new templates, configure the exact master/definition/instance names, refresh the connection, and then opt in to Project-Based v1. Verify repeat requests and an uncertain delivery before authorizing production rollout.
+4. Implement the SharePoint schema and flow branches above in staging, approve/promote the pinned project master, verify PRJ-05 and configure TIG_InstanceRef, refresh the connection, and then opt in to Business Technology Projects v1. Verify repeat requests and an uncertain delivery before authorizing production rollout.
 5. Acceptance example: create **Southeast Cable Construction — Outlook repair**, Hourly / Break-Fix. Supply contact, issue, work description, access needs and rate-authorization requirements. Confirm no Managed IT questions appear. Check missing-field links and an urgent hold/release.
-6. Create a two-hour custom estimate, approve as owner, and confirm internal approval leaves the business a prospect and the sale open. Revise intake and confirm it requires a new approval. Confirm no accounting, time entry or task controls appear.
-7. Open/reuse its SharePoint business record. Verify Project-Based only, one Client ID/folder and no MIT/BII copies/onboarding. Prepare the approved hourly DOCX in Commercial, review it, and send manually. Record sent only after actually sending.
+6. Create a two-hour custom estimate, approve as owner, and confirm internal approval leaves the business a prospect and the sale open. Revise intake and confirm the approved quote remains unchanged; work authorization validates current complete intake. Confirm no accounting, time entry or task controls appear.
+7. Open/reuse its SharePoint business record. Verify Business Technology Projects only, one Client ID/folder and no MIT/BII copies/onboarding. Prepare the approved hourly DOCX in Commercial, review it, and send manually. Record sent only after actually sending.
 8. Record the actual customer acceptance reference and handoff destination (for example MSP Manager) on the opportunity. Verify only this sale becomes Closed Won, a handoff activity is retained, and the business is a customer with no Managed IT coverage implied. Continue delivery outside this app. Repeated submission must not duplicate acceptance.
 9. Open a second opportunity from the business page for a migration, type One-Time Project. Estimate labor/deliverables/equipment, approve and save another proposal with a different Quote ID/Instance Reference. Confirm the same Client ID and no second folder. Mark this second opportunity lost and verify the first handoff/customer remains intact.
 10. Run existing MIT and BII discovery, price, approval, proposal and stage-gate acceptance tests. A future Managed IT sale still requires its existing standardization/activation process; a prior repair is not standardization evidence.

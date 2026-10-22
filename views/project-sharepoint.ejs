@@ -1,7 +1,7 @@
 <%- include('header') %>
 <h1>SharePoint business record</h1>
 <p><a href="/prospects/<%= p.id %>/work"><%= p.opp %> — <%= p.business_name %></a></p>
-<p>Opportunity type: <strong><%= engagementTypes[p.engagement_type] %></strong>. Service lane: <strong>Project-Based</strong> (selected automatically).</p>
+<p>Opportunity type: <strong><%= engagementTypes[p.engagement_type] %></strong>. Service lane: <strong><%= projectLane %></strong> (selected automatically).</p>
 <p>This stores project proposals under the shared business. It does not enroll the business in Managed IT or BII, start managed onboarding, or authorize work.</p>
 <% if(error){ %><p role="alert"><%= error %></p><% } %>
 <% if(prerequisites.length){ %><h2>Configuration required</h2><ul><% for(const item of prerequisites){ %><li><%= item %></li><% } %></ul><% } %>

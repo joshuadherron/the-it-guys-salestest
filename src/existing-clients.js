@@ -18,7 +18,7 @@ export function existingClientRoutes(app, deps = { query, transaction, audit, pr
       clients = (await sp.clients()).map(r => clientSummary(r, schema)).filter(r =>
         !q || `${r.Title} ${r["Client ID"]}`.toLowerCase().includes(q.toLowerCase()));
     } catch { error = "SharePoint clients could not be loaded. Check the connection before linking."; }
-    res.render("client-relationship", { p, q, clients, error, lanes:genericEngagement(p)?[projectLane]:[...lanes,projectLane],project:genericEngagement(p),engagementTypes });
+    res.render("client-relationship", { p, q, clients, error, lanes:genericEngagement(p)?[projectLane]:[...lanes,projectLane],project:genericEngagement(p),engagementTypes,projectLane });
   });
   app.post("/prospects/:id/relationship", ownerOnly, async (req, res) => {
     await transaction(async c => {
