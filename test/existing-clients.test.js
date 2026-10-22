@@ -17,15 +17,18 @@ function connection() {
   }));
   return {...validateSchema(columns("requests"), columns("clients")),siteId:"site",requestListId:"requests"};
 }
-function harness({existing=true, linked=true, active=false, missing=false, role="owner", additional=true}={}) {
+function harness({existing=true, linked=true, active=false, missing=false, role="owner", additional=true,engagementType,quoted=false,savedDiscovery=false}={}) {
   const s=connection(), writes=[], routes=new Map(), records=[];
-  const p={id:46,opp:"OPP-0046",business_name:"Golden Triangle ABA",stage:"Qualified",service_lane:"Managed IT",relationship_type:existing?"existing_client":"new_client",...(linked?{client_id:"CL-0007",client_item_id:"17"}:{})};
+  const p={id:46,opp:"OPP-0046",business_name:"Golden Triangle ABA",stage:"Qualified",engagement_type:engagementType,service_lane:"Managed IT",relationship_type:existing?"existing_client":"new_client",...(linked?{client_id:"CL-0007",client_item_id:"17"}:{})};
   const values={Title:"Golden Triangle ABA","Client ID":"CL-0007","Current Stage":"Acceptance","Stage Status":"Complete","Service Lanes":active?["Business IT Integration","Managed IT"]:["Business IT Integration"],"Next Action":"Review additional service"};
   const row={id:"17",fields:Object.fromEntries(Object.entries(values).map(([k,v])=>[s.maps.clients[k].name,v]))};
   const answers=emptyAnswers();
   if(!existing) {for(const [,ids] of groups) for(const id of ids) answers[id]={state:"not_sure",value:null};answers["Q1.3"]={state:"not_sure",value:null};}
   const query=async(sql, params=[])=>{
     writes.push({sql,params});
+    if(sql.startsWith("SELECT * FROM allowlist"))return [{role,email:role==="owner"?"josh@theitguys.us":"alanna@theitguys.us",enabled:1}];
+    if(sql.startsWith("SELECT id FROM quotes"))return quoted?[{id:77}]:[];
+    if(sql.startsWith("SELECT * FROM discoveries"))return savedDiscovery?[{answers:JSON.stringify(answers),revision:2,status:"Ready for Review",flags:"[]"}]:[];
     if(sql.startsWith("SELECT complete FROM additional")) return [{complete:additional}];
     if(sql.startsWith("SELECT * FROM additional")) return [];
     if(sql.includes("action='TechnicalAssessment' AND status='Done'")) return records.filter(r=>r.status==="Done"&&r.action==="TechnicalAssessment");
@@ -33,7 +36,7 @@ function harness({existing=true, linked=true, active=false, missing=false, role=
     if(sql.startsWith("SELECT * FROM sp_requests")) return records;
     if(sql.startsWith("INSERT INTO sp_requests")){records.push({id:records.length+1,action:params[1],body:JSON.parse(params[2]),status:"Preparing"});return {insertId:records.length};}
     if(sql.startsWith("UPDATE sp_requests SET status=?,item_id")){records[params[2]-1].status=params[0];return [];}
-    if(sql.startsWith("UPDATE prospects SET relationship_type")){[p.relationship_type,p.client_id,p.client_item_id,p.service_lane]=params;return [];}
+    if(sql.startsWith("UPDATE prospects SET relationship_type")){[p.relationship_type,p.client_id,p.client_item_id,p.service_lane,p.engagement_type]=params;return [];}
     return [];
   };
   const sp={cache:s,ready:()=>s,clients:async()=>missing?[]:[row],client:async()=>missing?null:row,requests:async()=>[]};
@@ -142,4 +145,33 @@ test("additional discovery and relationship views render current client details"
  const existing=harness();const discovery=await existing.call("GET /prospects/:id/additional-discovery");
  const form=await ejs.renderFile("views/additional-discovery.ejs",{...discovery.data,csrf:"token",user:existing.session.user,mode:"dryrun"});
  assert.ok(form.includes("Major infrastructure changes"));assert.ok(form.includes("BII-08"));
+});
+
+test("relationship lane list offers Project-Based alongside the existing Managed IT/BII choices",async()=>{
+  const h=harness({existing:false,linked:false,engagementType:"bii"});h.p.service_lane="Business IT Integration";
+  const page=await h.call("GET /prospects/:id/relationship"),html=await ejs.renderFile("views/client-relationship.ejs",{...page.data,csrf:"token",user:h.session.user,mode:"dryrun"});
+  assert.deepEqual(page.data.lanes,["Business IT Integration","Managed IT","Project-Based"]);assert.ok(html.includes('value="Project-Based"'));assert.ok(html.includes("Project-Based (Project / Hourly)"));assert.ok(html.includes("BII / Standardization"));
+});
+
+test("selecting Project-Based corrects a BII opportunity and links the existing client without creating a record",async()=>{
+  const h=harness({existing:false,linked:false,engagementType:"bii",savedDiscovery:true});h.p.service_lane="Business IT Integration";
+  await h.call("POST /prospects/:id/relationship",{relationship_type:"existing_client",client_id:"CL-0007",service_lane:"Project-Based",original_engagement_type:"bii"});
+  assert.equal(h.p.engagement_type,"project");assert.equal(h.p.service_lane,"Project-Based");assert.equal(h.p.client_id,"CL-0007");assert.equal(h.records.length,0);
+  assert.equal(h.writes.filter(w=>w.sql.startsWith("INSERT INTO discovery_versions")).length,2);assert.ok(h.writes.some(w=>w.sql.startsWith("UPDATE discoveries")&&w.sql.includes("status='Draft'")));assert.ok(!h.writes.some(w=>w.sql.startsWith("INSERT INTO sp_requests")));
+});
+
+for(const type of ["project","hourly"])test(`${type} relationship locks Project-Based and ignores a forged Managed IT lane`,async()=>{
+  const h=harness({existing:false,linked:false,engagementType:type});h.p.service_lane="Project-Based";
+  const page=await h.call("GET /prospects/:id/relationship"),html=await ejs.renderFile("views/client-relationship.ejs",{...page.data,csrf:"token",user:h.session.user,mode:"dryrun"});
+  assert.deepEqual(page.data.lanes,["Project-Based"]);assert.match(html,/<select name="service_lane" disabled/);assert.ok(html.includes("selected automatically"));
+  await h.call("POST /prospects/:id/relationship",{relationship_type:"existing_client",client_id:"CL-0007",service_lane:"Managed IT"});
+  assert.equal(h.p.service_lane,"Project-Based");assert.equal(h.p.engagement_type,type);assert.equal(h.p.client_id,"CL-0007");assert.equal(h.records.length,0);
+});
+
+test("Project-Based lane selection cannot bypass protected quote history or a stale type",async()=>{
+  for(const [quoted,original,pattern] of [[true,"bii",/has quotes/],[false,"managed_it",/another tab/]]) {
+    const h=harness({existing:false,linked:false,engagementType:"bii",quoted});h.p.service_lane="Business IT Integration";
+    await assert.rejects(()=>h.call("POST /prospects/:id/relationship",{relationship_type:"existing_client",client_id:"CL-0007",service_lane:"Project-Based",original_engagement_type:original}),pattern);
+    assert.equal(h.p.client_id,undefined);assert.equal(h.p.engagement_type,"bii");assert.equal(h.records.length,0);assert.ok(!h.writes.some(w=>w.sql.startsWith("UPDATE prospects SET relationship_type")));
+  }
 });

@@ -15,6 +15,7 @@ The attempt to correct the saved type exposed a separate implementation restrict
 - The previous service plan is saved in an activity before stale lane/sequence selections are cleared. The new service lane derives from the saved opportunity type. Project/Hourly always uses Project-Based and never submits MIT/BII enrollment requests. Any Managed IT-only Technical Assessment pipeline selection is returned to Discovery when correcting to another service type, subject to the existing hold restriction.
 - Generic `/handoff` GET links now lead directly to `/project-sharepoint`. Legacy handoff POST commands remain blocked for generic opportunities. Managed IT/BII retain their existing service choices.
 - SharePoint screens show the saved type. Project/Hourly identifies the automatically selected Project-Based lane and the existing-record reuse behavior. Missing schema/flow configuration is displayed explicitly and disables the unavailable button while the server continues enforcing the same prerequisites.
+- The Customer relationship screen also offers Project-Based in its new-service lane list. Selecting it for an open MIT/BII prospect invokes this same protected type correction to One-Time Project before saving the relationship, within one transaction. It does not silently mismatch the lane and stored type. Project/Hourly prospects keep Project-Based locked automatically, including against forged Managed IT values. Selecting an existing customer reuses that identity and creates no Workflow Request. Other lane corrections use the same quote/workflow/history guards.
 
 ## Data and deployment
 
@@ -24,4 +25,4 @@ After deploying this patch, Josh can open OPP-0086 → Edit opportunity, select 
 
 Tests cover archive preservation, compatible/incompatible questionnaire changes, old risk preservation, stale edits, permissions, commercial-history restrictions, shared identity, rollback, correct GET routing, rejected legacy POSTs, configuration messaging and escaped discovery history. The full test suite, lint and production source/view validation are required before release.
 
-Verified locally: all **486 tests passed**, lint passed, and the production validation checked 94 JavaScript sources, 36 EJS views and both pinned legacy DOCX masters. No production records or external workflows were changed during these checks.
+Verified locally, including the relationship lane follow-up: all **491 tests passed**, lint passed, and the production validation checked 94 JavaScript sources, 36 EJS views and both pinned legacy DOCX masters. No production records or external workflows were changed during these checks.

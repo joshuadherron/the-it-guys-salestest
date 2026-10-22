@@ -4,8 +4,9 @@ import { sp } from "./handoff.js";
 import { ownerOnly, text, choice, integer, fail } from "./security.js";
 import { lanes } from "./config.js";
 import { isExisting, additionalFields, additionalAnswers, clientSummary, selectClient } from "./existing-client-rules.js";
-import { genericEngagement,projectLane } from "./engagement-types.js";
+import { genericEngagement,projectLane,engagementTypes } from "./engagement-types.js";
 import { linkBusinessRecord } from "./businesses.js";
+import { changeOpportunityType } from "./opportunity-type.js";
 export function existingClientRoutes(app, deps = { query, transaction, audit, prospect, sp }) {
   const { query, transaction, audit, prospect, sp } = deps;
   app.get("/prospects/:id/relationship", ownerOnly, async (req, res) => {
@@ -17,7 +18,7 @@ export function existingClientRoutes(app, deps = { query, transaction, audit, pr
       clients = (await sp.clients()).map(r => clientSummary(r, schema)).filter(r =>
         !q || `${r.Title} ${r["Client ID"]}`.toLowerCase().includes(q.toLowerCase()));
     } catch { error = "SharePoint clients could not be loaded. Check the connection before linking."; }
-    res.render("client-relationship", { p, q, clients, error, lanes:genericEngagement(p)?[projectLane]:lanes });
+    res.render("client-relationship", { p, q, clients, error, lanes:genericEngagement(p)?[projectLane]:[...lanes,projectLane],project:genericEngagement(p),engagementTypes });
   });
   app.post("/prospects/:id/relationship", ownerOnly, async (req, res) => {
     await transaction(async c => {
@@ -28,8 +29,11 @@ export function existingClientRoutes(app, deps = { query, transaction, audit, pr
         fail("Reconcile existing SharePoint requests before linking a client.");
       const type = choice(req.body.relationship_type, ["new_client", "existing_client"]);
       const client = type === "existing_client" ? selectClient(await sp.clients(), text(req.body.client_id || "", 80), sp.ready()) : null;
-      const lane = genericEngagement(p)?projectLane:type === "existing_client" ? choice(req.body.service_lane, lanes) : p.service_lane;
-      await query("UPDATE prospects SET relationship_type=?,client_id=?,client_item_id=?,service_lane=? WHERE id=?", [type, client?.["Client ID"] || null, client?.itemId || null, lane, p.id], c);
+      const lane = genericEngagement(p)?projectLane:choice(req.body.service_lane||p.service_lane,[...lanes,projectLane]);
+      const targetType=genericEngagement(p)?p.engagement_type:lane===projectLane?"project":lane==="Managed IT"?"managed_it":"bii";
+      if(p.engagement_type&&targetType!==p.engagement_type)await changeOpportunityType(p,targetType,req.session.user,c,{query,audit},req.body.original_engagement_type);
+      if(targetType!=="managed_it"&&p.stage==="Technical Assessment")await query("UPDATE prospects SET stage='Discovery' WHERE id=?",[p.id],c);
+      await query("UPDATE prospects SET relationship_type=?,client_id=?,client_item_id=?,service_lane=?,engagement_type=? WHERE id=?", [type, client?.["Client ID"] || null, client?.itemId || null, lane,targetType,p.id], c);
       if(client)await linkBusinessRecord(p,client["Client ID"],client.itemId,c,query);
       await audit(c, req.session.user, "set customer relationship", "prospect", p.id);
     });
