@@ -359,7 +359,6 @@ export function quotesRoutes(app,deps={query,transaction,audit,prospect,discover
         fail("Complete the stop-condition review.");
 
       if(stops.some(s=>req.body["stop_"+s.id]==="yes")){
-        if(input.pricingMode!=="managed_v20")fail("BT-7.30 stop condition selected. Complete a targeted assessment or route the scope before approving this BII quote. The free BT-7.32 assessment is optional.");
         if(req.body.continue_anyway!=="yes")fail("Assessment findings need review. Select Continue Anyway to approve pricing only; this does not authorize work or service activation.");
       }
 

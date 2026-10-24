@@ -107,10 +107,10 @@ date is additionally required if assessed is true. A complete plan with assessed
 false is approvable without an assessment date. The worksheet and saved review
 show: `A free read-only assessment is available before quoting (BT-7.32).`
 
-BT-7.30 findings retain blocking behavior for BII approval, including if a forged
-Continue Anyway field is posted. This is the prompt's explicit BII exception to
-the flexible-sales warning policy. Managed IT's current warning behavior remains
-unchanged. The checklist states:
+BT-7.30 findings are pricing warnings for both BII and Managed IT. An owner-ticked
+condition requires Continue Anyway before approval, with the same warning message
+and `acknowledged` audit value in both lanes. Stop conditions are never ticked
+automatically. Approval does not authorize work or service activation. The checklist states:
 
 > The free scripted assessment (BT-7.32) is optional and is not a stop condition.
 
@@ -243,11 +243,14 @@ all-false template fills, matching flags, rate mismatches, master immutability a
 the 60-to-74-tag extension. Existing master-resolution, provenance, XML/package,
 Managed IT, ENG-PRJ and gate regressions remain in the full test suite.
 
-Local results: **563 tests pass**, including 31 new BII v1.7 tests. Tests cover an
+Local results: **564 tests pass**, including 32 new BII v1.7 tests. Tests cover an
 existing database missing all three defaults through a successful BII DOCX fill,
 partial backfill, concurrent/idempotent seeding, preservation of edited prices,
 each missing plan field at approval, assessed without a date, incomplete draft
-saves and all operating/assessed combinations without owner-selected stops.
+saves, all operating/assessed combinations without owner-selected stops, warning
+refusal without Continue Anyway and approval with audited acknowledgement when
+it is ticked. Both lanes show the override. `QSOW.AddonsNote` uses the v1.7 wording
+`+ add-ons and scope listed in §2` when add-ons apply.
 The database-state tests use an injectable query double, not a live MySQL server.
 ESLint and production build validation pass. Build validation checks 98 JavaScript sources,
 40 EJS views, COM-PRP v1.8, BII-QSOW v1.7 and ENG-PRJ v1.0. Both unaffected lanes'

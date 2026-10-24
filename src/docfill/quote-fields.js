@@ -63,7 +63,7 @@ export function buildBiiFill({quote,prospect,owner={},prices}){
  "QSOW.IssueDate":biiDate(quote.approved_at||new Date().toISOString()),
  "QSOW.BackupContact":required(owner,"backupContact"),"QSOW.Location":required(owner,"location"),
  "QSOW.PrimaryDomain":required(owner,"domain"),"QSOW.TargetTiming":required(owner,"targetTiming"),
- "QSOW.Total":money(calc.total),"QSOW.AddonsNote":calc.total>Number(prices.foundation)?"+ add-ons listed in §2":"",
+ "QSOW.Total":money(calc.total),"QSOW.AddonsNote":calc.total>Number(prices.foundation)?"+ add-ons and scope listed in §2":"",
  "QSOW.SummaryText":required(owner,"summary"),"QSOW.Users":String(input.users),
  "QSOW.Devices":String(devices),"QSOW.DeviceTypes":required(owner,"deviceTypes"),
  "QSOW.DevicesIncludedUsed":String(Math.min(devices,Number(prices.included_devices))),

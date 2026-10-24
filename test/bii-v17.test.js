@@ -140,6 +140,8 @@ test("regulated paragraph and price row are controlled together and use the exac
   const data=buildBiiFill(sample({regulatedPackage:true}));
   assert.equal(data.flags["IF.Regulated"],true);assert.equal(data.flags["IF.RegulatedPackage"],true);
   assert.equal(data.fields["QSOW.RegulatedText"],regulatedDataText);assert.equal(data.fields["QSOW.RegulatedCost"],"$550");assert.equal(data.fields["QSOW.Total"],"$5,135");
+  assert.equal(data.fields["QSOW.AddonsNote"],"+ add-ons and scope listed in §2");
+  assert.equal(buildBiiFill(sample({users:5,windows:5,mac:0,ios:0,mailboxes:5,regulatedPackage:false})).fields["QSOW.AddonsNote"],"");
   assert.equal(buildBiiFill(sample({users:1,regulatedPackage:true})).fields["QSOW.RegulatedUsers"],"1 user");
   const oldNarrative=sample();oldNarrative.owner={...owner,regulatedText:"Prior custom narrative"};
   assert.equal(buildBiiFill(oldNarrative).flags["IF.Regulated"],false);
@@ -165,16 +167,16 @@ test("every IF flag must be supplied, including all new flags",async()=>{
 });
 
 function routes(input){
-  const paths=new Map(),writes=[],q={id:19,prospect_id:86,status:"Draft",inputs:input};
+  const paths=new Map(),writes=[],audits=[],q={id:19,prospect_id:86,status:"Draft",inputs:input};
   const run=async(sql,args=[])=>{
     if(sql.startsWith("SELECT * FROM quotes"))return [q];if(sql.startsWith("SELECT id FROM prospects"))return [{id:86}];
     if(sql.startsWith("SELECT * FROM config_stop_conditions"))return [{id:1,label:"Known ownership dispute",status:"Review"}];
     if(sql.startsWith("UPDATE")||sql.startsWith("INSERT")){writes.push({sql,args});return {insertId:20};}throw new Error(sql);
   };
-  quotesRoutes({get:(p,...handlers)=>paths.set("GET "+p,handlers),post:(p,...handlers)=>paths.set("POST "+p,handlers)},{query:run,transaction:async f=>f({}),audit:async()=>{},prospect:async()=>({id:86,engagement_type:"bii"}),discovery:async()=>({answers:{}}),priceConfig:async()=>prices});
+  quotesRoutes({get:(p,...handlers)=>paths.set("GET "+p,handlers),post:(p,...handlers)=>paths.set("POST "+p,handlers)},{query:run,transaction:async f=>f({}),audit:async(...args)=>{audits.push(args);},prospect:async()=>({id:86,engagement_type:"bii"}),discovery:async()=>({answers:{}}),priceConfig:async()=>prices});
   const req={params:{id:19},body:{reviewed:"yes"},session:{user:{role:"owner",email:"josh@example.test",quote_approve:true}}};
   const res={redirect(){}};
-  return {req,writes,async call(path){for(const handler of paths.get("POST "+path)){let next=false;await handler(req,res,()=>{next=true;});if(!next)break;}}};
+  return {req,writes,audits,async call(path){for(const handler of paths.get("POST "+path)){let next=false;await handler(req,res,()=>{next=true;});if(!next)break;}}};
 }
 test("BII approval names every missing plan field and requires an assessment date only when assessed",async()=>{
   const incomplete=routes({...base(),operatingBusiness:true,afterHoursWindows:"",assessed:true});
@@ -200,14 +202,31 @@ test("operating and assessed never auto-select BT-7.30 stop conditions",async()=
   const stop=view.match(/<input[^>]*name="stop_[\s\S]*?value="yes"[^>]*>/);
   assert.ok(stop);assert.ok(!stop[0].includes("checked"));
 });
-test("BT-7.30 remains blocking for BII even with Continue Anyway; optional unperformed assessment is never a gate",async()=>{
-  const blocked=routes(base());blocked.req.body={reviewed:"yes",stop_1:"yes",continue_anyway:"yes"};await assert.rejects(()=>blocked.call("/quotes/:id/approve"),/BT-7.30/);assert.equal(blocked.writes.length,0);
+test("BII BT-7.30 warning requires Continue Anyway and records the owner acknowledgement",async()=>{
+  const blocked=routes(base());blocked.req.body={reviewed:"yes",stop_1:"yes"};
+  await assert.rejects(()=>blocked.call("/quotes/:id/approve"),{message:"Assessment findings need review. Select Continue Anyway to approve pricing only; this does not authorize work or service activation."});
+  assert.equal(blocked.writes.length,0);assert.equal(blocked.audits.length,0);
+  const acknowledged=routes(base());acknowledged.req.body={reviewed:"yes",stop_1:"yes",continue_anyway:"yes"};await acknowledged.call("/quotes/:id/approve");
+  const update=acknowledged.writes.find(w=>w.sql.startsWith("UPDATE quotes SET status='Approved'"));
+  assert.deepEqual(JSON.parse(update.args[1]),[{id:1,label:"Known ownership dispute",status:"Review",selected:true,acknowledged:true}]);
+  assert.deepEqual(acknowledged.audits[0].slice(2),["approve","quote",19]);
   const optional=routes({...base(),...plan,assessed:false});await optional.call("/quotes/:id/approve");assert.ok(optional.writes.length);
 });
 test("BII drafts can save incomplete plans and retain the new inputs for owner review",async()=>{
   const h=routes(base());h.req.params.id=86;h.req.body={...raw,operatingBusiness:"yes",assessed:"yes",regulatedPackage:"yes"};await h.call("/prospects/:id/quotes");
   const write=h.writes.find(w=>w.sql.startsWith("INSERT INTO quotes")),saved=JSON.parse(write.args[1]);
   assert.equal(saved.operatingBusiness,true);assert.equal(saved.assessed,true);assert.equal(saved.regulatedPackage,true);assert.equal(saved.waveCount,null);
+});
+test("both approval lanes show an unticked Continue Anyway override and BII retains optional assessment wording",async()=>{
+  const view=await readFile("views/quotes.ejs","utf8");
+  const start=view.indexOf("<h3>Pre-quote stop conditions</h3>"),end=view.indexOf("</form>",start);
+  for(const pricingMode of ["managed_v20",undefined]){
+    const html=ejs.render(view.slice(start,end),{selected:{docInput:{...plan,pricingMode,confirmed:true}},stops:[{id:1,label:"Review finding",status:"Review"}]});
+    assert.match(html,/<input type="checkbox" name="continue_anyway" value="yes">/);
+    assert.match(html,/<input type="checkbox" name="stop_1" value="yes">/);
+    assert.ok(html.includes("Findings are warnings for pricing."));
+    if(!pricingMode)assert.ok(html.includes("The free scripted assessment (BT-7.32) is optional and is not a stop condition."));
+  }
 });
 
 test("plan UI keeps draft fields optional, displays plan length and the non-blocking assessment hint",async()=>{

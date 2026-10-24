@@ -134,7 +134,7 @@
 <form method="post" action="/quotes/<%= selected.id %>/approve">
 <input type="hidden" name="_csrf" value="<%= csrf %>">
 <h3>Pre-quote stop conditions</h3>
-<p><%= selected.docInput.pricingMode==='managed_v20'?'Tick any condition that applies. Findings are warnings for pricing. Required assessment and service readiness still apply before work starts.':'Tick any BT-7.30 condition that applies. A selected stop condition blocks BII approval until targeted assessment or scope routing.' %></p>
+<p><%= selected.docInput.pricingMode==='managed_v20'?'Tick any condition that applies. Findings are warnings for pricing. Required assessment and service readiness still apply before work starts.':'Tick any BT-7.30 condition that applies. Findings are warnings for pricing. Select Continue Anyway to approve pricing with selected findings; approval does not authorize work or service activation.' %></p>
 <% if(!selected.docInput.confirmed){ %>
 <label>
 <input type="checkbox" name="confirm_counts" value="yes" required> I confirm the saved draft counts, including zero values and devices counted once.
@@ -148,7 +148,7 @@
 <% if(selected.docInput.pricingMode!=='managed_v20'){ %><p>The free scripted assessment (BT-7.32) is optional and is not a stop condition.</p><% } %>
 <label>
 <input type="checkbox" name="reviewed" value="yes" required> I reviewed every stop condition.</label>
-<% if(selected.docInput.pricingMode==='managed_v20'){ %><label><input type="checkbox" name="continue_anyway" value="yes">Continue Anyway with selected assessment findings. Pricing approval does not authorize work.</label><% } %>
+<label><input type="checkbox" name="continue_anyway" value="yes">Continue Anyway with selected assessment findings. Pricing approval does not authorize work.</label>
 <button>Approve pricing</button>
 </form>
 <% } %>

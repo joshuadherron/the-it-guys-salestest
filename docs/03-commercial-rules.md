@@ -18,7 +18,7 @@
 | Price-first rule | The standard BII quote is issued from Business Discovery for commercial acceptance. Technical verification (TRA) happens **after** signing. A targeted pre-quote assessment happens only when a stop condition exists (the stop-condition list is config; see open questions). |
 | Website phrase | "Business IT Integration projects start at $3,750." |
 | Scheduled after-hours work | Scheduled project work at the normal rate. No premium and no additional price line. Record the windows on the dated operating-business plan. |
-| Free scripted assessment (BT-7.32) | Optional before quoting. It is never a stop condition or quote prerequisite. Keep BT-7.30 targeted-assessment stops separate and blocking for BII approval. |
+| Free scripted assessment (BT-7.32) | Optional before quoting. It is never a stop condition or quote prerequisite. BT-7.30 findings are owner-selected warnings; Continue Anyway permits pricing approval and records acknowledgement, as for Managed IT. |
 
 **Worked example (for tests):** 7 users, 8 managed devices (6 PCs, 1 Mac, 1 company iPad), 6 mailboxes, 2 personal phones, 1 location → $3,750 + 2×$75 + 3×$185 + 1×$130 = **$4,585**. The phones are not counted.
 
