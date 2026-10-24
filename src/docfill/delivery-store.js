@@ -22,7 +22,7 @@ export class DeliveryStore {
         await assertProjectApproval(p,q);
       }
       if(!p.client_id)throw new Error("Save proposal to SharePoint first to create the opportunity record and quote copy.");
-      await lockClientRequests(p,this.query,c);
+      await lockClientRequests(p,this.query,c,id);
       const pending=await this.query("SELECT id FROM quote_send_attempts WHERE client_id=? AND (status IN ('Preparing','PdfSaved','Sending','Unknown') OR (status='Failed' AND pdf_item_id IS NOT NULL)) FOR UPDATE",[p.client_id],c);
       if(pending.some(a=>String(a.id)!==String(retryId||"")))throw new Error("A saved/active quote send needs reconciliation or email-only retry before another fill/send.");
       let attempt;

@@ -1,5 +1,13 @@
 # BII Quote and SOW v1.7
 
+October 24 Quick Quote update: use **choose/add business → build BII quote →
+Preview → Send**. Optional findings are on preview; Send anyway records their
+acknowledgement without a separate review/Continue Anyway form. Send prepares
+automatically and stops at Ready for signature, retaining eSignature. No email is
+sent automatically for BII. See [QUICK-QUOTE.md](QUICK-QUOTE.md) for migration 014,
+PSA creation limitations and live-flow completeness checks. The manual approval
+route described below remains a legacy troubleshooting path.
+
 Owner decisions: October 23, 2026. Business-rule reference:
 `The_IT_Guys_Business_IT_Integration_Standard_v1.5_Pass10.docx`.
 The supplied Standard has no content-control tags. The actual tagged artifact is

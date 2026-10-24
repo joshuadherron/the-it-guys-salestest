@@ -1,6 +1,6 @@
 <section class="card no-print"><h2>What would you like to do?</h2><p>Choose any action at any pipeline stage.</p><div class="sales-action-grid">
 <a class="button" href="#sales-notes">Notes / activity</a>
-<a class="button" href="/prospects/<%= p.id %>/quotes">New quote / proposal</a>
+<a class="button" href="<%= p.engagement_type==='hourly'?'/prospects/'+p.id+'/project-quotes':'/quick-quote'+(p.business_id?'?business_id='+p.business_id:'') %>">New quote / proposal</a>
 <a class="button" href="/prospects/<%= p.id %>/<%= ['project','hourly'].includes(p.engagement_type)?'intake':p.relationship_type==='existing_client'?'additional-discovery':'discovery/resume' %>">Discovery</a>
 <a class="button" href="/prospects/<%= p.id %>/handoff">Create / manage SharePoint structure and documents</a>
 <a class="button" href="/prospects/<%= p.id %>/edit">Edit opportunity / business</a>

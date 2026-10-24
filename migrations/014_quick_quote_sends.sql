@@ -1,0 +1,13 @@
+CREATE TABLE quote_quick_sends (
+  quote_id BIGINT UNSIGNED PRIMARY KEY,
+  status VARCHAR(30) NOT NULL,
+  snapshot_hash VARCHAR(64) NOT NULL,
+  requested_by VARCHAR(254) NOT NULL,
+  options_json JSON NOT NULL,
+  operation_token VARCHAR(36) NULL,
+  lease_until DATETIME NULL,
+  error_message TEXT NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (quote_id) REFERENCES quotes(id) ON DELETE CASCADE
+);

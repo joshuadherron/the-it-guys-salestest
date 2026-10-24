@@ -145,7 +145,7 @@ function harness(register,options={}) {
     if(sql.startsWith("SELECT d.*"))return options.noIntake?[]:[record];
     if(sql.startsWith("SELECT * FROM businesses"))return [business];
     if(sql.startsWith("SELECT * FROM activities WHERE prospect_id=? AND outcome=?"))return handoff?[handoff]:[];
-    if(sql.startsWith("SELECT r.id FROM sp_requests"))return pending;
+    if(sql.startsWith("SELECT r.id"))return pending;
     if(sql.startsWith("SELECT * FROM sp_requests"))return pending;
     if(sql.startsWith("SELECT id FROM quotes"))return [];
     if(sql.startsWith("SELECT id FROM businesses WHERE client_id"))return [];

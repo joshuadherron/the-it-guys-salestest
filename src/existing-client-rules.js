@@ -42,12 +42,17 @@ export function assertExistingTransition(p, client, complete) {
   if (client["Current Stage"] !== "Acceptance")
     fail("Managed IT transition requires the existing BII client to be at Acceptance.");
 }
-export async function lockClientRequests(p, run, c) {
-  if (!p.client_id) return;
+export async function lockClientRequests(p, run, c, quoteId) {
+  if (!String(p.client_id||"").trim()) {
+    const pending=await run("SELECT id FROM sp_requests WHERE prospect_id=? AND status IN ('Preparing','Pending','Processing','Unknown') FOR UPDATE",[p.id],c);
+    if(pending.length)fail("A request for this opportunity is already active or needs reconciliation.");
+    return;
+  }
   await run("INSERT IGNORE INTO client_request_locks (client_id) VALUES (?)", [p.client_id], c);
   await run("SELECT client_id FROM client_request_locks WHERE client_id=? FOR UPDATE", [p.client_id], c);
   const operations = await run("SELECT client_id FROM quote_operation_locks WHERE client_id=? FOR UPDATE",[p.client_id],c);
   if(operations.length)fail("A quote fill/send is active or uncertain. Reconcile it before another workflow action.");
-  const pending = await run("SELECT id FROM sp_requests WHERE prospect_id IN (SELECT id FROM prospects WHERE client_id=?) AND status IN ('Preparing','Pending','Processing','Unknown') FOR UPDATE", [p.client_id], c);
-  if (pending.length) fail("A request for this client is already active or needs reconciliation.");
+  const pending = await run("SELECT id,prospect_id,request_json FROM sp_requests WHERE prospect_id IN (SELECT id FROM prospects WHERE client_id=?) AND status IN ('Preparing','Pending','Processing','Unknown') FOR UPDATE", [p.client_id], c);
+  if (pending.some(r=>!quoteId||String(r.prospect_id)===String(p.id)||requestMatchesQuote(r.request_json,p,quoteId))) fail("A request for this client is already active or needs reconciliation.");
 }
+import { requestMatchesQuote } from "./quote-request-scope.js";

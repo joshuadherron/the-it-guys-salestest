@@ -1,5 +1,11 @@
 # Quote DOCX rollout checklist
 
+October 24 Quick Quote: apply migration **014_quick_quote_sends.sql** before
+deploying the three-step sales flow. Preview → Send now records approval and
+prepares folder/copy/fill automatically. Managed IT and Project use PDF/email;
+BII remains eSignature. See [QUICK-QUOTE.md](QUICK-QUOTE.md) for resume behavior,
+retained guards and the unverified live completeness/PSA flow prerequisites.
+
 ## Current integration state
 - Route: `GET/POST /quotes/:id/document`, enforced by configurable `quote.send`.
 - Approved quote required. The draft-download action returns a draft DOCX without SharePoint changes; the explicit Fill button invokes the separately gated quote-content service.

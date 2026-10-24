@@ -1,0 +1,7 @@
+<fieldset data-business-choice><legend>Who are you adding?</legend>
+<label><input type="radio" name="business_mode" value="new" <%= !p.business_id?'checked':'' %>>New prospect / business</label>
+<label><input type="radio" name="business_mode" value="existing" <%= p.business_id?'checked':'' %>>Another opportunity for an existing business</label>
+<div data-existing-business <%= p.business_id?'':'hidden' %>>
+<label>Choose the existing business<select name="business_id" <%= p.business_id?'required':'disabled' %>><option value="">Select a business</option><% for(const b of businesses){ %><option value="<%= b.id %>" data-business-name="<%= b.name %>" data-contact-name="<%= b.contact_name||'' %>" data-email="<%= b.email||'' %>" data-phone="<%= b.phone||'' %>" <%= String(p.business_id)===String(b.id)?'selected':'' %>><%= b.name %></option><% } %></select></label>
+<p>Reuses the saved business and its SharePoint identity. Contact details can be updated for this opportunity.</p>
+</div></fieldset>

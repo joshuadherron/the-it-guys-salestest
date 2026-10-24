@@ -35,7 +35,7 @@ export async function deletionBlock(p, run=query, c) {
   if(fill)return "A quote fill is active or uncertain. Reconcile it before deleting this prospect.";
   const [send]=await run("SELECT a.id FROM quote_send_attempts a JOIN quotes q ON q.id=a.quote_id WHERE q.prospect_id=? AND (a.status IN ('Preparing','PdfSaved','Sending','Unknown') OR (a.status='Failed' AND a.pdf_item_id IS NOT NULL)) LIMIT 1",[p.id],c);
   if(send)return "A quote delivery needs completion or reconciliation before deleting this prospect.";
-  if(p.client_id) {
+  if(String(p.client_id||"").trim()) {
     const [operation]=await run("SELECT client_id FROM quote_operation_locks WHERE client_id=? LIMIT 1",[p.client_id],c);
     if(operation)return "A quote operation for this SharePoint record is active or uncertain. Reconcile it before deletion.";
   }
@@ -75,7 +75,7 @@ export function prospectDeleteRoutes(app,deps={query,transaction,audit}) {
       await audit(c,actor,("delete prospect "+p.opp+" "+p.business_name).slice(0,100),"prospect",id);
       await audit(c,actor,("delete local history "+rows.map(r=>r.count).join("/")).slice(0,100),"prospect",id);
       // Delete in FK order; all statements are local and use the same transaction.
-      for(const table of ["quote_send_attempts","quote_proposal_states","quote_fills"])
+      for(const table of ["quote_quick_sends","quote_send_attempts","quote_proposal_states","quote_fills"])
         await query(`DELETE FROM ${table} WHERE quote_id IN (SELECT id FROM quotes WHERE prospect_id=?)`,[id],c);
       for(const [table] of children)
         await query(`DELETE FROM ${table} WHERE prospect_id=?`,[id],c);

@@ -841,7 +841,7 @@ test("Today queue selects the requested cohorts and sorts oldest first", async (
   const queries = [];
   const queue = await waitingForJosh(async (sql) => {
     queries.push(sql);
-    return sql.includes("LEFT JOIN discoveries")
+    return sql.includes("FROM prospects p LEFT JOIN discoveries")
       ? [{ id: 1, business_name: "A", hold: true, since: "2026-09-01" }]
       : sql.includes("FROM quotes")
         ? [{ id: 2, business_name: "B", since: "2026-09-02" }]

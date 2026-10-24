@@ -24,7 +24,7 @@
 <td><%= q.billingLabel %></td>
 <td class="quote-history-actions">
 <div class="quote-history-action-grid">
-<a href="/prospects/<%= p.id %>/quotes?quote=<%= q.id %>#selected-quote">Review</a>
+<a href="/quick-quote/quotes/<%= q.id %>">Preview / Send</a>
 <% if(user.role==="owner"){ %><a href="/prospects/<%= p.id %>/quotes?edit=<%= q.id %>#<%= q.docInput.pricingMode==="managed_v20"?"managed-services-section":"bii-services-section" %>">Edit</a><% }else{ %><span></span><% } %>
 <a href="/quotes/<%= q.id %>/print">Print</a>
 <% if(user.role==="owner" && q.status==="Approved" ){ %><a href="/quotes/<%= q.id %>/document?lane=<%= q.docInput.pricingMode==="managed_v20"?"COM-PRP":"BII-QSOW" %>">Review proposal facts</a><% }else{ %><span aria-hidden="true"></span><% } %>
@@ -123,7 +123,7 @@
 </div>
 <a href="/quotes/<%= selected.id %>/print">Printable internal worksheet</a>
 <% if((typeof canSend!=="undefined"&&canSend) && selected.status==="Approved"){ %>
-<a class="button quote-document-action" href="/quotes/<%= selected.id %>/document?lane=<%= selected.docInput.pricingMode==="managed_v20"?"COM-PRP":"BII-QSOW" %>">Save proposal to SharePoint</a><a href="/quotes/<%= selected.id %>/delivery">Fill / Send quote to client</a>
+<a class="button" href="/quick-quote/quotes/<%= selected.id %>">Preview → Send</a>
 
 <% } %>
 <% if((typeof canApprove!=='undefined'&&canApprove)&&selected.status==='Draft'){ %>
@@ -131,26 +131,7 @@
 <input type="hidden" name="_csrf" value="<%= csrf %>">
 <button type="submit">Delete draft</button>
 </form>
-<form method="post" action="/quotes/<%= selected.id %>/approve">
-<input type="hidden" name="_csrf" value="<%= csrf %>">
-<h3>Pre-quote stop conditions</h3>
-<p><%= selected.docInput.pricingMode==='managed_v20'?'Tick any condition that applies. Findings are warnings for pricing. Required assessment and service readiness still apply before work starts.':'Tick any BT-7.30 condition that applies. Findings are warnings for pricing. Select Continue Anyway to approve pricing with selected findings; approval does not authorize work or service activation.' %></p>
-<% if(!selected.docInput.confirmed){ %>
-<label>
-<input type="checkbox" name="confirm_counts" value="yes" required> I confirm the saved draft counts, including zero values and devices counted once.
-</label>
-<% } %>
-<% for(const stop of stops){ %>
-<label>
-<input type="checkbox" name="stop_<%= stop.id %>" value="yes"> <%= stop.label %> · <%= stop.status %>
-</label>
-<% } %>
-<% if(selected.docInput.pricingMode!=='managed_v20'){ %><p>The free scripted assessment (BT-7.32) is optional and is not a stop condition.</p><% } %>
-<label>
-<input type="checkbox" name="reviewed" value="yes" required> I reviewed every stop condition.</label>
-<label><input type="checkbox" name="continue_anyway" value="yes">Continue Anyway with selected assessment findings. Pricing approval does not authorize work.</label>
-<button>Approve pricing</button>
-</form>
+<a class="button" href="/quick-quote/quotes/<%= selected.id %>">Preview → Send</a>
 <% } %>
 </section>
 <% } %>
@@ -188,7 +169,7 @@
 <small>Internal Quoting Guide v16: reference ranges, not automatic pricing. Owner determines final fee.</small>
 </div>
 </div>
-<label><input type="checkbox" name="confirmed" value="yes" required> I confirmed quantities, scope, and custom-price items.</label>
+
 </fieldset>
 <button <%= user.role!=='owner'?'disabled':'' %>><%= editing?.docInput.pricingMode==="managed_v20"?(editing.status==="Approved"?"Save new draft revision":"Save changes to draft"):"Save managed services draft" %></button>
 </form>
@@ -234,8 +215,6 @@
 </div>
 </div>
 <% } %>
-<label>
-<input type="checkbox" name="confirmed" value="yes" <%= input.confirmed?'checked':'' %> <%= user.role==='owner'?'required':'' %>> I have confirmed all counts, including zero values and devices counted once.</label>
 </fieldset>
 <button >
 <%= editing && editing.docInput.pricingMode!=='managed_v20'?(editing.status==='Approved'?'Save new draft revision':'Save changes to draft'):(user.role==='owner'?'Save new draft':'Create draft from discovery for Josh') %>

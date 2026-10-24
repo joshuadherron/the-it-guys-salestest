@@ -1,0 +1,13 @@
+<%- include('header') %>
+<h1>Quick Quote</h1><p>1. Choose a business · 2. Build your quote · 3. Preview → Send</p>
+<form method="post" class="card">
+<input type="hidden" name="_csrf" value="<%= csrf %>">
+<%- include('business-choice',{p:{business_id:selected},businesses}) %>
+<label>Business name<input id="business_name" name="business_name" maxlength="255" required></label>
+<label>Contact name<input id="contact_name" name="contact_name" maxlength="255"></label>
+<label>Email<input id="email" name="email" type="email" maxlength="254"></label>
+<label>Phone (optional)<input id="phone" name="phone" maxlength="80"></label>
+<button>Build quote</button></form>
+<p>Adding a business creates its local sales record. It does not activate services or authorize work.</p>
+<script src="/opportunity-form.js" defer></script>
+<%- include('footer') %>

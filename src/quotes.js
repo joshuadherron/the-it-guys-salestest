@@ -114,7 +114,7 @@ export function validateManagedInputs(body) {
   return input;
 }
 
-function combinedManagedQuote(input, prices) {
+export function combinedManagedQuote(input, prices) {
   const managed = priceManagedServices(input);
   if (!input.includeBii) return managed;
   const foundation = Number(prices.foundation);
@@ -153,6 +153,7 @@ export function quotesRoutes(app,deps={query,transaction,audit,prospect,discover
       : null;
     if (req.query.quote && !selected)
       fail("Quote not found for this prospect.", 404);
+    if(selected&&req.query.legacy!=="yes")return res.redirect(`/quick-quote/quotes/${selected.id}`);
     const savedInput = selected ? json(selected.inputs) : null;
     const editingInput = editing ? json(editing.inputs) : null;
     const worksheetInput = editingInput || savedInput;

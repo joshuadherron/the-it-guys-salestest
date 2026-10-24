@@ -21,6 +21,7 @@ import { projectSharePointRoutes } from "./src/project-sharepoint.js";
 import { projectDocumentRoutes } from "./src/docfill/project-routes.js";
 import { engagementGuard } from "./src/engagement-guard.js";
 import { startRegulatedPriceBackfill } from "./src/price-config.js";
+import { quickQuoteRoutes } from "./src/quick-quote-routes.js";
 export const app = express();
 const mode = process.env.SHAREPOINT_WRITE_MODE || "dryrun";
 if (!["dryrun", "live"].includes(mode))
@@ -116,6 +117,7 @@ app.use(async (_req, _res, next) => {
   next();
 });
 app.use(engagementGuard());
+quickQuoteRoutes(app);
 pipelineRoutes(app);
 universalRoutes(app);
 projectQuoteRoutes(app);

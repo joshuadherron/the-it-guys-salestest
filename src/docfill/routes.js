@@ -15,7 +15,7 @@ import { genericEngagement } from "../engagement-types.js";
 const root=join(dirname(fileURLToPath(import.meta.url)),"../..");
 const templateNames={"COM-PRP":"COM-PRP-v1.8.docx","BII-QSOW":"BII-QSOW-v1.7.docx"};
 const ownerFields=["legalName","preparedFor","backupContact","locations","location","domain","serviceStart","targetTiming","summary","deviceKinds","deviceTypes","assignedDevices","onboardingText","clientTerms","sizedFor","signer","exceptions","deviceNote","hardwareText","locationText","regulatedText","extraExclusions","extraAssumption","lobExclusion"];
-function cleanOwner(body){
+export function cleanOwner(body){
  const owner={};
  for(const key of ownerFields){
   const value=body[key];

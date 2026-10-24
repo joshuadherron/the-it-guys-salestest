@@ -12,11 +12,11 @@ export function quoteDeliveryRoutes(app,deps={query,prospect,delivery:quoteDeliv
     const [q]=await query("SELECT * FROM quotes WHERE id=?",[integer(req.params.id)]);
     if(!q)throw new Error("Quote not found.");
     const p=await prospect(q.prospect_id),fill=await store.latestFill(q.id);
-    if(genericEngagement(p))return res.redirect(`/prospects/${p.id}/project-quotes?quote=${q.id}`);
+    if(genericEngagement(p)&&json(q.inputs).pricingMode==="hourly_v1")return res.redirect(`/prospects/${p.id}/project-quotes?quote=${q.id}`);
     const attempts=await query("SELECT id,status,phase,mode,actor,sent_to,sent_cc,pdf_item_id,error_message,created_at FROM quote_send_attempts WHERE quote_id=? ORDER BY id DESC",[q.id]);
     const documentKey=quoteLane(json(q.inputs)).key;
     let reason=null;
-    try{if(sendMode()==="off")throw new Error("QUOTE_SEND_MODE is off.");senderMailbox();senderProfile(req.session.user);if(q.status!=="Approved"||p.hold)throw new Error("Quote must be Approved and not On Hold.");if(!fill||fill.mode!=="live"||fill.status!=="Succeeded")throw new Error("A successful live fill is required.");if(fill?.document_key!=="COM-PRP")throw new Error("BII sending remains manual eSignature.");}catch(e){reason=e.message;}
+    try{if(sendMode()==="off")throw new Error("QUOTE_SEND_MODE is off.");senderMailbox();senderProfile(req.session.user);if(q.status!=="Approved"||p.hold)throw new Error("Quote must be Approved and not On Hold.");if(!fill||fill.mode!=="live"||fill.status!=="Succeeded")throw new Error("A successful live fill is required.");if(!["COM-PRP","ENG-PRJ"].includes(fill?.document_key))throw new Error("BII sending remains manual eSignature.");}catch(e){reason=e.message;}
     res.render("quote-delivery",{q,p,fill,attempts,reason,documentKey,report:fill?json(fill.report):null,sendMode:sendMode()});
   });
   app.post("/quotes/:id/send",quoteSend,async(req,res)=>{

@@ -26,7 +26,7 @@ test("owner form uses CSRF and explicit template lane",()=>{
  assert.match(view,/name="lane"/);
  assert.match(view,/Download draft Word document/);
 });
-test("Quote History retains printable internal worksheet and offers contractual quote",()=>{
+test("Quote History retains printable internal worksheet and offers Preview → Send without a prepare button",()=>{
  assert.match(quotesView,/Printable internal worksheet/);
- assert.match(quotesView,/Save proposal to SharePoint/);
+ assert.match(quotesView,/Preview → Send/);assert.doesNotMatch(quotesView,/Save proposal to SharePoint/);
 });

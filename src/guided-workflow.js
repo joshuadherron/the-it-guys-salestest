@@ -46,7 +46,7 @@ export async function waitingForJosh(run = query) {
       "SELECT p.id,p.business_name,p.hold,d.status,COALESCE((SELECT MIN(a.created_at) FROM audit_log a WHERE a.entity='discovery' AND a.entity_id=CAST(p.id AS CHAR) AND a.action='send to Josh'),p.created_at) since FROM prospects p LEFT JOIN discoveries d ON d.prospect_id=p.id WHERE p.hold=TRUE OR (d.status='Ready for Review' AND p.client_id IS NULL) ORDER BY since,p.id",
     ),
     run(
-      "SELECT p.id,p.business_name,q.id quote_id,q.created_at since FROM quotes q JOIN prospects p ON p.id=q.prospect_id JOIN discoveries d ON d.prospect_id=p.id WHERE q.status='Draft' AND d.status='Ready for Review' ORDER BY q.created_at,q.id",
+      "SELECT p.id,p.business_name,q.id quote_id,q.created_at since,s.status quick_status FROM quotes q JOIN prospects p ON p.id=q.prospect_id LEFT JOIN discoveries d ON d.prospect_id=p.id LEFT JOIN quote_quick_sends s ON s.quote_id=q.id WHERE q.status='Draft' AND (d.status='Ready for Review' OR s.status='WaitingApproval') ORDER BY q.created_at,q.id",
     ),
     run(
       "SELECT p.id,p.business_name,r.id request_id,r.status,r.result_message,r.created_at since FROM sp_requests r JOIN prospects p ON p.id=r.prospect_id WHERE r.status IN ('Rejected','Failed','Unknown') AND r.created_at>=DATE_SUB(UTC_TIMESTAMP(),INTERVAL 14 DAY) AND r.acknowledged_at IS NULL ORDER BY r.created_at,r.id",
@@ -60,8 +60,8 @@ export async function waitingForJosh(run = query) {
     })),
     ...quotes.map((r) => ({
       ...r,
-      label: "BII quote ready for approval",
-      href: `/prospects/${r.id}/quotes?quote=${r.quote_id}`,
+      label: r.quick_status==="WaitingApproval"?"Quote waiting for Approve & Send":"BII quote ready for approval",
+      href: r.quick_status==="WaitingApproval"?`/quick-quote/quotes/${r.quote_id}`:`/prospects/${r.id}/quotes?quote=${r.quote_id}`,
     })),
     ...requests.map((r) => ({
       ...r,

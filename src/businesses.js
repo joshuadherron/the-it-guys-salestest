@@ -40,11 +40,12 @@ export async function linkBusinessRecord(p,clientId,itemId,c,run=query) {
   await run("UPDATE prospects SET client_id=?,client_item_id=?,sharepoint_record_id=? WHERE business_id=? AND NULLIF(client_id,'') IS NULL",[clientId,itemId,clientId,p.business_id],c);
 }
 
-export async function lockBusinessRequests(p,run,c,own=[]) {
+export async function lockBusinessRequests(p,run,c,own=[],quoteId) {
   if(!p.business_id)return;
   const [b]=await run("SELECT * FROM businesses WHERE id=? FOR UPDATE",[p.business_id],c);
   if(!b)fail("Business identity is missing.",409);
-  const active=await run("SELECT r.id FROM sp_requests r JOIN prospects p ON p.id=r.prospect_id WHERE p.business_id=? AND (r.status IN ('Preparing','Pending','Processing','Unknown') OR (r.action='CreateClient' AND r.status='Done' AND NULLIF(p.client_id,'') IS NULL))",[p.business_id],c);
-  if(active.some(r=>!own.some(id=>String(id)===String(r.id))))fail("A SharePoint request for this business is active, uncertain or awaiting linkage. Reconcile it before continuing.",409);
   if(b.client_id&&!p.client_id)Object.assign(p,{client_id:b.client_id,client_item_id:b.client_item_id,sharepoint_record_id:b.client_id});
+  const active=await run("SELECT r.id,r.prospect_id,r.action,r.request_json FROM sp_requests r JOIN prospects p ON p.id=r.prospect_id WHERE p.business_id=? AND (r.status IN ('Preparing','Pending','Processing','Unknown') OR (r.action='CreateClient' AND r.status='Done' AND NULLIF(p.client_id,'') IS NULL))",[p.business_id],c);
+  if(active.some(r=>(!quoteId||!r.prospect_id||String(r.prospect_id)===String(p.id)||requestMatchesQuote(r.request_json,p,quoteId)||(!p.client_id&&r.action==='CreateClient'))&&!own.some(id=>String(id)===String(r.id))))fail("A SharePoint request for this business is active, uncertain or awaiting linkage. Reconcile it before continuing.",409);
 }
+import { requestMatchesQuote } from "./quote-request-scope.js";

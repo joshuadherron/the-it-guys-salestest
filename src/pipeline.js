@@ -34,6 +34,7 @@ import { engagementType, genericEngagement, projectLane, engagementTypes } from 
 import { attachBusiness } from "./businesses.js";
 import { salesHandoff } from "./sales-handoff.js";
 import { changeOpportunityType } from "./opportunity-type.js";
+import { canQuote } from "./quote-permissions.js";
 export const fields = [
   ...pipelineFields.map(([key, label]) =>
     key === "likely_tier" ? ["likely_service", "Likely Service"] : [key, label],
@@ -164,6 +165,8 @@ export async function insertProspect(
   c,
   storage = { query, audit },
 ) {
+  if(body.business_mode==="new")body={...body,business_id:undefined};
+  if(body.business_mode==="existing"&&!body.business_id)fail("Choose the existing business before saving.");
   if(body.business_id) {
     const [business]=await storage.query("SELECT * FROM businesses WHERE id=? FOR UPDATE",[integer(body.business_id)],c);
     if(!business)fail("Business not found.",404);
@@ -307,6 +310,7 @@ export function pipelineRoutes(app) {
   });
 
   app.post("/prospects", async (req, res) => {
+    if(req.body.next==="quote"&&!canQuote(req.session.user,"quote.send"))fail("Quote send permission is required to build a quote.",403);
     const id = await transaction((c) =>
       insertProspect(
         {
@@ -319,6 +323,7 @@ export function pipelineRoutes(app) {
         c,
       ),
     );
+    if(req.body.next==="quote")return res.redirect(`/quick-quote/opportunities/${id}`);
     const created = await prospect(id);
     await dispatchProspectSync(created, req.session.user);
     res.redirect(`/prospects/${id}`);
