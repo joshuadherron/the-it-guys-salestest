@@ -10,6 +10,12 @@ export async function ensureRegulatedPrices(run = query, connection) {
   }
 }
 
+export function startRegulatedPriceBackfill(run = query, report = error => {
+  console.error("Regulated price startup backfill failed; price loading will retry:", {name:error.name,code:error.code});
+}) {
+  return ensureRegulatedPrices(run).catch(report);
+}
+
 export async function loadPriceConfig(connection, run = query) {
   const sql = "SELECT * FROM config_prices" + (connection ? " FOR UPDATE" : "");
   let rows = await run(sql, [], connection);
