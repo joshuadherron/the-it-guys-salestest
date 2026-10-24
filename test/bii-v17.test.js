@@ -5,8 +5,9 @@ import JSZip from "jszip";
 import { DOMParser } from "@xmldom/xmldom";
 import ejs from "ejs";
 import { runInNewContext } from "node:vm";
+import { spawnSync } from "node:child_process";
 import { prices } from "../src/config.js";
-import { ensureRegulatedPrices,loadPriceConfig } from "../src/price-config.js";
+import { ensureRegulatedPrices,loadPriceConfig,startRegulatedPriceBackfill } from "../src/price-config.js";
 import { priceQuote,regulatedPackagePrice } from "../src/pricing.js";
 import { biiOptions,biiApprovalMissing,biiPlanLength,regulatedDataText,optionalAssessmentHint } from "../src/bii-options.js";
 import { prefill,validateInputs,quotesRoutes } from "../src/quotes.js";
@@ -55,6 +56,22 @@ test("startup seed is idempotent and partial backfill never overwrites existing 
   const config=await loadPriceConfig(connection,partial.run);
   assert.deepEqual(config,{regulatedBase:650,regulatedUser:25,regulatedIncludedUsers:5});
   assert.ok(partial.writes.every(w=>w.connection===connection));
+});
+test("startup backfill failure is handled and price loading retries successfully after database recovery",async()=>{
+  const error=Object.assign(new Error("Database unavailable"),{code:"ECONNREFUSED"}),reported=[];
+  await startRegulatedPriceBackfill(async()=>{throw error;},e=>reported.push(e));
+  assert.deepEqual(reported,[error]);
+  const old={...prices};for(const key of ["regulatedBase","regulatedUser","regulatedIncludedUsers"])delete old[key];
+  const db=priceDatabase(old);
+  assert.deepEqual(await loadPriceConfig(undefined,db.run),prices);
+});
+test("Hostinger CommonJS launcher can synchronously load the server module graph",()=>{
+  // Stop at the first config check, before any listener or database/network work.
+  // Top-level await would fail earlier with ERR_REQUIRE_ASYNC_MODULE instead.
+  const result=spawnSync(process.execPath,["-e",'require("node:assert/strict").throws(()=>require("./server.js"),{message:"Invalid SHAREPOINT_WRITE_MODE"})'],{
+    cwd:new URL("..",import.meta.url),env:{...process.env,SHAREPOINT_WRITE_MODE:"launcher-test-invalid"},encoding:"utf8",timeout:15000
+  });
+  assert.equal(result.status,0,result.stderr||result.error?.message);
 });
 const W="http://schemas.openxmlformats.org/wordprocessingml/2006/main";
 async function outputText(buffer){const zip=await JSZip.loadAsync(buffer),doc=new DOMParser().parseFromString(await zip.file("word/document.xml").async("string"),"text/xml");return Array.from(doc.getElementsByTagNameNS(W,"t")).map(t=>t.textContent).join(" ");}

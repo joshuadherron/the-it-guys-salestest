@@ -10,8 +10,10 @@ SHA-256: `c21451d63870a9058db311ec12ed7380de48dde719bf5299332fbea85314fa55`.
 
 ## Deployment prerequisites
 
-No schema migration or manual seed is needed. Startup inserts the three missing
-rows below into the existing `config_prices` table before accepting requests.
+No schema migration or manual seed is needed. After the HTTP listener starts,
+a handled background check inserts the three missing rows below into the existing
+`config_prices` table. A startup database failure is logged without terminating
+the web server. The entry point avoids top-level await for launcher compatibility.
 Price loading also repairs missing rows before returning persisted prices, so a
 BII fill cannot fail solely because these defaults were absent. `INSERT IGNORE`
 preserves every existing value, including owner edits and concurrent inserts.
@@ -243,7 +245,9 @@ all-false template fills, matching flags, rate mismatches, master immutability a
 the 60-to-74-tag extension. Existing master-resolution, provenance, XML/package,
 Managed IT, ENG-PRJ and gate regressions remain in the full test suite.
 
-Local results: **564 tests pass**, including 32 new BII v1.7 tests. Tests cover an
+Local results: **566 tests pass**, including 34 new BII v1.7 tests. A subprocess
+regression verifies Hostinger's CommonJS launcher can load the server module graph
+without `ERR_REQUIRE_ASYNC_MODULE`. Tests cover an
 existing database missing all three defaults through a successful BII DOCX fill,
 partial backfill, concurrent/idempotent seeding, preservation of edited prices,
 each missing plan field at approval, assessed without a date, incomplete draft
