@@ -46,14 +46,13 @@
   <% } %>
 </section>
 
-<% if(p.relationship_type!=='existing_client'){ %>
+<% if(!clientRecord&&!p.client_id&&p.relationship_type!=='existing_client'){ %>
 <section class="card">
   <h2>Open SharePoint record</h2>
   <p>Creates the opportunity's SharePoint folder and tracking row so proposals can be stored. This does not make them a client.</p>
 
   <p>
-    Completed discovery is required for this governed SharePoint structure. Sales preparation is available at any pipeline stage.
-    Missing groups: <%= missing.join(', ') || 'none' %>.
+    Quick Quote prepares proposal records automatically. These governed service actions retain their own readiness checks.
   </p>
 
   <form method="post" action="/prospects/<%= p.id %>/handoff">

@@ -84,7 +84,7 @@ test("EC4 duplicate name requires review and explicit different-company confirma
  assert.equal(duplicateClients({business_name:"Golden-Triangle ABA"},[h.row],h.s).length,1);
  await assert.rejects(()=>h.call("POST /prospects/:id/handoff",{action:"CreateClient",service_lane:"Managed IT"}),/Possible existing client/);
  const page=await h.call("GET /prospects/:id/handoff");assert.equal(page.data.duplicates.length,1);
- const html=await ejs.renderFile("views/handoff.ejs",{...page.data,csrf:"token",user:h.session.user,mode:"dryrun"});assert.ok(html.includes("This is a different company"));assert.ok(html.includes("Use existing client"));
+ const html=await ejs.renderFile("views/handoff.ejs",{...page.data,clientRecord:null,p:{...page.data.p,client_id:null},csrf:"token",user:h.session.user,mode:"dryrun"});assert.ok(html.includes("This is a different company"));assert.ok(html.includes("Use existing client"));
  await h.call("POST /prospects/:id/handoff",{action:"CreateClient",service_lane:"Managed IT",confirm_different:"yes"});
  assert.equal(h.records[0].action,"CreateClient");
 });

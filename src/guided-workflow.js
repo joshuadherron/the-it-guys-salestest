@@ -41,7 +41,7 @@ export function clientLanes(client) {
       : [];
 }
 export async function waitingForJosh(run = query) {
-  const [discoveries, quotes, requests] = await Promise.all([
+  const [discoveries, quotes, requests, failedSends] = await Promise.all([
     run(
       "SELECT p.id,p.business_name,p.hold,d.status,COALESCE((SELECT MIN(a.created_at) FROM audit_log a WHERE a.entity='discovery' AND a.entity_id=CAST(p.id AS CHAR) AND a.action='send to Josh'),p.created_at) since FROM prospects p LEFT JOIN discoveries d ON d.prospect_id=p.id WHERE p.hold=TRUE OR (d.status='Ready for Review' AND p.client_id IS NULL) ORDER BY since,p.id",
     ),
@@ -51,8 +51,10 @@ export async function waitingForJosh(run = query) {
     run(
       "SELECT p.id,p.business_name,r.id request_id,r.status,r.result_message,r.created_at since FROM sp_requests r JOIN prospects p ON p.id=r.prospect_id WHERE r.status IN ('Rejected','Failed','Unknown') AND r.created_at>=DATE_SUB(UTC_TIMESTAMP(),INTERVAL 14 DAY) AND r.acknowledged_at IS NULL ORDER BY r.created_at,r.id",
     ),
+    run("SELECT p.id,p.business_name,q.id quote_id,s.error_message result_message,s.updated_at since FROM quote_quick_sends s JOIN quotes q ON q.id=s.quote_id JOIN prospects p ON p.id=q.prospect_id WHERE s.status='Failed' ORDER BY s.updated_at,s.quote_id"),
   ]);
   return [
+    ...failedSends.map(r=>({...r,label:'Quote Send failed',href:`/quick-quote/quotes/${r.quote_id}`})),
     ...discoveries.map((r) => ({
       ...r,
       label: r.hold ? "On Hold" : "Discovery ready for review",

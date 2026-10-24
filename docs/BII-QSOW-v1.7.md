@@ -5,7 +5,7 @@ Preview → Send**. Optional findings are on preview; Send anyway records their
 acknowledgement without a separate review/Continue Anyway form. Send prepares
 automatically and stops at Ready for signature, retaining eSignature. No email is
 sent automatically for BII. See [QUICK-QUOTE.md](QUICK-QUOTE.md) for migration 014,
-PSA creation limitations and live-flow completeness checks. The manual approval
+the BII-14 / BII-PSA copy, worker and signature links. The manual approval
 route described below remains a legacy troubleshooting path.
 
 Owner decisions: October 23, 2026. Business-rule reference:

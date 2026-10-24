@@ -23,6 +23,7 @@
 <% if(item.request_id){ %><form method="post" action="/requests/<%= item.request_id %>/acknowledge"><input type="hidden" name="_csrf" value="<%= csrf %>"><button>Acknowledge</button></form><% } %>
 </article><% } %></details>
 <% }else{ %><p><%= relevantWaiting.length %> items waiting on Josh</p><% }} %>
+<% if(today&&user.role!=='owner'){for(const item of relevantWaiting.filter(r=>r.label==='Quote Send failed')){ %><article class="card"><h2>Quote Send failed</h2><a href="<%= item.href %>"><%= item.business_name %> — review quote</a><p class="error"><%= item.result_message %></p></article><% }} %>
 <form method="get" class="<%= today ? "" : "prospect-page-search" %>">
 <div class="row">
 <input name="q" value="<%= search %>" placeholder="Search business or contact" aria-label="Search">

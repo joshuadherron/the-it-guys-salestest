@@ -18,7 +18,7 @@ BUSINESS RECORD · <%= p.opp %> · <%= p.stage %>
 <%= p.city||'' %><%= p.city&&p.state?', ':'' %><%= p.state||'' %><%= p.zip?' '+p.zip:'' %>
 </p>
 <% } %>
-<%- include('sales-actions') %><%- include('sales-outcome') %>
+<%- include('sales-actions') %><%- include('quick-send-jobs') %><%- include('sales-outcome') %>
 <details class="card"><summary>SharePoint synchronization · technical details</summary>
 <% if(sync){ %>
 <p>Latest sync: <strong><%= sync.status %></strong> · <%= sync.created_at %></p>

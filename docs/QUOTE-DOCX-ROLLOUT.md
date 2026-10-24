@@ -3,8 +3,8 @@
 October 24 Quick Quote: apply migration **014_quick_quote_sends.sql** before
 deploying the three-step sales flow. Preview → Send now records approval and
 prepares folder/copy/fill automatically. Managed IT and Project use PDF/email;
-BII remains eSignature. See [QUICK-QUOTE.md](QUICK-QUOTE.md) for resume behavior,
-retained guards and the unverified live completeness/PSA flow prerequisites.
+BII remains eSignature. See [QUICK-QUOTE.md](QUICK-QUOTE.md) for worker progress,
+retained guards, verified PSA definition and signature links.
 
 ## Current integration state
 - Route: `GET/POST /quotes/:id/document`, enforced by configurable `quote.send`.

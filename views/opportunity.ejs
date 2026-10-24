@@ -2,7 +2,7 @@
 <p><%= p.opp %> · <%= engagementTypes[p.engagement_type] %> · <%= p.stage %> · <%= p.business_relationship_status||'Prospect' %></p>
 <p>This work does not enroll the business in Managed IT, monitoring, security or backups.</p><% if(p.hold){ %><p class="hold">On Hold — Pending Josh Review</p><% } %>
 <% if(user.is_admin){ %><p><a href="/prospects/<%= p.id %>/delete">Delete opportunity</a></p><% } %>
-<%- include('sales-actions') %><%- include('sales-outcome') %>
+<%- include('sales-actions') %><%- include('quick-send-jobs') %><%- include('sales-outcome') %>
 <section class="card"><h2>Intake</h2><p><%= intake?.complete?'Complete':'Draft' %></p><% if(missing.length){ %><p>Recommended sales context; required before work authorization:</p><ul><% for(const item of missing){ %><li><a href="<%= item.href %>"><%= item.label %></a></li><% } %></ul><% } %><% for(const flag of flags){ %><p class="<%= flag.urgent?'hold':'pill' %>"><%= flag.label %> · Review before authorizing work</p><% } %></section>
 <section class="card"><h2>Sales outcome and handoff</h2>
 <% if(handoff){ %><p>Won — customer authorization recorded.</p><p><%= handoff.authorization_kind %>: <%= handoff.authorization_reference %></p><p>Quote <%= handoff.quote_number||handoff.quote_id %> · recorded by <%= handoff.actor %></p><p>Hand off to: <%= handoff.handoff_destination %></p><p><%= handoff.handoff_notes||'' %></p><p>Continue delivery in the existing delivery system.</p>

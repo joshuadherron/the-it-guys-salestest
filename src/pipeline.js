@@ -350,6 +350,7 @@ export function pipelineRoutes(app) {
       relationshipLabel,
       servicePlan: servicePlan(p),
       json,
+      quickJobs:await query('SELECT s.*,q.quote_number FROM quote_quick_sends s JOIN quotes q ON q.id=s.quote_id WHERE q.prospect_id=? ORDER BY s.updated_at DESC',[p.id]),
     });
   });
   app.get("/prospects/:id/edit", async (req, res) =>

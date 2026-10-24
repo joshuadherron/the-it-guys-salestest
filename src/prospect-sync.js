@@ -23,6 +23,7 @@ export async function dispatchProspectSync(
   const mode = process.env.SHAREPOINT_WRITE_MODE || "dryrun";
   let body;
   let requestId;
+  let existing;
 
   try {
     const schema = sp.ready();
@@ -37,6 +38,10 @@ export async function dispatchProspectSync(
     );
 
     await transaction(async (c) => {
+      // Sync contention is prospect-local; it never holds quote preparation.
+      await query('SELECT id FROM prospects WHERE id=? FOR UPDATE',[p.id],c);
+      [existing]=await query("SELECT id,status FROM sp_requests WHERE prospect_id=? AND action='UpsertProspect' AND status IN ('Preparing','Pending','Processing','Unknown') ORDER BY id DESC LIMIT 1 FOR UPDATE",[p.id],c);
+      if(existing){requestId=existing.id;return;}
       const result = await query(
         "INSERT INTO sp_requests (prospect_id,action,request_json,status) VALUES (?,'UpsertProspect',?,'Preparing')",
         [p.id, JSON.stringify(body)],
@@ -45,6 +50,8 @@ export async function dispatchProspectSync(
       requestId = result.insertId;
       await audit(c, user, "prepare prospect sync", "sp_request", requestId);
     });
+
+    if(existing)return {ok:true,requestId,status:existing.status,existing:true};
 
     try {
       const result = await submitRequest(graph, mode, schema, body);

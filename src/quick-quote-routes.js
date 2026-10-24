@@ -12,6 +12,7 @@ import { documentPrefill } from "./docfill/prefill.js";
 import { snapshot } from "./docfill/delivery-store.js";
 import { quickCalculation,mayApprove } from "./quick-send.js";
 import { quickQuoteDocument } from "./quick-quote-document.js";
+import { missingProposalFacts,money,previewSections } from './quick-quote-preview.js';
 
 export function quickQuoteRoutes(app,{run=query,tx=transaction,log=audit,getProspect=prospect,insert=insertProspect,prices=priceConfig,document=quickQuoteDocument,service:provided,warn=console.warn}={}){
   const service=async()=>provided||(await import("./quick-send-runtime.js")).quickSend;
@@ -43,11 +44,14 @@ export function quickQuoteRoutes(app,{run=query,tx=transaction,log=audit,getPros
     res.redirect(`/quick-quote/opportunities/${id}`);
   }));
   app.get("/quick-quote/opportunities/:id",quoteSend,safe(async(req,res)=>{
-    const p=await getProspect(req.params.id),type=req.query.type||p.engagement_type;
-    if(!["managed_it","bii","project"].includes(type))fail("Choose Managed IT, BII or Project. Hourly estimates retain their existing workflow.");
+    const p=await getProspect(req.params.id);
     const [q]=req.query.quote?await run("SELECT * FROM quotes WHERE id=? AND prospect_id=?",[integer(req.query.quote),p.id]):[];
-    const input=q?json(q.inputs):type==="managed_it"?validateManagedInputs({}):type==="bii"?Object.fromEntries(["users","windows","mac","ios","android","unallocated","mailboxes","dell","phones","locations"].map(k=>[k,0])):{};
-    const prefill={...documentPrefill(p,input,type==="managed_it"?"COM-PRP":"BII-QSOW"),...(q?.document_facts?json(q.document_facts):{})};
+    const savedType=q?(json(q.inputs).pricingMode==='managed_v20'?'managed_it':json(q.inputs).pricingMode==='project_v1'?'project':'bii'):null;
+    const type=req.query.type||savedType,useSaved=q&&type===savedType;
+    if(!type)return res.render('quick-quote-type',{p});
+    if(!["managed_it","bii","project"].includes(type))fail("Choose Managed IT, BII or Project. Hourly estimates retain their existing workflow.");
+    const input=useSaved?json(q.inputs):type==="managed_it"?validateManagedInputs({}):type==="bii"?Object.fromEntries(["users","windows","mac","ios","android","unallocated","mailboxes","dell","phones","locations"].map(k=>[k,k==='locations'?1:0])):{};
+    const prefill={...documentPrefill(p,input,type==="managed_it"?"COM-PRP":"BII-QSOW"),...(useSaved&&q.document_facts?json(q.document_facts):{})};
     res.render("quick-quote-form",{p,type,input,prefill,q,oneOffItems,config:await projectConfig(run)});
   }));
   app.post("/quick-quote/opportunities/:id",quoteSend,safe(async(req,res)=>{
@@ -74,10 +78,12 @@ export function quickQuoteRoutes(app,{run=query,tx=transaction,log=audit,getPros
   }));
   app.get("/quick-quote/quotes/:id",quoteSend,safe(async(req,res)=>{
     const {q,p}=await context(req.params.id),send=await service(),job=await send.state(q.id);
-    if(job&&["Queued","Prepared","Sending"].includes(job.status))return res.redirect(`/quick-quote/quotes/${q.id}/progress`);
-    let preview=null,error=null;try{preview=await document(q,p,await prices());}catch(e){error=e.message;}
+    const input=json(q.inputs),type=input.pricingMode==='managed_v20'?'managed_it':input.includeBii?'bii':'project',missing=missingProposalFacts(type,json(q.document_facts));
+    let preview=null,error=missing.length?'Missing proposal facts: '+missing.join('; '):null;
+    if(!missing.length)try{preview=await document(q,p,await prices());}catch(e){error=e.message;}
     const stops=await run("SELECT * FROM config_stop_conditions ORDER BY id");
-    res.render("quick-quote-preview",{q,p,input:json(q.inputs),lines:json(q.line_items),hash:snapshot(q),preview,error,job,stops,canApprove:mayApprove(req.session.user)});
+    const documents=job?.status==='ReadySignature'?await send.signatureDocuments(q.id):null;
+    res.render("quick-quote-preview",{q,p,input,lines:json(q.line_items),hash:snapshot(q),preview,error,job,documents,stops,canApprove:mayApprove(req.session.user),money,sections:previewSections(input,json(q.line_items))});
   }));
   app.get("/quick-quote/quotes/:id/word",quoteSend,safe(async(req,res)=>{
     const {q,p}=await context(req.params.id),preview=await document(q,p,await prices());
@@ -98,6 +104,11 @@ export function quickQuoteRoutes(app,{run=query,tx=transaction,log=audit,getPros
     res.render("quick-quote-progress",{q,p,job,documents,canApprove:mayApprove(req.session.user)});
   }));
   app.post("/quick-quote/quotes/:id/progress",quoteSend,safe(async(req,res)=>res.json(await (await service()).advance(integer(req.params.id),req.session.user))));
+  app.get('/quick-quote/quotes/:id/status',quoteSend,safe(async(req,res)=>{
+    const send=await service(),job=await send.state(integer(req.params.id));
+    if(!job)fail('Send job not found.',404);
+    res.json(send.progress(job));
+  }));
   app.post("/quick-quote/quotes/:id/resume",quoteSend,safe(async(req,res)=>{
     await (await service()).resume(integer(req.params.id),req.session.user);res.redirect(`/quick-quote/quotes/${req.params.id}/progress`);
   }));

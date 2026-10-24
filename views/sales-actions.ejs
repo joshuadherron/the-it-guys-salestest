@@ -1,9 +1,10 @@
-<section class="card no-print"><h2>What would you like to do?</h2><p>Choose any action at any pipeline stage.</p><div class="sales-action-grid">
+<section class="card no-print"><h2>What would you like to do?</h2>
+<p><a class="button" href="<%= p.engagement_type==='hourly'?'/prospects/'+p.id+'/project-quotes':'/quick-quote'+(p.business_id?'?business_id='+p.business_id:'') %>">New quote</a></p>
+<details><summary>More</summary><div class="sales-action-grid">
 <a class="button" href="#sales-notes">Notes / activity</a>
-<a class="button" href="<%= p.engagement_type==='hourly'?'/prospects/'+p.id+'/project-quotes':'/quick-quote'+(p.business_id?'?business_id='+p.business_id:'') %>">New quote / proposal</a>
 <a class="button" href="/prospects/<%= p.id %>/<%= ['project','hourly'].includes(p.engagement_type)?'intake':p.relationship_type==='existing_client'?'additional-discovery':'discovery/resume' %>">Discovery</a>
 <a class="button" href="/prospects/<%= p.id %>/handoff">Create / manage SharePoint structure and documents</a>
 <a class="button" href="/prospects/<%= p.id %>/edit">Edit opportunity / business</a>
 <% if(p.business_id){ for(const [type,label] of [['project','New project'],['hourly','Hourly / break-fix'],['bii','BII opportunity'],['managed_it','Prepare Managed IT']]){ %>
 <a class="button" href="/prospects/new?business_id=<%= p.business_id %>&amp;engagement_type=<%= type %>"><%= label %></a>
-<% }} %></div><p>New work uses another opportunity under this business. Service activation uses the governed SharePoint actions.</p></section>
+<% }} %></div><p>New work uses another opportunity under this business. Service activation uses the governed SharePoint actions.</p></details></section>

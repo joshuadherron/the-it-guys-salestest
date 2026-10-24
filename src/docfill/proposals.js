@@ -6,7 +6,7 @@ import { listTags, fillDocx } from "./fill-docx.js";
 import { buildProjectFill } from "./project-fields.js";
 import { genericPricing } from "../engagement-types.js";
 
-// One bounded step per POST. The browser polls only after an explicit Save click.
+// One bounded step per worker tick or authenticated manual action.
 // Request identities are committed before dispatch; uncertain requests are never replayed.
 export class ProposalPreparation {
   constructor({store,resolver,delivery,prices,env=process.env}) { Object.assign(this,{store,resolver,delivery,prices,env}); }
@@ -23,12 +23,14 @@ export class ProposalPreparation {
       assertTagset(key,await listTags(master.content));
       await fillDocx(master.content,data); // Includes the existing RATE and document-field checks before any request.
       await this.store.validate(ctx,lane);
-      for(const [field,label,step] of [["record_request_id","SharePoint record","record_requested"],["record_sync_request_id","Sales Prospects record sync","record_ready"],["copy_request_id","Quote working copy","copy_requested"]]) {
+      for(const [field,label,step] of [["record_request_id","SharePoint record","record_requested"],["copy_request_id","Quote working copy","copy_requested"]]) {
         if(ctx.state[field] && !await this.wait(ctx,field,label))return {step,waiting:true,manualRequestId:ctx.manualRequestId||null};
       }
       const previous=await this.store.latestFill(id);
       if(previous?.status==="Succeeded" && previous.mode==="live" && previous.snapshot_hash===ctx.hash) {
-        await this.resolver.working(ctx.p,key,undefined,previous.item_id);
+        if(key==='BII-QSOW'){const psa=await this.store.preparePsa(ctx,lane);if(!psa.done)return psa;}
+        const working=await this.resolver.working(ctx.p,key,id,previous.item_id);
+        if(working.driveId!==previous.drive_id||working.itemId!==previous.item_id)throw new Error("The working quote differs from the latest fill.");
         await this.store.save(ctx,{step:"filled",fill_id:previous.id});
         return {step:"filled",done:true};
       }
@@ -45,7 +47,6 @@ export class ProposalPreparation {
       }
       await this.store.link(ctx,record);
       await this.store.save(ctx,{step:"record_ready"});
-      if(ctx.state.record_sync_request_id && !await this.wait(ctx,"record_sync_request_id","Sales Prospects record sync"))return {step:"record_ready",waiting:true};
       let copy=await this.store.copy(ctx,lane);
       if(!copy) {
         if(ctx.state.copy_request_id) {
@@ -62,6 +63,7 @@ export class ProposalPreparation {
       const result=await this.delivery.fill(id,user,{instanceRef:copy.instanceRef?String(id):undefined});
       const fill=await this.store.latestFill(id);
       await this.store.save(ctx,{step:"filled",fill_id:fill.id});
+      if(key==='BII-QSOW'){const psa=await this.store.preparePsa(ctx,lane);if(!psa.done)return psa;}
       return {step:"filled",done:true,...result};
     } catch(e) {
       await this.store.save(ctx,{error_message:e.message});

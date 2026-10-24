@@ -22,6 +22,7 @@ import { projectDocumentRoutes } from "./src/docfill/project-routes.js";
 import { engagementGuard } from "./src/engagement-guard.js";
 import { startRegulatedPriceBackfill } from "./src/price-config.js";
 import { quickQuoteRoutes } from "./src/quick-quote-routes.js";
+import { startQuickSendWorker } from './src/quick-send-worker.js';
 export const app = express();
 const mode = process.env.SHAREPOINT_WRITE_MODE || "dryrun";
 if (!["dryrun", "live"].includes(mode))
@@ -181,6 +182,7 @@ const port = Number(process.env.PORT || 3000);
 app.listen(port, () => {
   console.log("Sales app listening.");
   startRegulatedPriceBackfill();
+  void sharePointStartup.then(()=>startQuickSendWorker());
 });
 startSwitchPickup();
 

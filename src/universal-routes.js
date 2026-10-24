@@ -22,7 +22,8 @@ export function universalRoutes(app,deps={query,transaction,audit,prospect,sync:
     const [business]=await query("SELECT * FROM businesses WHERE id=?",[integer(req.params.id)]);
     if(!business)fail("Business not found.",404);
     const opportunities=await query("SELECT p.* FROM prospects p WHERE business_id=? ORDER BY id DESC",[business.id]);
-    res.render("business",{business,opportunities,engagementTypes});
+    const quickJobs=await query('SELECT s.*,q.quote_number FROM quote_quick_sends s JOIN quotes q ON q.id=s.quote_id JOIN prospects p ON p.id=q.prospect_id WHERE p.business_id=? ORDER BY s.updated_at DESC',[business.id]);
+    res.render("business",{business,opportunities,engagementTypes,quickJobs});
   });
   app.post("/prospects/:id/business",ownerOnly,async(req,res)=>{
     await transaction(async c=>{
@@ -41,7 +42,8 @@ export function universalRoutes(app,deps={query,transaction,audit,prospect,sync:
     const handoff=await salesHandoff(p.id,undefined,query);
     const quotes=await query("SELECT * FROM quotes WHERE prospect_id=? ORDER BY id DESC",[p.id]);
     const activities=await query("SELECT * FROM activities WHERE prospect_id=? ORDER BY id DESC LIMIT 100",[p.id]);
-    res.render("opportunity",{p,intake,handoff,quotes,activities,engagementTypes,missing:missingIntake(p.engagement_type,intake?json(intake.answers):{},p),flags:intake?json(intake.flags):[],canSend:canQuote(req.session.user,"quote.send")});
+    const quickJobs=await query('SELECT s.*,q.quote_number FROM quote_quick_sends s JOIN quotes q ON q.id=s.quote_id WHERE q.prospect_id=? ORDER BY s.updated_at DESC',[p.id]);
+    res.render("opportunity",{p,intake,handoff,quotes,activities,quickJobs,engagementTypes,missing:missingIntake(p.engagement_type,intake?json(intake.answers):{},p),flags:intake?json(intake.flags):[],canSend:canQuote(req.session.user,"quote.send")});
   });
   app.get("/prospects/:id/discovery-history",async(req,res)=>{
     const p=await prospect(req.params.id);

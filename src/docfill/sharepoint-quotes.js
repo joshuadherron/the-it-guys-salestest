@@ -5,7 +5,7 @@ import { listTags } from "./fill-docx.js";
 import { projectDocument,projectDocumentKeys,assertProjectCapability } from "../project-contract.js";
 import { masterNames } from "./master-names.js";
 export class SharePointQuotes {
-  constructor(sp,graph,env=process.env){this.sp=sp;this.graph=graph;this.env=env;}
+  constructor(sp,graph,env=process.env,debug=console.debug){this.sp=sp;this.graph=graph;this.env=env;this.debug=details=>{if(env.LOG_LEVEL==='debug')debug('quote working copy',details);};}
   async working(prospect,key,quoteId,itemId){
     const schema=this.sp.ready();
     if(!prospect.client_id||!await this.sp.client(prospect))throw new Error("The linked SharePoint client could not be read.");
@@ -13,26 +13,38 @@ export class SharePointQuotes {
     if(generic)assertProjectCapability(schema);
     const workflow=generic?projectDocument(key,this.env).workflow:key==="COM-PRP"?"MIT-05":"BII-05";
     const allItems=await this.sp.workItems(prospect.client_id,true);
-    const items=allItems.filter(i=>i.workflowId===workflow&&i.clientId===prospect.client_id&&!["Complete","Cancelled","Not Required"].includes(i.status) && (!quoteId || String(i.instanceRef)===String(quoteId)));
-    if(itemId){
+    let items=allItems;
+    for(const [filter,predicate] of [['workflow',i=>i.workflowId===workflow],['client',i=>i.clientId===prospect.client_id],['status',i=>!["Complete","Cancelled","Not Required"].includes(i.status)]]){
+      items=items.filter(predicate);this.debug({workflow,quoteId,filter,count:items.length});
+    }
+    const open=items;
+    if(quoteId)items=items.filter(i=>String(i.instanceRef)===String(quoteId));
+    this.debug({workflow,quoteId,filter:'instance',count:items.length});
+    // Instance identity is authoritative. Only genuinely unnumbered legacy files
+    // may fall back to the saved drive item; never adopt a different Quote ID.
+    if(itemId&&(!quoteId||!items.length)){
       const found=[];
-      for(const item of items){
+      for(const item of open.filter(i=>!i.instanceRef)){
         const row=await this.graph.read(`/sites/${schema.siteId}/lists/${schema.clientOpsId}/items/${encodeURIComponent(item.id)}?$expand=fields,driveItem`);
-        if(row.driveItem?.id===itemId)found.push(item);
+        this.debug({filter:'legacy drive item',listItemId:item.id,driveItemId:row.driveItem?.id,savedItemId:itemId});
+        if(String(row.driveItem?.id)===String(itemId))found.push(item);
       }
-      items.splice(0,items.length,...found);
+      items=found;
     }
     if(items.length!==1)throw new Error("Expected exactly one open quote working copy for this client.");
     const item=items[0];
     const instance=quoteId||item.instanceRef;
-    const pending=await this.sp.requests();
+    const pending=(await this.sp.requests()).filter(r=>!isProspectSync(r,schema));
     assertNoPending(instance?pending.filter(r=>requestMatchesQuote({fields:r.fields},prospect,instance,item.id)):pending,schema,{...prospect,work_item_ids:[item.id]});
     if(key==="BII-QSOW"&&item.signatureStatus!=="Preparing")throw new Error("BII quote signature preparation has already started.");
     const row=await this.graph.read(`/sites/${schema.siteId}/lists/${schema.clientOpsId}/items/${encodeURIComponent(item.id)}?$expand=fields,driveItem`);
     if(row.fields?.TIG_ClientID!==prospect.client_id||row.fields?.TIG_WorkflowID!==workflow||["Complete","Cancelled","Not Required"].includes(row.fields?.TIG_CompletionStatus))throw new Error("Quote working copy changed or belongs to another client.");
-    if(quoteId && (!schema.quoteInstanceColumn || String(row.fields?.[schema.quoteInstanceColumn])!==String(quoteId)))throw new Error("Quote instance reference changed. Check the verified Client Operations instance reference column.");
+    if(item.instanceRef && quoteId && (!schema.quoteInstanceColumn || String(row.fields?.[schema.quoteInstanceColumn])!==String(quoteId)))throw new Error("Quote instance reference changed. Check the verified Client Operations instance reference column.");
+    if(!item.instanceRef&&schema.quoteInstanceColumn&&row.fields?.[schema.quoteInstanceColumn])throw new Error("Legacy quote acquired a different instance reference. Reload and review.");
     if(key==="BII-QSOW"&&row.fields?.TIG_SignatureStatus!=="Preparing")throw new Error("BII signature preparation started before fill. Reload and review.");
     const drive=row.driveItem;
+    this.debug({filter:'resolved drive item',listItemId:item.id,driveItemId:drive?.id,savedItemId:itemId});
+    if(itemId&&String(drive?.id)!==String(itemId))throw new Error("The working quote differs from the latest fill.");
     if(!drive?.id||!drive.parentReference?.driveId||!drive.name?.toLowerCase().endsWith(".docx"))throw new Error("Working quote is missing its resolved Word drive item.");
     const fresh=await this.graph.read(`/drives/${encodeURIComponent(drive.parentReference.driveId)}/items/${encodeURIComponent(drive.id)}`);
     const folder=await this.graph.read(`/drives/${encodeURIComponent(drive.parentReference.driveId)}/items/${encodeURIComponent(fresh.parentReference?.id)}`);
@@ -69,4 +81,4 @@ export class SharePointQuotes {
     return {documentKey:key,status:"Approved",name:d.name,content};
   }
 }
-import { requestMatchesQuote } from "../quote-request-scope.js";
+import { requestMatchesQuote,isProspectSync } from "../quote-request-scope.js";

@@ -89,7 +89,7 @@ test("project common Quote action opens the project worksheet directly",async()=
 test("common sales actions and warnings remain visible across types and stages",async()=>{
   for(const type of ["managed_it","bii","project","hourly"]){
     const html=await ejs.renderFile("views/sales-actions.ejs",{p:{...business,engagement_type:type}});
-    for(const label of ["New quote / proposal","Discovery","New project","BII opportunity","Prepare Managed IT","Notes / activity"])assert.ok(html.includes(label),label);
+    for(const label of ["New quote","More","Discovery","New project","BII opportunity","Prepare Managed IT","Notes / activity"])assert.ok(html.includes(label),label);
     assert.ok(!html.includes("disabled"));
   }
   const html=await ejs.renderFile("views/sales-notices.ejs",{p:business});assert.match(html,/continue sales preparation/);

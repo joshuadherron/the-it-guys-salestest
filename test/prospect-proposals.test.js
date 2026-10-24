@@ -26,7 +26,7 @@ function harness({bii=false,linked=false}={}) {
     save:async(ctx,values)=>Object.assign(state,values),release:async()=>{leased=false;},
     renew:async()=>{},
     validate:async()=>{if(state.block)throw new Error("Pending request");},
-    latestFill:async()=>fill,
+    latestFill:async()=>fill,preparePsa:async()=>({done:true}),
     record:async()=>record,
     link:async(ctx,r)=>{p.client_id=r.clientId;p.sharepoint_record_id=r.clientId;},
     copy:async(ctx,lane)=>copies.find(c=>c.workflowId===lane.workflow&&c.instanceRef===String(ctx.q.id)),
@@ -119,12 +119,12 @@ test("BII delivery before its first fill offers no email Send form",async()=>{
   assert.doesNotMatch(html,/<form[^>]+action="\/quotes\/\d+\/send"/);
 });
 
-test("record-ID prospect sync is polled before creating the copy instead of blocking its own preparation",async()=>{
+test("record-ID prospect sync remains pending without blocking quote preparation",async()=>{
   const h=harness({linked:true});let synced=false;
   h.store.link=async()=>{if(!synced){synced=true;h.requests.push({id:1,status:"Pending",action:"UpsertProspect"});h.state.record_sync_request_id=1;}};
-  assert.equal((await h.service.advance(h.q.id,actor)).step,"record_ready");
-  await h.service.advance(h.q.id,actor);assert.equal(h.requests.length,1);
-  h.requests[0].status="Done";await h.service.advance(h.q.id,actor);
+  assert.equal((await h.service.advance(h.q.id,actor)).step,"copy_requested");
+  await h.service.advance(h.q.id,actor);assert.equal(h.requests.length,2);
+  assert.equal(h.requests[0].status,"Pending");
   assert.equal(h.requests[1].action,"CreateWorkingCopy");
 });
 test("successful stage observation syncs conversion once and uses the actual signed-in actor",async()=>{
@@ -199,7 +199,8 @@ test("fresh resolver selects the correct quote instance and sending selects the 
   }};
   const resolver=new SharePointQuotes({ready:()=>s,client:async()=>({}),workItems:async()=>items,requests:async()=>[]},graph);
   assert.equal((await resolver.working(p,"COM-PRP","2")).itemId,"doc2");
-  assert.equal((await resolver.working(p,"COM-PRP",undefined,"doc1")).itemId,"doc1");
+  assert.equal((await resolver.working(p,"COM-PRP","1","doc1")).itemId,"doc1");
+  await assert.rejects(()=>resolver.working(p,"COM-PRP",undefined,"doc1"),/exactly one/);
   await assert.rejects(()=>resolver.working(p,"COM-PRP","3"),/exactly one/);
 });
 
