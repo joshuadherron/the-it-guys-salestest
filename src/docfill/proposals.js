@@ -52,7 +52,7 @@ export class ProposalPreparation {
         if(ctx.state.copy_request_id) {
           if(!await this.wait(ctx,"copy_request_id","Quote working copy")) return {step:"copy_requested",waiting:true};
           copy=await this.store.copy(ctx,lane);
-          if(!copy) return {step:"copy_requested",waiting:true};
+          if(!copy) return await this.store.waitForCopy(ctx);
         } else {
           await this.store.request(ctx,"CreateWorkingCopy",lane,{workflowId:lane.workflow,instanceRef:String(id)},"copy_request_id");
           return {step:"copy_requested",waiting:true};
@@ -66,9 +66,24 @@ export class ProposalPreparation {
       if(key==='BII-QSOW'){const psa=await this.store.preparePsa(ctx,lane);if(!psa.done)return psa;}
       return {step:"filled",done:true,...result};
     } catch(e) {
+      if(e.code==='QUOTE_COPY_NOT_VISIBLE'){
+        try{
+          const waiting=await this.store.waitForCopy(ctx);
+          await this.store.save(ctx,{step:waiting.step});
+          return waiting;
+        }catch(error){e=error;}
+      }
       await this.store.save(ctx,{error_message:e.message});
       throw Object.assign(e,{status:e.status||409});
     } finally { await this.store.release(ctx); }
+  }
+  async waitForCopy(id,user){
+    const ctx=await this.store.acquire(id,user);
+    try{
+      const waiting=await this.store.waitForCopy(ctx);
+      await this.store.save(ctx,{step:waiting.step});
+      return waiting;
+    }finally{await this.store.release(ctx);}
   }
   async wait(ctx,field,label) {
     const r=await this.store.requestStatus(ctx.state[field]);

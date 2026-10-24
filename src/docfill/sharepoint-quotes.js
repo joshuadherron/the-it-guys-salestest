@@ -4,6 +4,7 @@ import { assertTagset } from "./tagsets.js";
 import { listTags } from "./fill-docx.js";
 import { projectDocument,projectDocumentKeys,assertProjectCapability } from "../project-contract.js";
 import { masterNames } from "./master-names.js";
+import { missingCopy } from './copy-visibility.js';
 export class SharePointQuotes {
   constructor(sp,graph,env=process.env,debug=console.debug){this.sp=sp;this.graph=graph;this.env=env;this.debug=details=>{if(env.LOG_LEVEL==='debug')debug('quote working copy',details);};}
   async working(prospect,key,quoteId,itemId){
@@ -18,7 +19,7 @@ export class SharePointQuotes {
       items=items.filter(predicate);this.debug({workflow,quoteId,filter,count:items.length});
     }
     const open=items;
-    if(quoteId)items=items.filter(i=>String(i.instanceRef)===String(quoteId));
+    items=items.filter(i=>quoteId?String(i.instanceRef)===String(quoteId):!i.instanceRef);
     this.debug({workflow,quoteId,filter:'instance',count:items.length});
     // Instance identity is authoritative. Only genuinely unnumbered legacy files
     // may fall back to the saved drive item; never adopt a different Quote ID.
@@ -31,6 +32,7 @@ export class SharePointQuotes {
       }
       items=found;
     }
+    if(!items.length)throw missingCopy();
     if(items.length!==1)throw new Error("Expected exactly one open quote working copy for this client.");
     const item=items[0];
     const instance=quoteId||item.instanceRef;
@@ -38,7 +40,9 @@ export class SharePointQuotes {
     assertNoPending(instance?pending.filter(r=>requestMatchesQuote({fields:r.fields},prospect,instance,item.id)):pending,schema,{...prospect,work_item_ids:[item.id]});
     if(key==="BII-QSOW"&&item.signatureStatus!=="Preparing")throw new Error("BII quote signature preparation has already started.");
     const row=await this.graph.read(`/sites/${schema.siteId}/lists/${schema.clientOpsId}/items/${encodeURIComponent(item.id)}?$expand=fields,driveItem`);
+    if(!row.fields?.TIG_ClientID||!row.fields?.TIG_WorkflowID)throw missingCopy();
     if(row.fields?.TIG_ClientID!==prospect.client_id||row.fields?.TIG_WorkflowID!==workflow||["Complete","Cancelled","Not Required"].includes(row.fields?.TIG_CompletionStatus))throw new Error("Quote working copy changed or belongs to another client.");
+    if(item.instanceRef&&quoteId&&schema.quoteInstanceColumn&&!row.fields?.[schema.quoteInstanceColumn])throw missingCopy();
     if(item.instanceRef && quoteId && (!schema.quoteInstanceColumn || String(row.fields?.[schema.quoteInstanceColumn])!==String(quoteId)))throw new Error("Quote instance reference changed. Check the verified Client Operations instance reference column.");
     if(!item.instanceRef&&schema.quoteInstanceColumn&&row.fields?.[schema.quoteInstanceColumn])throw new Error("Legacy quote acquired a different instance reference. Reload and review.");
     if(key==="BII-QSOW"&&row.fields?.TIG_SignatureStatus!=="Preparing")throw new Error("BII signature preparation started before fill. Reload and review.");

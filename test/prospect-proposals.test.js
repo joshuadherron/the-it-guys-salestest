@@ -15,6 +15,7 @@ import { canQuote } from "../src/quote-permissions.js";
 import { workPayload } from "../src/work-items.js";
 import { SharePointQuotes } from "../src/docfill/sharepoint-quotes.js";
 import { executeWorkAction } from "../src/guided-workflow.js";
+import { missingCopy,COPY_TIMEOUT_MESSAGE } from '../src/docfill/copy-visibility.js';
 const actor={email:"alanna@theitguys.us",quote_send:1,enabled:1};
 const facts={legalName:"Example Services LLC",preparedName:"Sample Owner",preparedTitle:"Director",preparedEmail:"owner@example.test",backupContact:"Administrator",siteCount:1,domain:"example.test",serviceStartMode:"after_contracts",summary:"Provide the selected services for the quantities listed in this quote.",deviceKinds:["computers","phones","tablets"],onboardingMode:"standard",onboardingFee:350,onsiteMode:"block",onsiteHours:1,clientTerms:"None.",sizingMode:"today",location:"One office",targetTiming:"This quarter",deviceTypes:"Windows computers",preparedFor:"Owner",exceptions:"None",signer:"Owner, Director"};
 function harness({bii=false,linked=false}={}) {
@@ -202,6 +203,67 @@ test("fresh resolver selects the correct quote instance and sending selects the 
   assert.equal((await resolver.working(p,"COM-PRP","1","doc1")).itemId,"doc1");
   await assert.rejects(()=>resolver.working(p,"COM-PRP",undefined,"doc1"),/exactly one/);
   await assert.rejects(()=>resolver.working(p,"COM-PRP","3"),/exactly one/);
+});
+
+function installCopyWait(h,clock){
+  const store=new ProposalStore({sp:{},graph:{},deliveryStore:{},clock});
+  store.requestStatus=async()=>({status:'Done',doneAt:'2026-10-24T19:00:00Z'});
+  h.store.waitForCopy=store.waitForCopy.bind(store);
+}
+
+test('Done quote copy stays waiting through lagging instance polls then fills without another copy request',async()=>{
+  const h=harness({linked:true});await h.service.advance(h.q.id,actor);h.done();
+  installCopyWait(h,()=>Date.parse('2026-10-24T19:02:00Z'));
+  let polls=0;h.store.copy=async()=>++polls<=4?null:h.copies[0];
+  for(let i=0;i<2;i++)assert.equal((await h.service.advance(h.q.id,actor)).step,'copy_waiting');
+  assert.equal((await h.service.advance(h.q.id,actor)).done,true);assert.equal(h.requests.length,1);
+});
+
+test('still-invisible copy fails at ten minutes from Done with the flow-specific message',async()=>{
+  const h=harness({linked:true});await h.service.advance(h.q.id,actor);h.done();h.store.copy=async()=>null;
+  let now=Date.parse('2026-10-24T19:09:59Z');installCopyWait(h,()=>now);
+  assert.equal((await h.service.advance(h.q.id,actor)).waiting,true);
+  now=Date.parse('2026-10-24T19:10:00Z');
+  await assert.rejects(()=>h.service.advance(h.q.id,actor),e=>e.message===COPY_TIMEOUT_MESSAGE);
+  assert.equal(h.requests.length,1);
+});
+
+test('a row visible to the store but not yet visible to the fill resolver waits and reuses that copy',async()=>{
+  const h=harness({linked:true});await h.service.advance(h.q.id,actor);h.done();installCopyWait(h,()=>Date.parse('2026-10-24T19:02:00Z'));
+  const fill=h.service.delivery.fill;let lag=true;
+  h.service.delivery.fill=async(...args)=>{if(lag)throw missingCopy();return fill(...args);};
+  assert.equal((await h.service.advance(h.q.id,actor)).step,'copy_waiting');
+  lag=false;assert.equal((await h.service.advance(h.q.id,actor)).done,true);assert.equal(h.requests.length,1);
+});
+
+test('PSA copy Done with temporarily blank instance waits instead of recreating or adopting it',async()=>{
+  let now=Date.parse('2026-10-24T19:01:00Z');const items=[{workflowId:'BII-14',instanceRef:'',status:'Not Started'}];
+  const store=new ProposalStore({sp:{ready:()=>({definitions:[{id:'BII-14',documentKey:'BII-PSA',lane:'Business IT Integration',active:true,createCopy:true}]}),workItems:async()=>items},graph:{},deliveryStore:{},clock:()=>now});
+  store.psaRequests=async()=>[1];store.requestStatus=async()=>({status:'Done',doneAt:'2026-10-24T19:00:00Z'});store.request=()=>assert.fail('must not recreate a Done copy');
+  const ctx={q:{id:25},p:{client_id:'CL-25'},state:{}};
+  assert.equal((await store.preparePsa(ctx,{})).step,'psa_waiting');
+  items[0].instanceRef='other-quote';assert.equal((await store.preparePsa(ctx,{})).waiting,true);
+  items[0].instanceRef='25';assert.equal((await store.preparePsa(ctx,{})).done,true);
+  items[0].instanceRef='';now=Date.parse('2026-10-24T19:10:00Z');await assert.rejects(()=>store.preparePsa(ctx,{}),e=>e.message===COPY_TIMEOUT_MESSAGE);
+});
+
+test('request Done timestamp is persisted once and later polls/restarts cannot reset the deadline',async()=>{
+  const r={id:1,item_id:'remote',status:'Pending'},writes=[];let modified='2026-10-24T19:00:00Z';
+  const run=async(sql,args)=>{if(sql.startsWith('SELECT'))return [r];writes.push({sql,args});if(sql.includes('done_at=COALESCE'))r.done_at ||=args[0];return {};};
+  const sp={ready:()=>({maps:{requests:{'Processing Status':{name:'Status'},'Result Message':{name:'Message'}}}}),request:async()=>({lastModifiedDateTime:modified,fields:{Status:'Done'}})};
+  const first=new ProposalStore({sp,graph:{},deliveryStore:{},run});
+  assert.equal((await first.requestStatus(1)).doneAt,'2026-10-24 19:00:00');modified='2026-10-24T19:08:00Z';
+  const restarted=new ProposalStore({sp,graph:{},deliveryStore:{},run});
+  assert.equal((await restarted.requestStatus(1)).doneAt,'2026-10-24 19:00:00');assert.equal(writes.filter(w=>w.sql.includes('done_at=COALESCE')).length,1);
+});
+
+test('copy polling cannot adopt a cached row whose instance belongs to another Quote ID',async()=>{
+  const items=[{id:'41',workflowId:'MIT-05',instanceRef:'99',status:'Not Started'}];
+  const store=new ProposalStore({sp:{workItems:async()=>items,ready:()=>({quoteInstanceColumn:'TIG_InstanceRef'})},graph:{},deliveryStore:{},run:async()=>[]});
+  const ctx={q:{id:24},p:{client_id:'CL-24'},state:{working_item_id:'41',copy_request_id:1}};
+  assert.equal(await store.copy(ctx,{workflow:'MIT-05'}),undefined);
+  items.push({...items[0],id:'42',instanceRef:'24'},{...items[0],id:'43',instanceRef:'24'});
+  await assert.rejects(()=>store.copy(ctx,{workflow:'MIT-05'}),/Duplicate quote instance/);
 });
 
 test("a failed request with partial record creation resumes by reusing the output",async()=>{

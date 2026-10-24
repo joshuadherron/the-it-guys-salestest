@@ -13,6 +13,7 @@ signature. Work authorization remains separate. A server worker advances queued
 Sends every 30 seconds, using the saved actor and durable job lease. Browser
 polling displays progress only; closing the page does not stop the job.
 Migration **014_quick_quote_sends.sql** is required before deployment.
+The v2 timing/content check also requires **015_quote_content_tags_and_copy_timing.sql**.
 See [Quick Quote rollout and flow limitations](docs/QUICK-QUOTE.md).
 
 ## Local setup

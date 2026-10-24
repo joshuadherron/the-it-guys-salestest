@@ -40,7 +40,7 @@ function graphFixture(key){
   };
   const row={id:'533',fields:{TIG_ClientID:p.client_id,TIG_WorkflowID:workflow,TIG_CompletionStatus:'Not Started',TIG_InstanceRef:'23',TIG_SignatureStatus:'Preparing'},driveItem:{id:'FILE-23',name:'Quote.docx',webUrl:'https://example.sharepoint.com/Commercial/Quote.docx',parentReference:{driveId:'drive'}}};
   const unrelated={...row,id:'532',fields:{...row.fields,TIG_InstanceRef:'22'},driveItem:{...row.driveItem,id:'FILE-22'}};
-  let etag='before',fill;const reads=[],events=[],debug=[];
+  let etag='before',ctag='content-before',fill;const reads=[],events=[],debug=[];
   const graph={
     all:async()=>[row,unrelated],
     read:async path=>{
@@ -48,9 +48,9 @@ function graphFixture(key){
       if(path.includes('/lists/ops/items/533'))return row;
       if(path.includes('/lists/ops/items/532'))return unrelated;
       if(path.endsWith('/commercial'))return {id:'commercial',name:'Commercial',folder:{}};
-      return {...row.driveItem,eTag:etag,parentReference:{id:'commercial'}};
+      return {...row.driveItem,eTag:etag,cTag:ctag,parentReference:{id:'commercial'}};
     },
-    replaceQuoteWorkingCopy:async(d,id,old)=>{assert.equal(id,'FILE-23');assert.equal(old,etag);etag='filled';return {id,eTag:etag};},
+    replaceQuoteWorkingCopy:async(d,id,old)=>{assert.equal(id,'FILE-23');assert.equal(old,etag);etag='filled';ctag='content-filled';return {id,eTag:etag,cTag:ctag};},
     quoteContent:async()=>Buffer.from('%PDF fixture'),
     createSentQuotePdf:async()=>{events.push('PDF');return {id:'sent-pdf'};},
     sendQuoteMail:async()=>{events.push('mail');return {requestId:'mail-request'};},
@@ -63,7 +63,7 @@ function graphFixture(key){
   const ctx=()=>({q,p,actor,hash:snapshot(q)});
   const store={checkMailbox:async()=>{},begin:async()=>ctx(),current:async()=>ctx(),release:async()=>{},log:async()=>{},latestFill:async()=>fill,
     createFill:async(c,k,w,data,mode)=>{fill={id:1,document_key:k,drive_id:w.driveId,item_id:w.itemId,web_url:w.webUrl,snapshot_hash:c.hash,mode,report:JSON.stringify(data.report),fields_json:JSON.stringify(data.fields)};return 1;},
-    filled:async(id,status,value)=>Object.assign(fill,{status,etag:value}),createAttempt:async()=>1,savedPdf:async()=>{},sending:async()=>{},sent:async()=>{q.status='Sent';},failed:async()=>{},
+    filled:async(id,status,value,content)=>Object.assign(fill,{status,etag:value,ctag:content}),createAttempt:async()=>1,savedPdf:async()=>{},sending:async()=>{},sent:async()=>{q.status='Sent';},failed:async()=>{},
   };
   const delivery=new QuoteDelivery({store,resolver,graph,prices:async()=>prices,config:async()=>({}),extractText:async()=>'Approved quote without placeholders',env:{QUOTE_FILL_MODE:'live',QUOTE_SEND_MODE:'live',QUOTE_SENDER_MAILBOX:'sales@theitguys.us'}});
   return {q,p,s,row,unrelated,sp,graph,resolver,delivery,reads,events,debug};
@@ -102,7 +102,7 @@ test('PSA uses live BII-14/BII-PSA definition, waits for the same request and ne
   assert.deepEqual(h.requests[0].options,{workflowId:'BII-14',instanceRef:'22'});
   h.requests[0].status='Unknown';h.requests[0].waiting=true;h.requests[0].manualRequestId=1;
   assert.equal((await h.store.preparePsa(h.ctx,{})).manualRequestId,1);assert.equal(h.requests.length,1);
-  h.requests[0].status='Done';h.items.push({workflowId:'BII-14',status:'Not Started',signatureStatus:'Preparing'});
+  h.requests[0].status='Done';h.items.push({workflowId:'BII-14',instanceRef:'22',status:'Not Started',signatureStatus:'Preparing'});
   assert.equal((await h.store.preparePsa(h.ctx,{})).done,true);assert.equal(h.requests.length,1);
 });
 test('signed PSA prevents another copy and missing definition gives BII-PSA configuration message',async()=>{

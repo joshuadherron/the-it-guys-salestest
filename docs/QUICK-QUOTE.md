@@ -48,6 +48,10 @@ replace a pending request's options.
 Apply **014_quick_quote_sends.sql** manually before deployment. It adds one small
 queue/lease table keyed by Quote ID. Existing quote/proposal/fill/send records
 retain approval data, workflow identities, copy linkage and delivery history.
+Apply **015_quote_content_tags_and_copy_timing.sql** for persisted copy Done times
+and post-fill content tags. Existing fills keep a null content tag and their eTag
+fallback. [V2 timing and content-tag rollout](QUICK-QUOTE-TIMING-V2.md) explains
+the ten-minute copy wait and reviewed-Word retry.
 No new environment setting is required; global write/send modes remain unchanged.
 
 The server runs one bounded step per queued job every 30 seconds: client folder →
@@ -61,6 +65,10 @@ Approval, hold/loss, sender permission and hash are rechecked while advancing.
 Email intent is persisted before delivery. Interrupted Sending is never replayed.
 Resume after a configuration refusal can continue preparation only if there is
 no email attempt; email failures use existing saved-PDF retry/admin reconciliation.
+Copy metadata may lag a Done request: the worker waits for the correct instance
+for up to ten minutes from its persisted Done time without recreating a copy.
+New fills compare content cTags; metadata-only eTag updates do not require review.
+Real edits show a review checkbox on Try again; legacy fills retain eTag checks.
 Dryrun emails the saved actor only and displays Test email sent.
 
 Own Preparing/Unknown requests older than two minutes are reconciled by exact

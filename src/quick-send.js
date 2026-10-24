@@ -108,7 +108,7 @@ export class QuickSend {
           await this.run("UPDATE quote_quick_sends SET status='ReadySignature',error_message=NULL WHERE quote_id=? AND operation_token=?",[id,token]);
           return this.progress({...job,status:"ReadySignature"});
         }
-        await this.run("UPDATE quote_quick_sends SET status='Prepared' WHERE quote_id=? AND operation_token=?",[id,token]);
+        await this.run("UPDATE quote_quick_sends SET status='Prepared',options_json=JSON_SET(options_json,'$._step','filled') WHERE quote_id=? AND operation_token=?",[id,token]);
         return {...this.progress({...job,status:"Prepared"}),step:"filled"};
       }
       // Persist intent BEFORE delivery. A process crash cannot silently replay an email.
@@ -118,14 +118,21 @@ export class QuickSend {
       await this.run("UPDATE quote_quick_sends SET status=?,error_message=NULL WHERE quote_id=? AND operation_token=?",[status,id,token]);
       return this.progress({...job,status});
     }catch(error){
+      if(error.code==='QUOTE_COPY_NOT_VISIBLE'&&error.safeToWaitForCopy){
+        try{
+          const waiting=await this.prepare.waitForCopy(id,{email:job.requested_by});
+          await this.run("UPDATE quote_quick_sends SET status='Prepared',options_json=JSON_SET(options_json,'$._step',?) WHERE quote_id=? AND operation_token=?",[waiting.step,id,token]);
+          return {...this.progress({...job,status:'Prepared'}),...waiting};
+        }catch(waitError){error=waitError;}
+      }
       await this.run("UPDATE quote_quick_sends SET status='Failed',error_message=? WHERE quote_id=? AND operation_token=?",[error.message,id,token]);
       throw Object.assign(error,{status:error.status&&error.status<500?error.status:409});
     }finally{
       await this.run("UPDATE quote_quick_sends SET operation_token=NULL,lease_until=NULL WHERE quote_id=? AND operation_token=?",[id,token]);
     }
   }
-  progress(job){const options=json(job.options_json)||{};return {status:job.status,step:job.status==='Prepared'?'filled':options._step,manualRequestId:options._manualRequestId||null,done:["Sent","Dryrun","ReadySignature"].includes(job.status),waitingApproval:job.status==="WaitingApproval",error:job.error_message||null};}
-  async resume(id,user){
+  progress(job){const options=json(job.options_json)||{};return {status:job.status,step:job.status==='Prepared'&&options._step!=='copy_waiting'?'filled':options._step,manualRequestId:options._manualRequestId||null,done:["Sent","Dryrun","ReadySignature"].includes(job.status),waitingApproval:job.status==="WaitingApproval",error:job.error_message||null};}
+  async resume(id,user,options={}){
     await this.tx(async c=>{
       const [q]=await this.run("SELECT * FROM quotes WHERE id=? FOR UPDATE",[id],c);if(!q)fail("Quote not found.",404);
       const [actor]=await this.run("SELECT * FROM allowlist WHERE email=? AND enabled=TRUE",[user.email],c),p=await this.getProspect(q.prospect_id,c);eligible(p,actor);
@@ -140,7 +147,8 @@ export class QuickSend {
         const fields=json(row.request_json)?.fields||{};
         if(Object.values(fields).some(value=>typeof value==='string'&&value.startsWith(`SALESAPP-${p.opp}-QUOTE-${id}-PSA-`)))await this.run("UPDATE sp_requests SET acknowledged_at=UTC_TIMESTAMP() WHERE id=? AND status IN ('Failed','Rejected')",[row.id],c);
       }
-      await this.run("UPDATE quote_quick_sends SET status='Queued',error_message=NULL WHERE quote_id=?",[id],c);
+      await this.run("UPDATE quote_quick_sends SET status='Queued',error_message=NULL,options_json=JSON_SET(options_json,'$.reviewed_edits',?) WHERE quote_id=?",[options.reviewed_edits==='yes'?'yes':'no',id],c);
+      if(options.reviewed_edits==='yes')await this.log(c,actor,'review Word edits before quote retry','quote',id);
       await this.log(c,actor,"resume quote preparation after refusal","quote",id);
     });
   }

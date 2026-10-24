@@ -16,6 +16,7 @@ import { requestMatchesQuote } from "../src/quote-request-scope.js";
 import { quoteEmail } from "../src/docfill/send-policy.js";
 import { runInNewContext } from "node:vm";
 import { startQuickSendWorker } from '../src/quick-send-worker.js';
+import { missingCopy,COPY_TIMEOUT_MESSAGE } from '../src/docfill/copy-visibility.js';
 
 const owner={email:"josh@example.test",role:"owner",enabled:1,quote_send:1,quote_approve:1,display_name:"Josh",sender_title:"Owner",sender_phone:"555-555-0100"};
 const sales={...owner,email:"sales@example.test",role:"sales",quote_approve:0};
@@ -40,6 +41,8 @@ function harness(type="managed_it"){
     if(sql.startsWith("UPDATE quotes SET status='Approved'")){Object.assign(q,{status:"Approved",approved_by:args[0],approved_at:"2026-10-24 12:00:00",stop_review:JSON.parse(args[1]),inputs:JSON.parse(args[2])});events.push("Approve");return {};}
     if(sql.startsWith("INSERT INTO quote_quick_sends")){job={quote_id:args[0],status:args[1],snapshot_hash:args[2],requested_by:args[3],options_json:JSON.parse(args[4]),operation_token:null};return {};}
     if(sql.startsWith("UPDATE quote_quick_sends")){
+      if(sql.includes("'$.reviewed_edits'"))job.options_json.reviewed_edits=args[0];
+      if(sql.includes("'$._step',?"))job.options_json._step=args[0];
       if(sql.includes("SET operation_token=?"))job.operation_token=args[0];
       if(sql.includes("SET operation_token=NULL"))job.operation_token=null;
       const status=sql.match(/SET status='([^']+)'/);if(status)job.status=status[1];
@@ -148,7 +151,8 @@ for(const [minutes,found,expected,manual] of [[1,true,"Unknown",null],[3,true,"D
   const updates=[],s={maps:{requests:{Title:{name:"Title"},"Processing Status":{name:"Status"},"Result Message":{name:"Message"}}}},r={id:99,status:"Unknown",created_at:new Date(Date.now()-minutes*60000),request_json:{fields:{Title:"EXACT-99"}}};
   const store=new ProposalStore({sp:{ready:()=>s,requests:async()=>found?[{id:"remote-99",fields:{Title:"EXACT-99",Status:"Done"}}]:[{id:"other",fields:{Title:"EXACT-OTHER",Status:"Done"}}]},graph:{createWorkflowRequest:()=>assert.fail("must not replay")},deliveryStore:{},run:async(sql,args)=>{if(sql.startsWith("SELECT"))return [r];updates.push({sql,args});return {};},log:async()=>{}});
   const result=await store.requestStatus(99);assert.equal(result.status,expected);assert.equal(result.manualRequestId??null,manual??null);
-  assert.equal(updates.length,minutes>=2&&found?1:0);
+  assert.equal(updates.filter(u=>u.sql.includes('SET item_id')).length,minutes>=2&&found?1:0);
+  if(minutes>=2&&found)assert.ok(updates.some(u=>u.sql.includes('done_at=COALESCE')));
 });
 test("project email uses approved project fields, never Managed IT monthly/contract promises",()=>{
   const message=quoteEmail({quote:{quote_number:"Q-2026-019"},prospect:{contact_name:"Pat"},actor:owner,fields:{"ENG.QuoteId":"Q-2026-019","ENG.Scope":"Repair email","ENG.Terms":"Email acceptance","ENG.OneTimeTotal":"$300.00"},mode:"live",to:"pat@example.test",pdf:Buffer.from("pdf"),name:"quote.pdf",requestId:"request"});
@@ -258,4 +262,48 @@ test('worker rechecks saved sender permission and security hold after queuing',a
     await assert.rejects(()=>h.service.advance(19),reason==='hold'?/security hold/:/Send permission/);
     assert.equal(h.job.status,'Failed');assert.deepEqual(h.events,['Approve']);
   }
+});
+
+test('Send lookup lag returns to Prepared and reuses the existing copy until it becomes visible',async()=>{
+  const h=harness('project');await h.service.start(19,owner,snapshot(h.q));h.job.status='Prepared';let missing=true,calls=0;
+  const waitStore=new ProposalStore({sp:{},graph:{},deliveryStore:{},clock:()=>Date.parse('2026-10-24T19:01:00Z')});
+  waitStore.requestStatus=async()=>({status:'Done',doneAt:'2026-10-24T19:00:00Z'});
+  h.service.prepare.waitForCopy=()=>waitStore.waitForCopy({state:{copy_request_id:1}});
+  h.service.delivery.send=async()=>{calls++;if(missing)throw Object.assign(missingCopy(),{safeToWaitForCopy:true});h.q.status='Sent';return {mode:'live'};};
+  const waiting=await h.service.advance(19);assert.equal(waiting.step,'copy_waiting');assert.equal(h.job.status,'Prepared');assert.equal(h.job.options_json._step,'copy_waiting');
+  missing=false;assert.equal((await h.service.advance(19)).status,'Sent');assert.equal(calls,2);assert.equal(h.requests.length,0);
+});
+
+test('Send lookup lag exceeding the same Done deadline becomes Failed with no new request',async()=>{
+  const h=harness('project');await h.service.start(19,owner,snapshot(h.q));h.job.status='Prepared';
+  h.service.delivery.send=async()=>{throw Object.assign(missingCopy(),{safeToWaitForCopy:true});};
+  const store=new ProposalStore({sp:{},graph:{},deliveryStore:{},clock:()=>Date.parse('2026-10-24T19:10:00Z')});
+  store.requestStatus=async()=>({status:'Done',doneAt:'2026-10-24T19:00:00Z'});
+  h.service.prepare.waitForCopy=()=>store.waitForCopy({state:{copy_request_id:1}});
+  await assert.rejects(()=>h.service.advance(19),e=>e.message===COPY_TIMEOUT_MESSAGE);assert.equal(h.job.status,'Failed');assert.equal(h.requests.length,0);
+});
+
+test('reviewed Quick Quote retry persists its option and uses the existing filled document',async()=>{
+  const h=harness('project');await h.service.start(19,owner,snapshot(h.q));h.job.status='Failed';
+  await h.service.resume(19,owner,{reviewed_edits:'yes'});assert.equal(h.job.options_json.reviewed_edits,'yes');
+  h.service.prepare.advance=async()=>({done:true});let options;
+  h.service.delivery.send=async(_id,_user,input)=>{options=input;return {mode:'live'};};
+  await h.service.advance(19);await h.service.advance(19);assert.equal(options.reviewed_edits,'yes');assert.equal(h.requests.length,0);
+  assert.ok(h.audits.some(row=>row[2]==='review Word edits before quote retry'));
+});
+
+test('reviewed edits never permit replaying an uncertain email attempt',async()=>{
+  const h=harness('project');await h.service.start(19,owner,snapshot(h.q));h.job.status='Failed';
+  const run=h.service.run;h.service.run=(sql,...args)=>sql.startsWith('SELECT id FROM quote_send_attempts')?[{id:1,status:'Unknown'}]:run(sql,...args);
+  await assert.rejects(()=>h.service.resume(19,owner,{reviewed_edits:'yes'}),/No email was replayed/);assert.equal(h.job.status,'Failed');assert.ok(!h.events.includes('PDF email'));
+});
+
+test('Quick Quote resume route accepts only the explicit reviewed-edits checkbox value',async()=>{
+  const routes=new Map(),calls=[];
+  quickQuoteRoutes({get(){},post:(path,...handlers)=>routes.set(path,handlers)},{service:{resume:async(...args)=>calls.push(args)}});
+  for(const value of ['yes','true',undefined]){
+    const req={params:{id:'26'},session:{user:owner},body:{reviewed_edits:value}},res={redirect(){}};
+    for(const fn of routes.get('/quick-quote/quotes/:id/resume')){let next=false;await fn(req,res,()=>next=true);if(!next)break;}
+  }
+  assert.deepEqual(calls.map(c=>c[2].reviewed_edits),['yes','no','no']);
 });
