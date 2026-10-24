@@ -6,6 +6,7 @@ import { DOMParser } from "@xmldom/xmldom";
 import ejs from "ejs";
 import { runInNewContext } from "node:vm";
 import { prices } from "../src/config.js";
+import { ensureRegulatedPrices,loadPriceConfig } from "../src/price-config.js";
 import { priceQuote,regulatedPackagePrice } from "../src/pricing.js";
 import { biiOptions,biiApprovalMissing,biiPlanLength,regulatedDataText,optionalAssessmentHint } from "../src/bii-options.js";
 import { prefill,validateInputs,quotesRoutes } from "../src/quotes.js";
@@ -25,6 +26,36 @@ function sample(changes={}){
   return {quote:{id:17,inputs:input,total:calc.total,approved_at:"2026-10-24T01:33:00Z"},prospect:{business_name:"Example Health"},owner,prices};
 }
 const fixture=()=>readFile(new URL("./fixtures/BII-QSOW-v1.7.docx",import.meta.url));
+function priceDatabase(initial){
+  const rows=new Map(Object.entries(initial)),writes=[];
+  const run=async(sql,args,connection)=>{
+    if(sql.startsWith("SELECT * FROM config_prices"))return [...rows].map(([name,amount])=>({name,amount}));
+    assert.equal(sql,"INSERT IGNORE INTO config_prices (name,amount) VALUES (?,?)");
+    writes.push({args,connection});
+    if(!rows.has(args[0]))rows.set(args[0],args[1]);
+    return {affectedRows:1};
+  };
+  return {rows,writes,run};
+}
+test("existing database without regulated prices is backfilled and produces a complete BII DOCX",async()=>{
+  const old={...prices};for(const key of ["regulatedBase","regulatedUser","regulatedIncludedUsers"])delete old[key];
+  const db=priceDatabase(old),config=await loadPriceConfig(undefined,db.run);
+  assert.deepEqual(config,prices);assert.equal(db.writes.length,3);
+  const args=sample({regulatedPackage:true});args.prices=config;
+  const result=await fillDocx(await fixture(),buildBiiFill(args));
+  assert.deepEqual(result.report.unfilled,[]);
+  assert.ok((await outputText(result.buffer)).includes("$5,135"));
+  await loadPriceConfig(undefined,db.run);assert.equal(db.writes.length,3);
+});
+test("startup seed is idempotent and partial backfill never overwrites existing owner prices",async()=>{
+  const db=priceDatabase({foundation:4200,regulatedBase:650,regulatedUser:30});
+  await Promise.all([ensureRegulatedPrices(db.run),ensureRegulatedPrices(db.run)]);
+  assert.deepEqual(Object.fromEntries(db.rows),{foundation:4200,regulatedBase:650,regulatedUser:30,regulatedIncludedUsers:5});
+  const partial=priceDatabase({regulatedBase:650}),connection={};
+  const config=await loadPriceConfig(connection,partial.run);
+  assert.deepEqual(config,{regulatedBase:650,regulatedUser:25,regulatedIncludedUsers:5});
+  assert.ok(partial.writes.every(w=>w.connection===connection));
+});
 const W="http://schemas.openxmlformats.org/wordprocessingml/2006/main";
 async function outputText(buffer){const zip=await JSZip.loadAsync(buffer),doc=new DOMParser().parseFromString(await zip.file("word/document.xml").async("string"),"text/xml");return Array.from(doc.getElementsByTagNameNS(W,"t")).map(t=>t.textContent).join(" ");}
 
@@ -149,6 +180,25 @@ test("BII approval names every missing plan field and requires an assessment dat
   const incomplete=routes({...base(),operatingBusiness:true,afterHoursWindows:"",assessed:true});
   await assert.rejects(()=>incomplete.call("/quotes/:id/approve"),e=>["Pilot group","Wave count","Wave basis","Wave dates","After-hours windows","Assessment date"].every(label=>e.message.includes(label)));assert.equal(incomplete.writes.length,0);
   const ready=routes({...base(),...plan,assessed:false,assessmentDate:null});await ready.call("/quotes/:id/approve");assert.ok(ready.writes.some(w=>w.sql.startsWith("UPDATE quotes SET status='Approved'")));
+});
+for(const [key,label] of [["pilotGroup","Pilot group"],["waveCount","Wave count"],["waveBasis","Wave basis"],["waveDates","Wave dates"],["afterHoursWindows","After-hours windows"]])test(`approval refuses an operating BII quote missing only ${key} and names it`,async()=>{
+  const h=routes({...base(),...plan,[key]:key==="waveCount"?null:""});
+  await assert.rejects(()=>h.call("/quotes/:id/approve"),e=>e.message.includes(label)&&!e.message.includes("BT-7.30"));
+  assert.equal(h.writes.length,0);
+});
+test("approval refuses assessed BII quote without a date even when not operating",async()=>{
+  const h=routes({...base(),operatingBusiness:false,assessed:true,assessmentDate:null});
+  await assert.rejects(()=>h.call("/quotes/:id/approve"),/Assessment date/);assert.equal(h.writes.length,0);
+});
+test("operating and assessed never auto-select BT-7.30 stop conditions",async()=>{
+  for(const operatingBusiness of [true,false])for(const assessed of [true,false]){
+    const h=routes({...base(),...plan,operatingBusiness,assessed});await h.call("/quotes/:id/approve");
+    const update=h.writes.find(w=>w.sql.startsWith("UPDATE quotes SET status='Approved'"));
+    assert.ok(update);assert.equal(JSON.parse(update.args[1])[0].selected,false);
+  }
+  const view=await readFile("views/quotes.ejs","utf8");
+  const stop=view.match(/<input[^>]*name="stop_[\s\S]*?value="yes"[^>]*>/);
+  assert.ok(stop);assert.ok(!stop[0].includes("checked"));
 });
 test("BT-7.30 remains blocking for BII even with Continue Anyway; optional unperformed assessment is never a gate",async()=>{
   const blocked=routes(base());blocked.req.body={reviewed:"yes",stop_1:"yes",continue_anyway:"yes"};await assert.rejects(()=>blocked.call("/quotes/:id/approve"),/BT-7.30/);assert.equal(blocked.writes.length,0);

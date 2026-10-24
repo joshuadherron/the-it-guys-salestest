@@ -10,8 +10,12 @@ SHA-256: `c21451d63870a9058db311ec12ed7380de48dde719bf5299332fbea85314fa55`.
 
 ## Deployment prerequisites
 
-No schema migration is needed. Existing databases need these three new rows in
-the existing `config_prices` table before using the package or filling v1.7:
+No schema migration or manual seed is needed. Startup inserts the three missing
+rows below into the existing `config_prices` table before accepting requests.
+Price loading also repairs missing rows before returning persisted prices, so a
+BII fill cannot fail solely because these defaults were absent. `INSERT IGNORE`
+preserves every existing value, including owner edits and concurrent inserts.
+The following SQL is an optional diagnostic/manual equivalent:
 
 ```sql
 INSERT IGNORE INTO config_prices (name, amount) VALUES
@@ -239,12 +243,17 @@ all-false template fills, matching flags, rate mismatches, master immutability a
 the 60-to-74-tag extension. Existing master-resolution, provenance, XML/package,
 Managed IT, ENG-PRJ and gate regressions remain in the full test suite.
 
-Local results: **554 tests pass**, including 22 new BII v1.7 tests. ESLint and
-production build validation pass. Build validation checks 97 JavaScript sources,
+Local results: **563 tests pass**, including 31 new BII v1.7 tests. Tests cover an
+existing database missing all three defaults through a successful BII DOCX fill,
+partial backfill, concurrent/idempotent seeding, preservation of edited prices,
+each missing plan field at approval, assessed without a date, incomplete draft
+saves and all operating/assessed combinations without owner-selected stops.
+The database-state tests use an injectable query double, not a live MySQL server.
+ESLint and production build validation pass. Build validation checks 98 JavaScript sources,
 40 EJS views, COM-PRP v1.8, BII-QSOW v1.7 and ENG-PRJ v1.0. Both unaffected lanes'
 existing fill tests pass unchanged.
 
-Deploy code and the supplied fixture together, seed/review the three configuration
+Deploy code and the supplied fixture together, review the automatically seeded configuration
 rows, promote the exact master, refresh the connection and verify an approved BII
 download in staging. Live SharePoint/Power Automate behavior and owner review of
 the final customer-facing Word file are separate rollout checks. No production

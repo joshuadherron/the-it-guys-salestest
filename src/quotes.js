@@ -7,17 +7,10 @@ import { answer, value, mvd,flags } from "./discovery-rules.js";
 import { biiOptions,assertBiiApprovalInputs,biiPlanLength,optionalAssessmentHint } from "./bii-options.js";
 import { genericEngagement } from "./engagement-types.js";
 import { platforms, oneOffItems, priceQuote, priceManagedServices } from "./pricing.js";
+import { loadPriceConfig } from "./price-config.js";
 
 export async function priceConfig(c) {
-  return Object.fromEntries(
-    (
-      await query(
-        "SELECT * FROM config_prices" + (c ? " FOR UPDATE" : ""),
-        [],
-        c,
-      )
-    ).map((p) => [p.name, Number(p.amount)]),
-  );
+  return loadPriceConfig(c);
 }
 
 export function prefill(a) {
