@@ -6,15 +6,11 @@ const text = value => typeof value === "string" && !/^(none\.?|null|undefined|n\
 export function documentPrefill(prospect, input, laneKey) {
   const p = prospect || {}, q = input || {};
   const address = [p.street_address, [p.city,p.state,p.zip].filter(Boolean).join(" ")].filter(Boolean).join(", ");
-  const email = text(p.email).toLowerCase();
-  const domain = email.includes("@") ? email.split("@").pop() : "";
-  const publicMail = new Set(["gmail.com","yahoo.com","outlook.com","hotmail.com","aol.com","icloud.com","live.com","msn.com","proton.me","protonmail.com"]);
-  const knownDomain = domain && !publicMail.has(domain) ? domain : "";
   const common = {
     // Business name is not necessarily the legal name; owner must verify.
     preparedFor:text(p.contact_name),
     backupContact:text(p.backup_contact || p.secondary_contact || ""),
-    domain:knownDomain,
+    domain:"",
     summary:"",
     legalName:text(p.business_name),
     // Business name is a suggestion, not proof of the registered legal entity.\n    legalName: text(p.business_name),

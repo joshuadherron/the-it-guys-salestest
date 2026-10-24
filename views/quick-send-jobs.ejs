@@ -1,0 +1,3 @@
+<% if(typeof quickJobs!=='undefined'&&quickJobs.length){ %><section class="card"><h2>Quote delivery</h2>
+<% for(const job of quickJobs){ %><h3><a href="/quick-quote/quotes/<%= job.quote_id %>"><%= job.quote_number||job.quote_id %></a></h3><%- include('quick-send-status',{job,q:{id:job.quote_id}}) %><% } %>
+</section><% } %>

@@ -9,8 +9,9 @@ build the quote → **Preview → Send**. Send records permitted approval (or qu
 Waiting for Josh), creates/reuses the SharePoint folder, syncs the prospect,
 creates a quote-specific copy, fills it and delivers without intermediate clicks.
 Managed IT and Project use the shared PDF/email transport; BII ends at Ready for
-signature. Work authorization remains separate. Progress resumes when an
-authorized user reopens the quote; no background worker is installed.
+signature. Work authorization remains separate. A server worker advances queued
+Sends every 30 seconds, using the saved actor and durable job lease. Browser
+polling displays progress only; closing the page does not stop the job.
 Migration **014_quick_quote_sends.sql** is required before deployment.
 See [Quick Quote rollout and flow limitations](docs/QUICK-QUOTE.md).
 
@@ -146,7 +147,7 @@ Schedule it nightly with the host's scheduler/cron, check exit status, encrypt b
 - Weekly metrics use explicit activity types/outcomes. Calls count call entries; the other five metrics count matching outcomes. Duplicate logs count twice. Historical weekly imports must not overlap app activity periods. Legacy Call Tracker v2 Pipeline/Weekly import remains supported with exact headers, ignored Legend, sample-row skipping and explicit technical-lane review. Its old tier column is retained only as historical data. See docs/05-current-sales-migration.md for the current 25-column Sales App format, conservative stage mapping and migration 004. Full staging pipeline export now includes Likely Service, all structured migration fields and source history; it is not the old Call Tracker format and is not accepted as a migration upload. Weekly export keeps its v2 headers.
 - Quotes are immutable saved draft snapshots; editing creates a new draft. New discovery answers, price changes and stop-condition changes invalidate approved drafts. Josh confirms counts because discovery does not capture mailbox/platform/deployment quantities. Unassigned devices avoid inventing a platform. Selected unresolved owner one-offs are excluded from the displayed provisional total and block approval. Sent quotes remain historical records. No hardware math, recurring pricing or client-facing output exists.
 - Mark Lost is owner-only for linked clients before activation, with exact reasons and stage checks. Apply migration 005 before using the updated app. Local Closed Lost remains owner-only for unlinked prospects. Create Client includes a one-time discovery snapshot. See docs/02-sharepoint-workflow-contract.md.
-- Connection checks need real credentials even in dryrun because the app must not invent field names. List scans paginate; this is intended for the small two-person workload. The UI polls only while open; there is no background SharePoint status worker.
+- Connection checks need real credentials even in dryrun because the app must not invent field names. List scans paginate; this is intended for the small two-person workload. The Quick Send worker advances explicitly queued quote operations; it does not sweep unrelated SharePoint workflows.
 - Exact quote/hold/permission checks are enforced server-side. A process-local sign-in limiter fits the specified single-server deployment. Scale-out would require a shared limiter and additional operational review.
 - The owner reports migrations 001–003, staging database access and Entra sign-in are working. Migration 004 and the real-data import have not been run during this update. Real SharePoint/Hostinger integration still requires the checks in HANDOFF.
 

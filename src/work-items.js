@@ -136,6 +136,7 @@ export function normalizeDefinition(row) {
   return {
     id: f.Title,
     document: f.TIG_RequiredDocument,
+    documentKey: f.TIG_DocumentKey||null,
     lane: f.TIG_ServiceLaneSingle,
     stage: f.TIG_WorkflowStage,
     triggerMode: f.TIG_TriggerMode,
@@ -158,6 +159,7 @@ export function normalizeItem(
     id: String(row.id),
     clientId: f.TIG_ClientID,
     workflowId: f.TIG_WorkflowID,
+    documentKey: f.TIG_SourceDocumentKey||null,
     instanceRef: row.instanceRef ?? null,
     document:
       definition?.document ||

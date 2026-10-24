@@ -16,7 +16,8 @@ import { genericEngagement,projectLane } from "../engagement-types.js";
 import { assertProjectCapability,projectDiscovery } from "../project-contract.js";
 import { linkBusinessRecord,lockBusinessRequests } from "../businesses.js";
 import { assertProjectApproval } from "../project-quotes.js";
-import { requestMatchesQuote } from "../quote-request-scope.js";
+import { requestMatchesQuote,isProspectSync } from "../quote-request-scope.js";
+import { psaDefinition,psaItems,signedPsa } from '../bii-psa.js';
 
 const canonical = value => Array.isArray(value) ? value.map(canonical)
   : value && typeof value === "object" ? Object.fromEntries(Object.keys(value).sort().map(key=>[key,canonical(value[key])])) : value;
@@ -89,21 +90,44 @@ export class ProposalStore {
     const old=await this.latestFill(ctx.q.id);
     if(!s.quoteInstanceColumn && !ctx.p.client_id && !(old?.mode==="live"&&old.status==="Succeeded"&&old.snapshot_hash===ctx.hash))
       throw new Error("Client Operations needs a verified text Instance Reference column populated by Create Working Copy. Configure QUOTE_INSTANCE_REF_COLUMN to its actual internal name and check the connection.");
-    const own=[ctx.state.record_request_id,ctx.state.record_sync_request_id,ctx.state.copy_request_id].filter(Boolean);
+    const own=[ctx.state.record_request_id,ctx.state.record_sync_request_id,ctx.state.copy_request_id,...await this.psaRequests(ctx)].filter(Boolean);
     const clientId=String(ctx.p.client_id||"").trim();
-    const active=clientId?await this.query("SELECT id,prospect_id,request_json FROM sp_requests WHERE (prospect_id=? OR prospect_id IN (SELECT id FROM prospects WHERE client_id=?)) AND status IN ('Preparing','Pending','Processing','Unknown')",[ctx.p.id,clientId])
-      :await this.query("SELECT id,prospect_id,request_json FROM sp_requests WHERE prospect_id=? AND status IN ('Preparing','Pending','Processing','Unknown')",[ctx.p.id]);
-    const relevant=active.filter(r=>String(r.prospect_id)===String(ctx.p.id)||!r.prospect_id||this.sameInstance(r.request_json,s,ctx));
+    const active=clientId?await this.query("SELECT id,prospect_id,request_json FROM sp_requests WHERE (prospect_id=? OR prospect_id IN (SELECT id FROM prospects WHERE client_id=?)) AND action<>'UpsertProspect' AND status IN ('Preparing','Pending','Processing','Unknown')",[ctx.p.id,clientId])
+      :await this.query("SELECT id,prospect_id,request_json FROM sp_requests WHERE prospect_id=? AND action<>'UpsertProspect' AND status IN ('Preparing','Pending','Processing','Unknown')",[ctx.p.id]);
+    const relevant=active.filter(r=>!isProspectSync(r,s)&&(String(r.prospect_id)===String(ctx.p.id)||!r.prospect_id||this.sameInstance(r.request_json,s,ctx)));
     if(relevant.some(r=>!own.some(id=>String(id)===String(r.id))))throw new Error("Another Workflow Request for this opportunity is active or uncertain. Reconcile it first.");
     const ownRemote=[];
     for(const id of own){const [r]=await this.query("SELECT item_id FROM sp_requests WHERE id=?",[id]);if(r?.item_id)ownRemote.push(String(r.item_id));}
-    assertNoPending((await this.sp.requests()).filter(r=>!ownRemote.includes(String(r.id))&&(this.sameInstance({fields:r.fields},s,ctx)||this.requestOpportunity(r.fields,s)===ctx.p.opp)),s,ctx.p);
+    assertNoPending((await this.sp.requests()).filter(r=>!isProspectSync(r,s)&&!ownRemote.includes(String(r.id))&&(this.sameInstance({fields:r.fields},s,ctx)||this.requestOpportunity(r.fields,s)===ctx.p.opp)),s,ctx.p);
     const operations=clientId?await this.query("SELECT client_id FROM quote_operation_locks WHERE client_id=?",[clientId]):[];
     if(operations.length)throw new Error("A quote fill/send is active or uncertain. Reconcile it before saving.");
   }
   requestOpportunity(fields,s){try{return JSON.parse(fields?.[s.maps.requests.Payload.name]||"{}").opportunityId;}catch{return null;}}
   sameInstance(raw,_schema,ctx){
     return requestMatchesQuote(raw,ctx.p,ctx.q.id,ctx.state.working_item_id);
+  }
+  async psaRequests(ctx){
+    const rows=await this.query("SELECT id,request_json FROM sp_requests WHERE prospect_id=? AND action='CreateWorkingCopy' AND (status NOT IN ('Failed','Rejected') OR acknowledged_at IS NULL) ORDER BY id DESC",[ctx.p.id]);
+    const title=this.sp.ready().maps.requests.Title.name;
+    return rows.filter(r=>String(json(r.request_json)?.fields?.[title]||'').startsWith(`SALESAPP-${ctx.p.opp}-QUOTE-${ctx.q.id}-PSA-`)).map(r=>r.id);
+  }
+  async preparePsa(ctx,lane){
+    const definition=psaDefinition(this.sp.ready().definitions||[]);
+    if(!definition)return {done:true}; // Explicit missing-configuration message in signature UI.
+    const items=psaItems(await this.sp.workItems(ctx.p.client_id,true),definition);
+    if(signedPsa(items))return {done:true};
+    const open=items.filter(i=>!['Complete','Cancelled','Not Required'].includes(i.status));
+    if(open.length>1)throw new Error('Multiple unsigned PSA copies exist. Reconcile them before signature delivery.');
+    const [requestId]=await this.psaRequests(ctx);
+    if(requestId){
+      const r=await this.requestStatus(requestId);
+      if(['Failed','Rejected'].includes(r.status))throw new Error('PSA request '+r.status+': '+(r.message||'Check request history.'));
+      if(r.status!=='Done')return {step:'psa_requested',waiting:true,manualRequestId:r.manualRequestId||null};
+      if(!open.length)return {step:'psa_requested',waiting:true};
+    }
+    if(open.length)return {done:true};
+    await this.request(ctx,'CreateWorkingCopy',lane,{workflowId:definition.id,instanceRef:String(ctx.q.id)},null);
+    return {step:'psa_requested',waiting:true};
   }
   async record(ctx) { return this.sp.client(ctx.p); }
   async link(ctx,row) {
@@ -169,6 +193,14 @@ export class ProposalStore {
         await this.query("INSERT IGNORE INTO client_request_locks (client_id) VALUES (?)",[p.client_id],c);
         await this.query("SELECT client_id FROM client_request_locks WHERE client_id=? FOR UPDATE",[p.client_id],c);
       }
+      if(field===null){
+        const definition=psaDefinition(s.definitions||[]);
+        if(!definition||definition.id!==options.workflowId)throw new Error('The active BII-PSA workflow definition changed. Review before trying again.');
+        const copies=psaItems(await this.sp.workItems(p.client_id,true),definition);
+        if(signedPsa(copies)||copies.some(i=>!['Complete','Cancelled','Not Required'].includes(i.status)))return;
+        const pending=await this.query("SELECT r.request_json FROM sp_requests r JOIN prospects p ON p.id=r.prospect_id WHERE p.client_id=? AND r.action='CreateWorkingCopy' AND r.status IN ('Preparing','Pending','Processing','Unknown') FOR UPDATE",[p.client_id],c);
+        if(pending.some(r=>json(json(r.request_json)?.fields?.[s.maps.requests.Payload.name])?.workflowId===definition.id))throw new Error('A PSA copy request for this business is already active or uncertain. Wait for it or reconcile request history; no duplicate was created.');
+      }
       await this.validate(ctx,lane);
       if(action==="CreateClient") {
 
@@ -179,12 +211,13 @@ export class ProposalStore {
       const requestLane=genericEngagement(p)?projectLane:action==="CreateClient"&&p.planned_service_lanes?planned.startingLane:lane.key==="COM-PRP"?"Managed IT":"Business IT Integration";
       body=buildFields(s,action,p,requestLane,actor.email,new Date(),lookupId(actor.email),options,this.env);
       // Stable, quote-specific title supports exact reconciliation after transport uncertainty.
-      body.fields[s.maps.requests.Title.name]=`SALESAPP-${p.opp}-QUOTE-${q.id}-${action}-${randomUUID()}`;
+      body.fields[s.maps.requests.Title.name]=`SALESAPP-${p.opp}-QUOTE-${q.id}-${field===null?'PSA-':''}${action}-${randomUUID()}`;
       const r=await this.query("INSERT INTO sp_requests (prospect_id,action,request_json,status) VALUES (?,?,?,'Preparing')",[p.id,action,JSON.stringify(body)],c);id=r.insertId;
-      await this.query(`UPDATE quote_proposal_states SET ${field}=?,step=? WHERE quote_id=? AND operation_token=?`,[id,field==="record_request_id"?"record_requested":"copy_requested",q.id,ctx.token],c);
+      if(field)await this.query(`UPDATE quote_proposal_states SET ${field}=?,step=? WHERE quote_id=? AND operation_token=?`,[id,field==="record_request_id"?"record_requested":"copy_requested",q.id,ctx.token],c);
       await this.audit(c,actor,"prepare proposal "+action,"sp_request",id);
     });
-    ctx.state[field]=id;
+    if(!body)return;
+    if(field)ctx.state[field]=id;
     try {
       const result=await submitRequest(this.graph,this.env.SHAREPOINT_WRITE_MODE,s,body);
       await this.query("UPDATE sp_requests SET status=?,item_id=? WHERE id=?",[result.status,result.itemId,id]);

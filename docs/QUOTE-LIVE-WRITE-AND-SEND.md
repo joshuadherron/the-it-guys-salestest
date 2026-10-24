@@ -11,7 +11,7 @@ Admin is an explicit allowlist flag, separate from the existing sales/owner role
 ## Configuration without changing production defaults
 
 - `QUOTE_FILL_MODE=off|dryrun|live`, default dryrun. This flag governs the quote-content exception independently of SHAREPOINT_WRITE_MODE, which continues governing Workflow Requests.
-- `QUOTE_SEND_MODE=off|dryrun|live`, default dryrun. A dryrun Send is a real shared-mailbox email addressed only to the signed-in person, with [DRYRUN] in the subject, zero CC recipients and no PDF saved to SharePoint. It is never scheduled or automatic.
+- `QUOTE_SEND_MODE=off|dryrun|live`, default dryrun. A dryrun Send is a real shared-mailbox email addressed only to the authorized sender, with [DRYRUN] in the subject, zero CC recipients and no PDF saved to SharePoint. It requires an explicit Send; the worker may finish that queued operation after the page closes.
 - `QUOTE_SENDER_MAILBOX` must name the dedicated shared mailbox, such as sales@theitguys.us. Missing configuration disables Send with a named reason. workflow@ and the known personal sender mailboxes are rejected. Do not use a personal mailbox as this configuration.
 - Masters resolve only from Operational Standards & Templates, using a unique Approved row, the exact document key, a pinned versioned filename and the approved tag set. Managed IT accepts COM-PRP-v1.8.docx or The_IT_Guys_Managed_IT_Quote_Template_v1.8.docx. BII accepts BII-QSOW-v1.6.docx or The_IT_Guys_BII_Short_Form_Quote_SOW_Template_v1.6.docx. The long names were verified in the live library on 2026-10-20. If both aliases are Approved, resolution refuses the duplicate rather than choosing one. Older versions and DRAFT suffixes are not accepted; downloaded contents must pass the exact tag-set check before the resolver returns a master. The key and status columns resolve by exact display names Document Key and Status by default. If production uses other labels, set `QUOTE_MASTER_KEY_COLUMN` and `QUOTE_MASTER_STATUS_COLUMN` to their verified internal names. Missing or ambiguous columns fail closed. No approval is inferred from a local fixture.
 
@@ -21,8 +21,8 @@ Use **choose/add business → build quote → Preview → Send**. Approval and a
 preparation now run inside Send; the manual forms below are retained for history,
 diagnosis and email-only retry. Managed IT and Project share the PDF/email
 transport; BII remains eSignature. Apply migration 014 before deployment. See
-[QUICK-QUOTE.md](QUICK-QUOTE.md) for durable polling/resume, optional findings,
-Waiting for Josh, uncertain-request matching and external flow limitations.
+[QUICK-QUOTE.md](QUICK-QUOTE.md) for the 30-second worker, optional findings,
+Waiting for Josh, uncertain-request matching and PSA definition/copy handling.
 
 ## Shared mailbox and Exchange scope
 

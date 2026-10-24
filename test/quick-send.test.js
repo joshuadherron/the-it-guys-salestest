@@ -15,6 +15,7 @@ import { lockClientRequests } from "../src/existing-client-rules.js";
 import { requestMatchesQuote } from "../src/quote-request-scope.js";
 import { quoteEmail } from "../src/docfill/send-policy.js";
 import { runInNewContext } from "node:vm";
+import { startQuickSendWorker } from '../src/quick-send-worker.js';
 
 const owner={email:"josh@example.test",role:"owner",enabled:1,quote_send:1,quote_approve:1,display_name:"Josh",sender_title:"Owner",sender_phone:"555-555-0100"};
 const sales={...owner,email:"sales@example.test",role:"sales",quote_approve:0};
@@ -35,6 +36,7 @@ function harness(type="managed_it"){
     if(sql.startsWith("SELECT * FROM config_stop"))return [{id:1,label:"Disputed access",status:"Review"}];
     if(sql.includes("FROM quote_quick_sends"))return job?[{...job,busy:!!job.operation_token}]:[];
     if(sql.startsWith("SELECT id FROM quote_send_attempts"))return [];
+    if(sql.startsWith('SELECT id,request_json FROM sp_requests'))return [];
     if(sql.startsWith("UPDATE quotes SET status='Approved'")){Object.assign(q,{status:"Approved",approved_by:args[0],approved_at:"2026-10-24 12:00:00",stop_review:JSON.parse(args[1]),inputs:JSON.parse(args[2])});events.push("Approve");return {};}
     if(sql.startsWith("INSERT INTO quote_quick_sends")){job={quote_id:args[0],status:args[1],snapshot_hash:args[2],requested_by:args[3],options_json:JSON.parse(args[4]),operation_token:null};return {};}
     if(sql.startsWith("UPDATE quote_quick_sends")){
@@ -51,7 +53,7 @@ function harness(type="managed_it"){
   const discoveryStore=new ProposalStore({sp:{},graph:{},deliveryStore:{},run:async sql=>sql.startsWith("SELECT d.*")?[]:[]});
   discoveryStore.discoveryData=async()=>({status:"Draft",revision:0,answers:{}});
   const prepStore={
-    acquire:async()=>ctx(),save:async(_ctx,values)=>Object.assign(state,values),release:async()=>{},renew:async()=>{},validate:async()=>{},latestFill:async()=>fill,
+    acquire:async()=>ctx(),save:async(_ctx,values)=>Object.assign(state,values),release:async()=>{},renew:async()=>{},validate:async()=>{},latestFill:async()=>fill,preparePsa:async()=>({done:true}),
     record:async()=>record,
     link:async()=>{p.client_id="CL-9";if(!state.record_sync_request_id){events.push("Sync");requests.push({id:2,action:"Sync"});state.record_sync_request_id=2;}},
     discovery:async c=>discoveryStore.discovery(c),
@@ -109,7 +111,7 @@ test("Send polls serialize through durable leases and never replay interrupted e
   const h=harness();await h.service.start(19,owner,snapshot(h.q));h.job.operation_token="someone-else";
   await h.service.advance(19,owner);assert.deepEqual(h.events,["Approve"]);
   h.job.operation_token=null;h.job.status="Sending";
-  await assert.rejects(()=>h.service.advance(19,owner),/no email was replayed/);assert.deepEqual(h.events,["Approve"]);
+  const interrupted=await h.service.advance(19,owner);assert.equal(interrupted.status,'Failed');assert.match(interrupted.error,/no email was replayed/);assert.deepEqual(h.events,["Approve"]);
 });
 test("a durable Sent quote repairs a lagging job status without sending again",async()=>{
   const h=harness();await h.service.start(19,owner,snapshot(h.q));h.q.status="Sent";h.job.status="Failed";
@@ -163,7 +165,7 @@ test("all three builder views and preview render without a separate approve/prep
 });
 test("BII signature view finds the actual PSA definition and excludes it once signed",async()=>{
   const h=harness("bii"),psa={id:"42",workflowId:"PSA-ID",document:"Project Services Agreement",signatureStatus:"Preparing",url:"https://example.test/psa"};
-  h.service.sp={workItems:async()=>[{id:"41",workflowId:"BII-05",instanceRef:"19"},psa],ready:()=>({definitions:[{id:"PSA-ID",lane:"Business IT Integration",document:"Project Services Agreement"}]})};
+  h.service.sp={workItems:async()=>[{id:"41",workflowId:"BII-05",instanceRef:"19"},psa],ready:()=>({definitions:[{id:"PSA-ID",active:true,createCopy:true,lane:"Business IT Integration",document:"Project Services Agreement"}]})};
   assert.equal((await h.service.signatureDocuments(19)).psa.length,1);psa.signatureStatus="Signed";
   assert.equal((await h.service.signatureDocuments(19)).psaSigned,true);assert.deepEqual((await h.service.signatureDocuments(19)).psa,[]);
 });
@@ -184,15 +186,15 @@ test("adding a Quick Quote client creates only local business/prospect data and 
   assert.ok(!("discovery" in inserts[0].body));assert.ok(!("intake" in inserts[0].body));
 });
 
-test("progress browser automatically advances on opening and polls to completion without any click",async()=>{
-  const callbacks=[],calls=[],status={textContent:""},error={textContent:""},form={action:"/quick-quote/quotes/19/progress"};let reloads=0;
+test("progress browser polls status without advancing or writing any step",async()=>{
+  const callbacks=[],calls=[],status={textContent:""},error={textContent:""},form={dataset:{statusUrl:"/quick-quote/quotes/19/status"}};let reloads=0;
   const document={querySelector:()=>null,getElementById:id=>id==="quick-progress-form"?form:id==="quick-progress"?status:error};
   const results=[{step:"copy_requested"},{step:"filled"},{done:true,status:"Sent"}];
   runInNewContext(await readFile("public/quick-quote.js","utf8"),{document,URLSearchParams,FormData:class extends Array{constructor(){super(["_csrf","test"]);}},fetch:async(url,options)=>{calls.push({url,options});return {ok:true,json:async()=>results.shift()};},setTimeout:fn=>callbacks.push(fn),window:{location:{reload:()=>reloads++}}});
   const flush=()=>new Promise(resolve=>setImmediate(resolve));
   await flush();assert.equal(calls.length,1);assert.equal(status.textContent,"Creating quote copy…");
   callbacks.shift()();await flush();assert.equal(status.textContent,"Sending…");
-  callbacks.shift()();await flush();assert.equal(reloads,1);assert.equal(calls.length,3);assert.ok(calls.every(c=>c.options.method==="POST"));
+  callbacks.shift()();await flush();assert.equal(reloads,1);assert.equal(calls.length,3);assert.ok(calls.every(c=>!c.options.method&&c.url.endsWith('/status')));
 });
 
 test("preview selections switch the button to Send anyway without auto-selecting a finding",async()=>{
@@ -226,4 +228,34 @@ test("business chooser prefills existing contacts and restores the unsaved new p
   assert.equal(fields.business_name.value,"Existing Co");assert.equal(fields.contact_name.value,"Pat");assert.equal(fields.email.value,"pat@example.test");assert.equal(fields.business_name.readOnly,true);
   modes[0].checked=true;modes[1].checked=false;listeners.new();
   assert.equal(fields.business_name.value,"New Co");assert.equal(fields.contact_name.value,"");assert.equal(fields.business_name.readOnly,false);assert.equal(business.value,"");assert.equal(business.disabled,true);
+});
+
+test('a queued job reaches Sent through the worker with no page or viewer identity',async()=>{
+  const h=harness('project');await h.service.start(19,owner,snapshot(h.q));
+  const worker=startQuickSendWorker({run:async()=>['Queued','Prepared','Sending'].includes(h.job.status)?[{quote_id:19}]:[],service:h.service,interval:()=>({unref(){}}),clear:()=>{},warn:(...args)=>assert.fail(JSON.stringify(args))});
+  await worker.ready;
+  for(let i=0;i<8&&h.job.status!=='Sent';i++)await worker.tick();
+  assert.equal(h.job.status,'Sent');assert.equal(h.events.filter(e=>e==='PDF email').length,1);worker.stop();
+});
+
+test('worker and browser advancement cannot run one leased step concurrently',async()=>{
+  const h=harness('project');await h.service.start(19,owner,snapshot(h.q));
+  let release,entered;const ready=new Promise(resolve=>entered=resolve),paused=new Promise(resolve=>release=resolve);let calls=0;
+  h.service.prepare={advance:async()=>{calls++;entered();await paused;return {step:'record_requested'};}};
+  const first=h.service.advance(19);await ready;
+  await h.service.advance(19,owner);assert.equal(calls,1);release();await first;
+});
+
+test('Try again resumes a failure before any email attempt while preserving snapshot and sender',async()=>{
+  const h=harness('project');await h.service.start(19,owner,snapshot(h.q));h.job.status='Failed';
+  await h.service.resume(19,owner);assert.equal(h.job.status,'Queued');assert.equal(h.job.snapshot_hash,snapshot(h.q));assert.equal(h.job.requested_by,owner.email);
+});
+
+test('worker rechecks saved sender permission and security hold after queuing',async()=>{
+  for(const reason of ['hold','revoked']){
+    const h=harness('project');await h.service.start(19,owner,snapshot(h.q));
+    if(reason==='hold')h.p.hold=true;else h.users.set(owner.email,{...owner,quote_send:0});
+    await assert.rejects(()=>h.service.advance(19),reason==='hold'?/security hold/:/Send permission/);
+    assert.equal(h.job.status,'Failed');assert.deepEqual(h.events,['Approve']);
+  }
 });

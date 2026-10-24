@@ -50,12 +50,12 @@ queue/lease table keyed by Quote ID. Existing quote/proposal/fill/send records
 retain approval data, workflow identities, copy linkage and delivery history.
 No new environment setting is required; global write/send modes remain unchanged.
 
-The progress page automatically polls POSTs: client folder → CRM sync → quote
-copy → fill → delivery. No intermediate clicks are required. Opening the saved
-Quick Quote URL resumes its job for any user with send permission. **No background
-worker is added**: closing all quote pages pauses progress between bounded steps;
-an already running request may finish. Reopening resumes with the saved actor,
-not the viewer's identity. Database leases serialize simultaneous tabs/users.
+The server runs one bounded step per queued job every 30 seconds: client folder →
+quote copy → fill → delivery (plus unsigned PSA copy for BII). CRM sync is dispatched
+but never holds the quote. Browser polling reads status only. The worker starts
+after SharePoint schema startup, uses the saved sender, and rechecks current
+permission/hold/hash. A durable DB lease serializes app instances and authenticated
+manual progress requests. Closing the page does not pause an authorized Send.
 
 Approval, hold/loss, sender permission and hash are rechecked while advancing.
 Email intent is persisted before delivery. Interrupted Sending is never replayed.
@@ -73,21 +73,18 @@ customer creation. Null/empty IDs never produce a blank-client join/operation qu
 
 ## External flow inspection and remaining checks
 
-The repository's `docs/02-sharepoint-workflow-contract.md` documents **Start Stage /
-Quoting** creating BII-05 plus **BII-14 MSA**, both signed. The newer owner prompt
-calls the companion agreement PSA. Current proposal preparation submits Create
-Client and Create Working Copy for BII-05 only: **it does not submit Start Stage
-or create a PSA**. The signature screen reads the live definition's PSA / Project
-Services Agreement name; it does not silently treat an MSA as a PSA. A missing
-PSA is reported for Josh to review in Quoting/Start Stage. No flows were changed.
+Read-only inspection on October 24 found Client Workflow Definitions row 31:
+**BII-14 / Project Services Agreement / BII-PSA**, BII lane, Active and Create
+Client Copy both Yes. The old MSA wording in the repository contract is historical.
+When no signed or open PSA exists, Send requests its copy with the existing
+CreateWorkingCopy contract and numeric quote instance. The request is persisted
+in sp_requests and resumed by exact title; an uncertain request is never replayed.
+No definitions or flows were modified. The signature screen uses actual working
+file webUrls and names BII-PSA explicitly if configuration is missing.
 
-No deployed Power Automate export is present in this repository or available in
-local app configuration. The exact live BII/MIT Create Client expression that may
-reject incomplete discovery therefore **cannot be verified**. The app submits
-available discovery plus discoveryComplete false, without claiming live-flow
-acceptance. Josh must inspect that flow's discovery-completeness condition and
-verify staging requests, and confirm the actual PSA definition/creation branch.
-Flow rejections are surfaced with their result message and request history.
+The owner's live walkthrough confirmed Create Client accepted all three quote
+types without discovery. This behavior is retained. Flow rejections still surface
+their result messages and request history. See [walkthrough fixes and validation](QUICK-QUOTE-WALKTHROUGH-FIXES.md).
 
 Project readiness is exactly one PRJ-05 / Business Technology Projects definition
 with Active and Create Client Copy enabled, plus lane choices and the unique

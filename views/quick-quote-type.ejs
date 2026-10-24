@@ -1,0 +1,7 @@
+<%- include('header') %>
+<h1>Choose quote type · <%= p.business_name %></h1>
+<p>Select the work you are quoting. No type is selected automatically.</p>
+<% for(const [key,label,description] of [['managed_it','Managed IT','Ongoing monthly IT support, with a separate one-time onboarding fee.'],['bii','BII Project','Business IT Integration standardization project, sent for electronic signature.'],['project','Project / one-time job','A custom scope and estimate for a specific piece of work.']]){ %>
+<section class="card"><h2><a class="button" href="?type=<%= key %>"><%= label %></a></h2><p><%= description %></p></section>
+<% } %>
+<%- include('footer') %>
