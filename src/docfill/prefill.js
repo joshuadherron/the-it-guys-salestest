@@ -1,4 +1,5 @@
 import { DEFAULT_MANAGED_SUMMARY, deviceList } from "./managed-facts.js";
+import { regulatedDataText } from "../bii-options.js";
 // Prefill contractual document inputs from saved, already-known facts only.
 // Never infer legal entity names, signer authority, contractual exceptions, or scope.
 const text = value => typeof value === "string" && !/^(none\.?|null|undefined|n\/a|unknown)$/i.test(value.trim()) ? value.trim() : "";
@@ -35,5 +36,5 @@ export function documentPrefill(prospect, input, laneKey) {
   }
   const types = [["windows","Windows"],["mac","Mac"],["ios","iOS"],["android","Android"],["unallocated","Platform not yet assigned"]]
     .filter(([key])=>Number(q[key])>0).map(([key,label])=>`${q[key]} ${label}`).join("; ");
-  return {...common,location:address,deviceTypes:types,targetTiming:"",deviceNote:"",hardwareText:"",locationText:"",regulatedText:"",lobExclusion:"",extraExclusions:"",extraAssumption:""};
+  return {...common,location:address,deviceTypes:types,targetTiming:"",deviceNote:"",hardwareText:"",locationText:"",regulatedText:q.regulatedPackage?regulatedDataText:"",lobExclusion:"",extraExclusions:"",extraAssumption:""};
 }

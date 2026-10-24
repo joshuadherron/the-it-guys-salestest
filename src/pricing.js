@@ -7,6 +7,16 @@ export const oneOffItems = [
   "Tenant-to-tenant",
   "Additional STANDARD workloads",
 ];
+export function regulatedPackagePrice(users,prices){
+  const values=Object.fromEntries(["regulatedBase","regulatedUser","regulatedIncludedUsers"].map(key=>{
+    const n=Number(prices[key]);
+    if(prices[key]===null||prices[key]===""||!Number.isFinite(n)||n<0)throw new Error("Missing or invalid price: "+key);
+    return [key,n];
+  }));
+  if(!Number.isSafeInteger(users)||users<0)throw new Error("Invalid count: users");
+  if(!Number.isSafeInteger(values.regulatedIncludedUsers))throw new Error("Invalid included regulated users");
+  return Math.round((values.regulatedBase+values.regulatedUser*Math.max(0,users-values.regulatedIncludedUsers))*100)/100;
+}
 export function priceQuote(input, prices) {
   const get = (k) => {
     const n = Number(prices[k]);
@@ -56,6 +66,10 @@ export function priceQuote(input, prices) {
       unit: get(rate),
       amount: Math.round(quantity * get(rate) * 100) / 100,
     });
+  }
+  if(input.regulatedPackage===true){
+    const amount=regulatedPackagePrice(count("users"),prices);
+    lines.push({label:"Regulated Data Package",quantity:1,unit:amount,amount});
   }
   const pending = [];
   for (const label of oneOffItems) {

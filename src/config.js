@@ -10,6 +10,9 @@ export const prices = {
   additional_device: 185,
   additional_mailbox: 130,
   dell_deployment: 260,
+  regulatedBase: 500,
+  regulatedUser: 25,
+  regulatedIncludedUsers: 5,
 };
 export const stages = [
   "Prospecting",

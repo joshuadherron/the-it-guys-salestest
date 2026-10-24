@@ -4,7 +4,7 @@ import { readFile } from "node:fs/promises";
 import { SharePointQuotes } from "../src/docfill/sharepoint-quotes.js";
 const names={
   "COM-PRP":["COM-PRP-v1.8.docx","The_IT_Guys_Managed_IT_Quote_Template_v1.8.docx"],
-  "BII-QSOW":["BII-QSOW-v1.6.docx","The_IT_Guys_BII_Short_Form_Quote_SOW_Template_v1.6.docx"],
+  "BII-QSOW":["BII-QSOW-v1.7.docx","The_IT_Guys_BII_Short_Form_Quote_SOW_Template_v1.7.docx"],
 };
 function harness(key,name) {
   const rows=[{fields:{TIG_DocumentKey:key,TIG_Status:"Approved"},driveItem:{id:"template",name,parentReference:{driveId:"masters"}}}];
@@ -27,7 +27,7 @@ for(const [key,aliases] of Object.entries(names)) {
     await assert.rejects(()=>h.resolver.master(key),/found 0/);assert.equal(h.events.length,0);
   });
   test(`${key} refuses older and unapproved filename variants`,async()=>{
-    for(const name of [aliases[1].replace(key==="COM-PRP"?"v1.8":"v1.6","v1.5"),aliases[1].replace(".docx","_DRAFT.docx")]){
+    for(const name of [aliases[1].replace(key==="COM-PRP"?"v1.8":"v1.7","v1.5"),aliases[1].replace(".docx","_DRAFT.docx")]){
       const h=harness(key,name);await assert.rejects(()=>h.resolver.master(key),/Expected filename/);assert.equal(h.events.length,0);
     }
   });

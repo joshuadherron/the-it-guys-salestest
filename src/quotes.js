@@ -3,7 +3,8 @@ import { query, transaction, audit, json } from "./db.js";
 import { ownerOnly, integer, fail } from "./security.js";
 import { prospect } from "./pipeline.js";
 import { discovery } from "./discovery.js";
-import { answer, value, mvd } from "./discovery-rules.js";
+import { answer, value, mvd,flags } from "./discovery-rules.js";
+import { biiOptions,assertBiiApprovalInputs,biiPlanLength,optionalAssessmentHint } from "./bii-options.js";
 import { genericEngagement } from "./engagement-types.js";
 import { platforms, oneOffItems, priceQuote, priceManagedServices } from "./pricing.js";
 
@@ -44,6 +45,7 @@ export function prefill(a) {
     oneOff: {},
     confirmed: false,
     includeBii: false,
+    ...biiOptions({regulatedPackage:flags(a).some(f=>f.code==="FLAG-HEALTH-DATA")}),
   };
 }
 
@@ -94,7 +96,7 @@ export function validateInputs(body) {
     };
   }
 
-  return input;
+  return {...input,...biiOptions(body)};
 }
 
 export function validateManagedInputs(body) {
@@ -172,6 +174,7 @@ export function quotesRoutes(app,deps={query,transaction,audit,prospect,discover
       p,
       missingDiscovery:mvd(d.answers),
       assessmentFindings:selected&&Array.isArray(json(selected.stop_review))?json(selected.stop_review).filter(s=>s.selected):[],
+      biiPlanLength,optionalAssessmentHint,
       canApprove: canQuote(req.session.user,"quote.approve"),
       canSend: canQuote(req.session.user,"quote.send"),
       quotes,
@@ -345,6 +348,7 @@ export function quotesRoutes(app,deps={query,transaction,audit,prospect,discover
       if (q.status !== "Draft") fail("Only a draft can be approved.");
 
       const input = json(q.inputs);
+      if(input.pricingMode!=="managed_v20")assertBiiApprovalInputs(input);
 
       if (!input.confirmed) {
         if (req.body.confirm_counts !== "yes")
@@ -361,10 +365,10 @@ export function quotesRoutes(app,deps={query,transaction,audit,prospect,discover
       if (req.body.reviewed !== "yes")
         fail("Complete the stop-condition review.");
 
-      if (stops.some((s) => req.body["stop_" + s.id] === "yes") && req.body.continue_anyway !== "yes")
-        fail(
-          "Assessment findings need review. Select Continue Anyway to approve pricing only; this does not authorize work or service activation.",
-        );
+      if(stops.some(s=>req.body["stop_"+s.id]==="yes")){
+        if(input.pricingMode!=="managed_v20")fail("BT-7.30 stop condition selected. Complete a targeted assessment or route the scope before approving this BII quote. The free BT-7.32 assessment is optional.");
+        if(req.body.continue_anyway!=="yes")fail("Assessment findings need review. Select Continue Anyway to approve pricing only; this does not authorize work or service activation.");
+      }
 
       const calc = input.pricingMode==="managed_v20" ? combinedManagedQuote(input,await priceConfig(c)) : priceQuote(input, await priceConfig(c));
 

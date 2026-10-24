@@ -3,8 +3,8 @@
 ## Current integration state
 - Route: `GET/POST /quotes/:id/document`, enforced by configurable `quote.send`.
 - Approved quote required. The draft-download action returns a draft DOCX without SharePoint changes; the explicit Fill button invokes the separately gated quote-content service.
-- Templates are pinned by exact document key: `COM-PRP-v1.8.docx` and `BII-QSOW-v1.6.docx`.
-- Both original binary masters are installed under `test/fixtures/`, imported using `scripts/import-quote-templates.py` from `TIG_Quote_Fill_Codex_Package_v1.zip`. Their bytes are unchanged. `test/fixtures/quote-masters.json` records the source ZIP and master SHA-256 hashes. Real-master integration tests verify those hashes and the exact approved tag sets (62 Managed IT / 60 BII).
+- Templates are pinned by exact document key: `COM-PRP-v1.8.docx` and `BII-QSOW-v1.7.docx`.
+- The active BII fixture is the unchanged owner-supplied October 23 v1.7 template with 74 distinct tags. Managed IT remains the unchanged 62-tag original. `test/fixtures/quote-masters.json` records master hashes and the new BII source. The historical package importer and v1.6 fixture are retained for provenance; they do not install the active v1.7 BII master. See [BII v1.7 setup and fill contract](BII-QSOW-v1.7.md).
 - Required runtime modules `jszip` and `@xmldom/xmldom` are present in both `package.json` and `package-lock.json`. Clean installation has been verified with Node 22.23.3.
 - The local deployment prerequisites are complete. Deploy masters, application code and the lockfile together. A missing master still returns HTTP 503. A real owner browser download against the deployed database remains a deployment acceptance check.
 - Do not enable SharePoint live writes as a workaround.
