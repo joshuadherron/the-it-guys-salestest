@@ -1,0 +1,25 @@
+<%- include('header') %>
+<h1>Today</h1>
+<p><%= label %> · Central time (America/Chicago)</p>
+<p>Meetings, next actions and follow-ups scheduled for today. <a href="/">Home dashboard</a></p>
+<form method="get" class="row">
+<label>Show<select name="scope"><option value="all" <%= !mine?'selected':'' %>>Everyone's schedule</option><option value="mine" <%= mine?'selected':'' %>>My schedule</option></select></label>
+<button>Update</button>
+</form>
+<p role="status"><strong><%= entries.length %></strong> scheduled <%= entries.length===1?'item':'items' %> today.</p>
+<% if(!entries.length){ %><div class="card"><h2>Nothing scheduled for today</h2><p><%= mine?'No opportunities assigned to you have meetings, next actions or follow-ups scheduled today.':'No meetings, next actions or follow-ups are scheduled today.' %></p><a href="/pipeline">View prospects to schedule a follow-up</a></div><% } %>
+<% for(const entry of entries){ const p=entry.p; %>
+<article class="card">
+<div class="row"><strong><% if(entry.time){ %><time datetime="<%= day %>T<%= entry.time %>"><%= new Date(day+'T'+entry.time+'Z').toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit',timeZone:'UTC'}) %></time><% }else{ %>No time set<% } %></strong><span class="pill"><%= entry.kind %></span></div>
+<h2><a href="/prospects/<%= p.id %>"><%= p.business_name %></a></h2>
+<% if(p.opportunity_title){ %><p><%= p.opportunity_title %></p><% } %>
+<p><%= entry.description %><%= entry.method?' · '+entry.method:'' %></p>
+<p><%= [p.contact_name,p.phone,p.email].filter(Boolean).join(' · ') %></p>
+<p class="muted">Assigned to: <%= p.owner||'Unassigned' %> · <%= p.stage %></p>
+<% if(p.hold){ %><p class="error">On Hold — Pending Josh Review</p><% } %>
+<% if(entry.kind==='Meeting'&&/^https:\/\//i.test(p.teams_join_url||'')){ %><a class="button" href="<%= p.teams_join_url %>" target="_blank" rel="noopener noreferrer">Join meeting</a><% } %>
+<a class="button secondary" href="/prospects/<%= p.id %>">Open opportunity</a>
+<a class="button secondary" href="/prospects/<%= p.id %>/edit">Edit schedule</a>
+</article>
+<% } %>
+<%- include('footer') %>
