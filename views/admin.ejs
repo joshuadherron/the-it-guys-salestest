@@ -3,6 +3,8 @@
 <p><a href="/admin/project-pricing">Project / hourly pricing configuration</a></p>
 <p class="muted">Select a section heading to expand its settings. User Permissions &amp; Access controls account roles and privileges.</p>
 <details class="card admin-block"><summary>SharePoint connection</summary>
+<p>Project readiness is controlled by PRJ-05 in Client Workflow Definitions after the project flows are deployed.</p>
+<% for(const issue of (typeof projectPrerequisites==='undefined'?[]:projectPrerequisites)){ %><p class="error"><%= issue %></p><% } %>
 <p>Last checked: <%= schema.checkedAt||'Not checked' %>
 </p>
 <% for(const error of schema.errors){ %>

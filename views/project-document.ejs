@@ -3,6 +3,6 @@
 <p>Uses the approved scope, prices and terms saved in this quote. Quote approval does not authorize work. Customer acceptance is recorded separately on the opportunity.</p>
 <% if(error){ %><p role="alert"><%= error %></p><% } %>
 <% if(lane){ %><p>Pinned master: <%= lane.name %> · <%= lane.template %>. Fill mode: <%= fillMode %>.</p><form method="post"><input type="hidden" name="_csrf" value="<%= csrf %>"><button name="action" value="Download">Download proposal for review</button><button name="action" value="FillSharePoint">Save proposal to SharePoint</button></form><% } %>
-<p><a href="/prospects/<%= p.id %>/project-sharepoint">Open / reuse the business record</a> · <a href="/quotes/<%= q.id %>/project-print">Printable quote / estimate</a></p>
+<p><a href="/prospects/<%= p.id %>/project-sharepoint?quote=<%= q.id %>">Open / reuse the business record</a> · <a href="/quotes/<%= q.id %>/project-print">Printable quote / estimate</a></p>
 <p>Sending is manual. These documents do not grant ongoing monitoring, support, backups, security or Managed IT coverage.</p>
 <%- include('footer') %>

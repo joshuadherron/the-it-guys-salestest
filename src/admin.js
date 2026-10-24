@@ -6,6 +6,7 @@ import { query, transaction, audit } from "./db.js";
 import { choice, text, integer, fail } from "./security.js";
 import { sp } from "./handoff.js";
 import { dispatchProspectSync, prospectSyncEnabled } from "./prospect-sync.js";
+import { projectCapability } from "./project-contract.js";
 export function adminRoutes(app) {
   app.get("/admin", adminOnly, async (req, res) =>
     res.render("admin", {
@@ -22,6 +23,7 @@ export function adminRoutes(app) {
       allowlist: await query("SELECT * FROM allowlist ORDER BY email"),
       logs: await query("SELECT * FROM audit_log ORDER BY id DESC LIMIT 200"),
       schema: sp.cache,
+      projectPrerequisites: projectCapability(sp.cache),
       prospectSyncEnabled: prospectSyncEnabled(),
       prospectCount: (await query("SELECT COUNT(*) count FROM prospects"))[0].count,
       prospectSyncSummary: await query(

@@ -10,7 +10,7 @@ export class SharePointQuotes {
     const schema=this.sp.ready();
     if(!prospect.client_id||!await this.sp.client(prospect))throw new Error("The linked SharePoint client could not be read.");
     const generic=projectDocumentKeys.includes(key);
-    if(generic)assertProjectCapability(schema,this.env);
+    if(generic)assertProjectCapability(schema);
     const workflow=generic?projectDocument(key,this.env).workflow:key==="COM-PRP"?"MIT-05":"BII-05";
     const allItems=await this.sp.workItems(prospect.client_id,true);
     assertNoPending(await this.sp.requests(),schema,{...prospect,work_item_ids:allItems.map(i=>i.id)});

@@ -182,7 +182,7 @@ function payloadData(action, p, lane, options) {
       Array.isArray(options.discovery)
     )
       throw new Error("A discovery snapshot is required to create the client.");
-    if(project&&(options.discovery.contractVersion!=="project-v1"||String(options.discovery.businessId)!==String(p.business_id)))throw new Error("Project creation requires the completed, versioned project intake snapshot.");
+    if(project&&(options.discovery.contractVersion!=="project-v1"||String(options.discovery.businessId)!==String(p.business_id)))throw new Error("Project creation requires the versioned project intake snapshot.");
     return {
       opportunityId: p.opp,
       client: p.business_name,
@@ -221,7 +221,7 @@ export function buildFields(
   options = {},
   env=process.env,
 ) {
-  if(lane===projectLane)assertProjectCapability(schema,env);
+  if(lane===projectLane)assertProjectCapability(schema);
   if(lane===projectLane&&action==="CreateWorkingCopy"&&options.workflowId!==projectDocument(p.engagement_type==="hourly"?"ENG-HRLY":"ENG-PRJ",env).workflow)throw new Error("The project working-copy workflow must match the approved quote type.");
   if (schema.actionErrors?.[action]?.length)
     throw new Error(schema.actionErrors[action].join(" "));
