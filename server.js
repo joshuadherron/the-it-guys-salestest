@@ -14,6 +14,7 @@ import { quotesRoutes } from "./src/quotes.js";
 import { quoteDocumentRoutes } from "./src/docfill/routes.js";
 import { discoveryRoutes } from "./src/discovery.js";
 import { pipelineRoutes } from "./src/pipeline.js";
+import { todayRoutes } from "./src/today.js";
 import { authRoutes } from "./src/auth.js";
 import { universalRoutes } from "./src/universal-routes.js";
 import { projectQuoteRoutes } from "./src/project-quotes.js";
@@ -119,6 +120,7 @@ app.use(async (_req, _res, next) => {
 app.use(engagementGuard());
 quickQuoteRoutes(app);
 pipelineRoutes(app);
+todayRoutes(app);
 universalRoutes(app);
 projectQuoteRoutes(app);
 projectSharePointRoutes(app);

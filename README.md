@@ -14,6 +14,13 @@ authorized user reopens the quote; no background worker is installed.
 Migration **014_quick_quote_sends.sql** is required before deployment.
 See [Quick Quote rollout and flow limitations](docs/QUICK-QUOTE.md).
 
+The separate **Today** page (`/today`) lists meetings, next actions and follow-ups
+scheduled for the current America/Chicago calendar day, ordered by time with
+untimed follow-ups last. Switch between everyone's schedule and opportunities
+assigned to the signed-in user. Overdue, future and unscheduled items remain on
+Home/Prospects. This uses existing prospect schedule fields; no migration or
+SharePoint/Power Automate changes are needed.
+
 ## Local setup
 
 1. Install Node 22 and MySQL 8. Create an empty `utf8mb4` database and a dedicated database account. For setup, the account needs CREATE/ALTER plus normal SELECT/INSERT/UPDATE/DELETE privileges. Use a separate migration account in production if practical.
