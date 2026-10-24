@@ -18,6 +18,7 @@ const owner={legalName:"Example Services LLC",preparedName:"Example Owner",prepa
 function harness(options={}){
  const q={...qSample.quote,quote_number:"Q-2026-010",document_facts:owner},p={id:1,client_id:"CL-1",contact_name:"Jane Doe",business_name:"Example Services LLC",email:"jane@example.test"};
  const working={name:"Example Managed Quote.docx",driveId:"drive",itemId:"item",folderId:"commercial",eTag:"etag",webUrl:"https://example.sharepoint.com/Commercial/quote.docx",status:"Open"};
+ working.sharepoint={fieldsPath:'/sites/site/lists/ops/items/41/fields',fields:{Title:'Example Managed Quote',TIG_ClientID:'CL-1',TIG_WorkflowID:'MIT-05',TIG_InstanceRef:'10'}};
  const actor={...profile},events=[],attempts=[];
  let leased=false;
  const fill={id:1,document_key:"COM-PRP",mode:"live",status:"Succeeded",snapshot_hash:snapshot(q),drive_id:"drive",item_id:"item",etag:"etag",fields_json:JSON.stringify(qSample.data.fields),report:JSON.stringify({unfilled:[]})};
@@ -38,7 +39,7 @@ function harness(options={}){
  };
  const graph={
   quoteContent:async()=>Buffer.from("%PDF-verified sample"),
-  read:async()=>({id:"sent-pdf",parentReference:{id:"commercial"}}),
+  read:async path=>path===working.sharepoint.fieldsPath?{...working.sharepoint.fields}:({id:"sent-pdf",parentReference:{id:"commercial"}}),
   replaceQuoteWorkingCopy:async(d,i,etag)=>{events.push(["put",etag]);if(options.putFail)throw Object.assign(new Error("changed"),{status:409});return {id:i,eTag:"new-etag",cTag:"new-content"};},
   createSentQuotePdf:async(d,folder,name)=>{events.push(["savePdf",folder,name]);if(options.pdfFail)throw Object.assign(new Error("PDF conflict"),{status:409});return {id:"sent-pdf"};},
   sendQuoteMail:async(box,message,correlation)=>{events.push(["mail",box,message,correlation]);if(options.mailFail)throw Object.assign(new Error("Access policy refused"),{status:403});if(options.timeout)throw new Error("timeout");return {messageId:null,requestId:"graph-request"};},
@@ -57,6 +58,27 @@ test("live fill uses eTag and dryrun never PUTs; 412-style refusal is retained",
  const h=harness();await h.service.fill(h.q.id,profile);assert.deepEqual(h.events.find(e=>e[0]==="put"),["put","etag"]);
  const dry=harness();dry.env.QUOTE_FILL_MODE="dryrun";await dry.service.fill(dry.q.id,profile);assert.ok(!dry.events.some(e=>e[0]==="put"));
  const bad=harness({putFail:true});await assert.rejects(()=>bad.service.fill(bad.q.id,profile),/changed/);assert.ok(bad.events.some(e=>e[0]==="filled"&&e[1]==="Failed"));
+});
+
+test('fill restores columns blanked by the upload before recording success',async()=>{
+ const h=harness(),fields={...h.working.sharepoint.fields};let uploaded=false,patched=false;
+ h.graph.replaceQuoteWorkingCopy=async()=>{uploaded=true;for(const key of Object.keys(fields))fields[key]='';return {id:'item',eTag:'filled',cTag:'content'};};
+ h.graph.read=async path=>{assert.equal(path,h.working.sharepoint.fieldsPath);return {...fields};};
+ h.graph.request=async(path,method,values)=>{assert.ok(uploaded);assert.equal(path,h.working.sharepoint.fieldsPath);assert.equal(method,'PATCH');assert.deepEqual(values,h.working.sharepoint.fields);Object.assign(fields,values);patched=true;};
+ await h.service.fill(h.q.id,profile);assert.ok(patched);assert.deepEqual(fields,h.working.sharepoint.fields);assert.equal(h.fill.status,'Succeeded');
+});
+
+for(const ignored of [false,true])test(`fill refuses when column restoration ${ignored?'does not persist':'fails'}`,async()=>{
+ const h=harness();let uploaded=false;
+ h.graph.replaceQuoteWorkingCopy=async()=>{uploaded=true;return {id:'item',eTag:'filled',cTag:'content'};};
+ h.graph.read=async()=>uploaded?{}:{...h.working.sharepoint.fields};
+ h.graph.request=async()=>{if(!ignored)throw Object.assign(new Error('Forbidden'),{status:403});};
+ await assert.rejects(()=>h.service.fill(h.q.id,profile),/could not be restored/);assert.equal(h.fill.status,'Failed');assert.ok(!h.events.some(e=>e[0]==='mail'));
+});
+
+test('fill refuses pre-upload column changes without uploading or restoring stale identity',async()=>{
+ const h=harness();h.graph.read=async()=>({...h.working.sharepoint.fields,TIG_InstanceRef:'another-quote'});
+ await assert.rejects(()=>h.service.fill(h.q.id,profile),/changed before fill/);assert.ok(!h.events.some(e=>e[0]==='put'));
 });
 for(const [label,change,match] of [
  ["unapproved quote",h=>h.q.status="Draft",/Approved/],
@@ -184,8 +206,8 @@ test('new live fill records the post-write content tag, not the template content
 test('fill reads explicit drive tags when the PUT result omits cTag',async()=>{
  const h=harness(),reads=[];
  h.graph.replaceQuoteWorkingCopy=async()=>({id:'item',eTag:'written'});
- h.graph.read=async path=>{reads.push(path);return {id:'item',eTag:'metadata-after-fill',cTag:'written-content'};};
- await h.service.fill(h.q.id,profile);assert.equal(h.fill.ctag,'written-content');assert.equal(h.fill.etag,'metadata-after-fill');assert.match(reads[0],/\?\$select=id,eTag,cTag$/);
+ h.graph.read=async path=>{reads.push(path);return path===h.working.sharepoint.fieldsPath?{...h.working.sharepoint.fields}:{id:'item',eTag:'metadata-after-fill',cTag:'written-content'};};
+ await h.service.fill(h.q.id,profile);assert.equal(h.fill.ctag,'written-content');assert.equal(h.fill.etag,'metadata-after-fill');assert.match(reads.at(-1),/\?\$select=id,eTag,cTag$/);
 });
 
 test('metadata-only eTag changes before/during PDF conversion send without an edit review',async()=>{

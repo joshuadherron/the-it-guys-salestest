@@ -97,6 +97,15 @@ test("hold refuses Send before approval while the same saved quote still preview
   await assert.rejects(()=>h.service.start(19,owner,snapshot(h.q)),/security hold/);assert.equal(h.q.status,"Draft");assert.equal(h.job,null);
   const preview=await quickQuoteDocument(h.q,h.p,prices);assert.ok(preview.buffer.length);
 });
+
+test('internal recipients require explicit confirmation at Send before approval, jobs or SharePoint requests',async()=>{
+ for(const type of ['managed_it','project','bii']){
+  const h=harness(type);h.p.email='Test@theitguys.us';
+  await assert.rejects(()=>h.service.start(19,owner,snapshot(h.q)),/Internal recipient requires the internal test checkbox/);
+  assert.equal(h.q.status,'Draft');assert.equal(h.job,null);assert.deepEqual(h.events,[]);assert.deepEqual(h.requests,[]);
+  await h.service.start(19,owner,snapshot(h.q),{internal_test:'yes'});assert.equal(h.job.status,'Queued');
+ }
+});
 test("Send refuses changed preview, changed pricing and revoked permission",async()=>{
   const h=harness();await assert.rejects(()=>h.service.start(19,owner,"stale"),/changed after preview/);
   h.q.total++;await assert.rejects(()=>h.service.start(19,owner,snapshot(h.q)),/differs from current prices/);

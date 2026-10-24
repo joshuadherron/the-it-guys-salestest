@@ -45,6 +45,7 @@ function graphFixture(key){
     all:async()=>[row,unrelated],
     read:async path=>{
       reads.push(path);
+      if(path.endsWith('/lists/ops/items/533/fields'))return {...row.fields};
       if(path.includes('/lists/ops/items/533'))return row;
       if(path.includes('/lists/ops/items/532'))return unrelated;
       if(path.endsWith('/commercial'))return {id:'commercial',name:'Commercial',folder:{}};
