@@ -80,7 +80,7 @@ export class ProposalStore {
   }
   async validate(ctx,lane) {
     const s=this.sp.ready();
-    if(genericEngagement(ctx.p))assertProjectCapability(s,this.env);
+    if(genericEngagement(ctx.p))assertProjectCapability(s);
     if(s.workErrors?.length||s.definitionErrors?.length)throw new Error([...(s.workErrors||[]),...(s.definitionErrors||[])].join(" "));
     const definitions=s.definitions.filter(d=>d.id===lane.workflow&&d.lane===(lane.lane||(lane.key==="COM-PRP"?"Managed IT":"Business IT Integration")));
     if(definitions.length!==1||!definitions[0].active||!definitions[0].createCopy)
@@ -141,7 +141,7 @@ export class ProposalStore {
   async discovery(ctx) {
     if(genericEngagement(ctx.p)) {
       const [intake]=await this.query(intakeSelect,[ctx.p.id]);
-      return projectDiscovery(ctx.p,intake);
+      return projectDiscovery(ctx.p,intake,ctx.q);
     }
     const d=await this.discoveryData(ctx.p.id);
     if(d.answers._opportunity_type&&d.status!=="Ready for Review")throw new Error("Review discovery for the corrected opportunity type before saving its proposal.");

@@ -106,10 +106,10 @@ test("ENG-PRJ metadata is pinned with legacy master names and ignores retired en
 });
 
 test("capability checks require the existing Business Technology Projects choice, not the old invented lane",()=>{
-  const schema=lane=>({businessColumn:"TIG_SalesBusinessID",maps:{requests:{"Service Lane":{choice:{choices:[lane]}}},clients:{"Service Lanes":{choice:{choices:[lane]}}}}});
-  assert.deepEqual(projectCapability(schema(projectLane),{PROJECT_WORKFLOW_CONTRACT:"v1"}),[]);
-  assert.equal(projectCapability(schema("Project-Based"),{PROJECT_WORKFLOW_CONTRACT:"v1"}).filter(e=>e.includes("choice")).length,2);
-  assert.ok(projectCapability(schema(projectLane),{}).some(e=>e.includes("Power Automate")));
+  const schema=lane=>({definitions:[{id:"PRJ-05",lane:projectLane,active:true,createCopy:true}],businessColumn:"TIG_SalesBusinessID",maps:{requests:{"Service Lane":{choice:{choices:[lane]}}},clients:{"Service Lanes":{choice:{choices:[lane]}}}}});
+  assert.deepEqual(projectCapability(schema(projectLane)),[]);
+  assert.equal(projectCapability(schema("Project-Based")).filter(e=>e.includes("choice")).length,2);
+  assert.ok(projectCapability({...schema(projectLane),definitions:[]}).some(e=>e.includes("Activate PRJ-05")));
 });
 
 test("pinned project resolver reads only its exact Approved master and rejects draft, wrong-version and duplicate candidates",async()=>{

@@ -16,22 +16,31 @@ export function projectDocument(key,env=process.env) {
   if(!/^[^\\/]+\.docx$/i.test(name)||!/^PRJ-[A-Z0-9-]+$/.test(workflow))fail("Project template filename or PRJ workflow ID is invalid.",503);
   return {key,name,workflow,template:env[prefix+"_TEMPLATE_VERSION"],label:"Hourly Estimate / Work Authorization",lane:projectLane};
 }
-export function projectCapability(schema,env=process.env) {
+export function projectCapability(schema) {
   const errors=[];
-  if(env.PROJECT_WORKFLOW_CONTRACT!=="v1")errors.push(`Deploy and verify the ${projectLane} v1 Power Automate contract, then have Josh enable the project workflow contract in Hostinger.`);
+  const definitions=(schema.definitions||[]).filter(d=>d.id==="PRJ-05");
+  if(definitions.length!==1||definitions[0].lane!==projectLane||!definitions[0].active||!definitions[0].createCopy)
+    errors.push("Activate PRJ-05 in Client Workflow Definitions (Active = Yes, Create Client Copy = Yes) after the project flows are deployed.");
   for(const [kind,label] of [["requests","Service Lane"],["clients","Service Lanes"]])
     if(!schema.maps?.[kind]?.[label]?.choice?.choices?.includes(projectLane))errors.push(`${kind} ${label} needs the ${projectLane} choice.`);
   if(!schema.businessColumn)errors.push("Clients needs a unique, indexed text TIG_SalesBusinessID column for project business identity.");
   return errors;
 }
-export function assertProjectCapability(schema,env=process.env) {
-  const errors=projectCapability(schema,env);
-  if(errors.length)fail(errors.join(" "),503);
+export function assertProjectCapability(schema) {
+  const errors=projectCapability(schema);
+  if(errors.length)fail(errors.join(" "),409);
 }
-export function projectDiscovery(p,intake) {
-  const answers=intake?json(intake.answers):{};
-  const missing=missingIntake(p.engagement_type,answers,p);
-  if(!genericEngagement(p)||p.hold||!intake?.complete||missing.length)fail("Complete project/hourly intake and resolve holds before opening SharePoint: "+missing.map(m=>m.label+" ("+m.href+")").join("; "),409);
+export function projectDiscovery(p,intake,quote) {
+  if(!genericEngagement(p)||p.hold)fail("Only a project/hourly opportunity without a hold can open a project record.",409);
   if(!p.business_id)fail("Link this opportunity to a business before opening SharePoint.",409);
-  return {contractVersion:"project-v1",businessId:String(p.business_id),opportunityId:p.opp,engagementType:p.engagement_type,revision:intake.revision,answers,flags:json(intake.flags)||[],capturedBy:intake.updated_by};
+  const answers=intake?json(intake.answers)||{}:{};
+  const snapshot={contractVersion:"project-v1",businessId:String(p.business_id),opportunityId:p.opp,engagementType:p.engagement_type,
+    revision:intake?.revision??0,answers,flags:intake?json(intake.flags)||[]:[],capturedBy:intake?.updated_by??null,
+    intakeComplete:!!intake?.complete&&!missingIntake(p.engagement_type,answers,p).length};
+  if(quote){
+    if(quote.status!=="Approved"||String(quote.prospect_id)!==String(p.id))fail("Quote context requires this opportunity's approved quote.",409);
+    const input=json(quote.inputs);
+    snapshot.quoteContext={scope:input.scope??null,exclusions:input.exclusions??null,assumptions:input.assumptions??null,terms:input.terms??null,contactName:p.contact_name??null,contactEmail:p.email??null};
+  }
+  return snapshot;
 }

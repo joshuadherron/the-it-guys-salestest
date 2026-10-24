@@ -6,7 +6,7 @@ import { graph } from "./graph.js";
 import { sp,lookupId } from "./sharepoint-runtime.js";
 import { refresh } from "./handoff.js";
 import { quoteSend,canQuote } from "./quote-permissions.js";
-import { fail } from "./security.js";
+import { fail,integer } from "./security.js";
 import { genericEngagement,projectLane,engagementTypes } from "./engagement-types.js";
 import { assertProjectCapability,projectCapability,projectDiscovery } from "./project-contract.js";
 import { buildFields,assertNoPending,submitRequest } from "./sharepoint.js";
@@ -18,9 +18,10 @@ export function projectSharePointRoutes(app,deps={query,transaction,audit,prospe
   app.get("/prospects/:id/project-sharepoint",quoteSend,async(req,res)=>{
     const p=await prospect(req.params.id);if(!genericEngagement(p))return res.redirect(`/prospects/${p.id}/handoff`);
     let error=null,record=null,prerequisites=[];
-    try {const s=sp.ready();await refresh(p,{sp,query,transaction,audit});record=await sp.client(p);if(!record)prerequisites=projectCapability(s,env);}catch(e){error=e.message;}
+    try {const s=sp.ready();await refresh(p,{sp,query,transaction,audit});record=await sp.client(p);if(!record)prerequisites=projectCapability(s);}catch(e){error=e.message;}
     const requests=await query("SELECT * FROM sp_requests WHERE prospect_id IN (SELECT id FROM prospects WHERE business_id=?) ORDER BY id DESC LIMIT 30",[p.business_id]);
-    res.render("project-sharepoint",{p,record,error,prerequisites,requests,engagementTypes,projectLane});
+    const quoteId=req.query.quote?integer(req.query.quote):null;
+    res.render("project-sharepoint",{p,record,error,prerequisites,requests,engagementTypes,projectLane,quoteId});
   });
   app.post("/prospects/:id/project-sharepoint",quoteSend,async(req,res)=>{
     let body,id;
@@ -40,9 +41,14 @@ export function projectSharePointRoutes(app,deps={query,transaction,audit,prospe
         return;
       }
       if(p.client_id)fail("The linked SharePoint record could not be verified. Reconcile the existing ID; another record will not be created.",409);
-      assertProjectCapability(schema,env);
+      assertProjectCapability(schema);
       const [intake]=await query(intakeSelect,[p.id],c);
-      const discovery=projectDiscovery(p,intake);
+      let quote;
+      if(req.body.quote_id){
+        [quote]=await query("SELECT * FROM quotes WHERE id=? AND prospect_id=?",[integer(req.body.quote_id),p.id],c);
+        if(!quote)fail("Quote not found for this opportunity.",404);
+      }
+      const discovery=projectDiscovery(p,intake,quote);
       if(duplicateClients(p,await sp.clients(),schema).length)fail("A possible SharePoint customer already exists. Link it on Customer relationship before creating a record.",409);
       assertNoPending(await sp.requests(),schema,p);
       if(env.SHAREPOINT_WRITE_MODE!=="live")fail("Project SharePoint creation is disabled until Workflow Requests live mode is explicitly configured. Nothing was sent.",409);

@@ -15,9 +15,9 @@ terms, not work. Existing authentication, CSRF, roles and quote permissions appl
 | Corrected opportunity discovery required for internal quote approval | Avoid stale service context | Advisory; quote type, saved scope and prices still validated |
 | Pre-quote assessment findings block pricing approval | Surface implementation risk | BII and Managed IT use warnings plus the owner’s Continue Anyway override, recorded as acknowledged. Conditions are never ticked automatically. The optional BT-7.32 assessment is not a stop condition |
 | Manually sent project proposal requires successful live SharePoint fill | Prove proposal storage | Remove; explicit actual-send confirmation and audit remain |
-| Qualified stage required for opening project SharePoint record | Enforce pipeline order | Remove stage prerequisite; keep complete intake, hold, identity and flow checks at this external boundary |
+| Qualified stage required for opening project SharePoint record | Enforce pipeline order | Remove stage and complete-intake prerequisites; keep hold, identity and flow checks at this external boundary |
 | Legacy CreateClient requires completed discovery and qualified stage | Create initial governed structure, may start existing flows | Preserve discovery until existing flow contract separates record creation from service activation; remove only local stage prerequisite |
-| Project CreateClient requires completed intake | Establish governed project record | Preserve until project flow supports partial snapshots; client creation can occur without MIT/BII |
+| Project CreateClient requires completed intake | Establish governed project record | Removed. Send a partial snapshot with intakeComplete and approved quoteContext when a quote is involved; enforce complete current intake at customer work authorization/handoff |
 | Discovery submit/completion checks | Define the meaning of a completed questionnaire | Preserve; drafts can be updated without marking complete; history and revision checks remain |
 | Existing-customer transition requires linked client and service context | Prevent wrong-client/service activation | Preserve for lifecycle transition, not quote preparation |
 | Sales won/lost/hold status | Describe a sales outcome | Allow explicit local actions independently of SharePoint; never create work authorization or activate services |
@@ -40,22 +40,33 @@ of the recommended next step. Holds stay visible and cannot be released through
 the sales status form.
 
 No migration or production configuration change is required. No SharePoint or
-Power Automate changes are made by this implementation. Existing CreateClient
-flows still receive complete versioned snapshots; their hard boundary is retained
-because record creation can issue operational documents. Business Technology Projects requires
-the existing verified project-v1 flow/schema contract and reuses shared business
-records. ENG-PRJ/ENG-HRLY approved master and routing prerequisites remain.
+Power Automate changes are made by this implementation. Managed IT/BII CreateClient
+flows still receive their existing complete versioned snapshots.
+Business Technology Projects receives available intake (revision 0 and empty
+answers/flags if absent), intakeComplete, and quoteContext when an approved quote
+is involved. Only those two fields are added to the existing flow contract; flows
+ignore them. A partial snapshot never authorizes work. Project readiness requires
+exactly one PRJ-05 definition in Business Technology Projects with Active = Yes
+and Create Client Copy = Yes, plus the existing lane-choice and unique business
+key checks. Josh activates the definition after deploying the flows; there is no
+project-specific environment opt-in. Verified existing business records are reused.
+ENG-PRJ/ENG-HRLY approved master and routing prerequisites remain.
 
 This work adds no invoicing, tax, payment, timesheet, inventory, ticketing or
 project execution system. Deployment requires the owner's approval.
 
 ## Verification
 
-522 tests pass; ESLint and production build validation pass. The build checks
-94 JavaScript sources, 39 EJS views and both pinned legacy DOCX masters. Added
+582 tests pass; ESLint and production build validation pass. The build checks
+98 JavaScript sources, 40 EJS views and all three pinned DOCX masters. Added
 route tests cover held/early-stage draft pricing, assessment acknowledgement,
 approved previews without discovery, manual send recording, local outcomes,
 record reuse without creation configuration, and retained live-write and work
 authorization guards. No live database, SharePoint or Power Automate writes were
 performed. Production rollout and authenticated browser verification are separate
 from these local checks.
+
+October 24 project sales updates additionally verify missing/partial intake
+snapshots, approved quote context, no-intake proposal preparation, PRJ-05 readiness
+without an environment switch, retained work-authorization intake refusal and
+friendly prepare refusals with warning-level logging.

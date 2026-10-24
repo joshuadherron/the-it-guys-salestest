@@ -42,9 +42,10 @@ current example: `/quotes/19/project-print`; its opportunity is OPP-0086.
   monitoring, security, backup coverage or operational responsibility.
 - Internal pricing approval and the local sales status Won do not authorize work.
   Actual customer acceptance and the sales handoff are recorded separately.
-- Sales preparation does not require completed intake or an earlier pipeline
-  stage. New SharePoint record creation and actual work authorization retain
-  their applicable intake, hold, identity and acceptance checks.
+- Sales preparation, opening the SharePoint business record and saving a proposal
+  do not require completed intake or an earlier pipeline stage. Live writes retain
+  hold, identity, request and flow-readiness checks. Customer work authorization
+  and handoff still require complete current intake and actual acceptance.
 - Project delivery stays in the existing delivery systems. This implementation
   adds no invoicing, payment, accounting, tax, time tracking, tasks or ticketing.
 - ENG-PRJ is a standalone Project Quote / SOW: no MSA or PSA is required. Its
@@ -61,7 +62,7 @@ current example: `/quotes/19/project-print`; its opportunity is OPP-0086.
 | SharePoint master metadata and promotion | SharePoint administrator/owner | Exactly one matching Approved master |
 | Project proposal workflow definition | SharePoint administrator | Active Business Technology Projects PRJ definition tied to ENG-PRJ |
 | Record and working-copy flow branches | Power Automate administrator | Staging request results, reuse and uncertainty tests |
-| Environment variables and connection refresh | Hostinger/app administrator | Correct pinned settings and successful connection check |
+| Instance-reference setting and connection refresh | Hostinger/app administrator | Verified instance column and successful connection check; project readiness uses the PRJ-05 row |
 | End-to-end acceptance and production enablement | Owner and implementer | Approved results and explicit production rollout approval |
 
 No live SharePoint inspection or external configuration change is performed by
@@ -238,16 +239,25 @@ Route this before the existing MIT/BII branches. An example payload is:
     "businessId": "9",
     "opportunityId": "OPP-0086",
     "engagementType": "project",
-    "revision": 3,
+    "revision": 0,
     "answers": {},
     "flags": [],
-    "capturedBy": "owner@example.test"
+    "capturedBy": null,
+    "intakeComplete": false
   }
 }
 ```
 
-Identifiers are illustrative; `answers: {}` is a structural abbreviation, not
-an acceptable completed intake. The real request includes appropriate answers.
+Identifiers are illustrative. No intake is allowed for sales storage: revision 0,
+answers {}, flags [], capturedBy null and intakeComplete false. Existing partial
+intake keeps its answers, revision, flags and capturedBy. Completed intake sets
+intakeComplete true only when the required fields are present. A quote-related
+request also adds discovery.quoteContext with the approved scope, exclusions,
+assumptions and terms, and the prospect's contactName and contactEmail. No values
+are inferred; Open/reuse from a quote passes its explicit Quote ID, and proposal
+save uses the approved quote it already locked. The two additive fields are ignored
+by the flows; all existing envelope fields and routing remain unchanged. Complete
+current intake remains required for customer work authorization/handoff.
 
 The flow must:
 
@@ -273,8 +283,9 @@ The flow must:
 7. Do not issue MIT/BII proposal copies, managed contracts or onboarding tasks.
 
 The app already attempts verified business-record reuse before creating a new
-record. Reuse alone does not require the new-record flow opt-in. New creation
-still requires complete project intake, no hold/loss and verified configuration.
+record. Reuse alone does not require new-record flow configuration. New creation
+requires no hold/loss and verified identity/flow configuration, with partial intake
+allowed. It does not authorize work.
 
 ### B. Create Working Copy / Business Technology Projects
 
@@ -328,11 +339,12 @@ The instance-reference setting remains necessary:
 QUOTE_INSTANCE_REF_COLUMN=TIG_InstanceRef
 ```
 
-Josh alone controls `PROJECT_WORKFLOW_CONTRACT` in Hostinger. The expected opt-in
-value is `v1`, and it is enabled only after the staging checks pass. Do not commit
-that production opt-in in a configuration file or set it as a side effect of
-deploying these code changes. Until enabled, new project live requests stop with
-configuration guidance.
+Project readiness uses the SharePoint definition, with no project-specific
+environment switch. Exactly one PRJ-05 row must have Service Lane = Business
+Technology Projects, Active = Yes and Create Client Copy = Yes. Josh activates
+that row only after the project flows are deployed and verified. The existing
+request/client lane choices and unique indexed TIG_SalesBusinessID text column
+are also required. Admin → Check SharePoint connection refreshes these checks.
 
 For a separately approved live save, the running environment must also have
 `QUOTE_FILL_MODE` and `SHAREPOINT_WRITE_MODE` set to `live` as applicable. Do not
@@ -393,7 +405,9 @@ promote or modify it. Structural review and generated Word samples remain requir
   monthly versus one-time labels, page breaks and unused hourly fields.
 - [ ] A project quote can be drafted and approved without completed intake.
 - [ ] Preview uses the saved approved scope/prices/terms and writes no master.
-- [ ] New project record creation requires current complete intake and no hold.
+- [ ] Opening a project record and saving a proposal work with no/partial intake;
+  snapshots include intakeComplete and approved quoteContext when applicable.
+- [ ] A hold, absent business ID or unready PRJ-05 still refuses new live writes.
 - [ ] First approved live save produces one business record and one quote copy.
 - [ ] Repeated save reuses the same copy; another Quote ID produces another copy.
 - [ ] A second opportunity for the same business reuses the Client ID/folder.
@@ -422,7 +436,7 @@ verify the database ledger instead of rerunning migrations blindly.
 | Expected exactly one promoted Approved master | Exact library, Document Key ENG-PRJ, Approved status, pinned filename and unique matching drive item |
 | Tags differ from approved master | Compare all 21 distinct tags; remove extra/untagged controls; inspect headers/footers too |
 | Unresolved fields remain | Check inline/repeat nesting and supported controls; missing values are not the only possible cause |
-| Business Technology Projects v1 contract required | Verify the supplied deployed branches, lane choices and unique business key; Josh opts in through Hostinger after staging |
+| Activate PRJ-05 in Client Workflow Definitions | After deploying project flows, activate exactly one PRJ-05 row in Business Technology Projects with Create Client Copy = Yes; refresh the connection and verify lane choices and the unique business key |
 | Active / Create Client Copy definition required | Exact PRJ workflow ID, Business Technology Projects lane and both flags |
 | Verified Instance Reference column required | `QUOTE_INSTANCE_REF_COLUMN=TIG_InstanceRef`; flow must populate it with numeric Quote ID text |
 | Business identity mismatch | Deliberately populate the legacy Clients Sales Business ID with the correct app Business ID; blank/different keys are rejected |
