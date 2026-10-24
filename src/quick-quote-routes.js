@@ -110,7 +110,7 @@ export function quickQuoteRoutes(app,{run=query,tx=transaction,log=audit,getPros
     res.json(send.progress(job));
   }));
   app.post("/quick-quote/quotes/:id/resume",quoteSend,safe(async(req,res)=>{
-    await (await service()).resume(integer(req.params.id),req.session.user);res.redirect(`/quick-quote/quotes/${req.params.id}/progress`);
+    await (await service()).resume(integer(req.params.id),req.session.user,{reviewed_edits:req.body.reviewed_edits==='yes'?'yes':'no'});res.redirect(`/quick-quote/quotes/${req.params.id}/progress`);
   }));
   app.post("/quick-quote/quotes/:id/signature-sent",quoteSend,safe(async(req,res)=>{
     if(req.body.confirm!=="yes")fail("Confirm that you actually sent the eSignature request.");

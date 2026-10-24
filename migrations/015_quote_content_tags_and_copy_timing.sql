@@ -1,0 +1,2 @@
+ALTER TABLE quote_fills ADD COLUMN ctag VARCHAR(500) NULL AFTER etag;
+ALTER TABLE sp_requests ADD COLUMN done_at DATETIME NULL;

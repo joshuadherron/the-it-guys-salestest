@@ -41,7 +41,7 @@ if(progressForm){
       const result=await response.json();
       if(!response.ok)throw new Error(result.error||'Send paused. Return to the quote for the next action.');
       if(result.done||result.waitingApproval||result.status==='Failed'){window.location.reload();return;}
-      document.getElementById('quick-progress').textContent=({record_requested:'Setting up client folder…',record_ready:'Creating quote copy…',copy_requested:'Creating quote copy…',psa_requested:'Preparing PSA copy…',copy_ready:'Filling quote…',filled:'Sending…'})[result.step]||'Sending…';
+      document.getElementById('quick-progress').textContent=({record_requested:'Setting up client folder…',record_ready:'Creating quote copy…',copy_requested:'Creating quote copy…',copy_waiting:'Waiting for SharePoint to finish the copy…',psa_waiting:'Waiting for SharePoint to finish the copy…',psa_requested:'Preparing PSA copy…',copy_ready:'Filling quote…',filled:'Sending…'})[result.step]||'Sending…';
       if(result.manualRequestId){
         document.getElementById('quick-reconcile').hidden=false;
         const form=document.getElementById('quick-confirm-absent');if(form)form.action='/requests/'+encodeURIComponent(result.manualRequestId)+'/reconcile';

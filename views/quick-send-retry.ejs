@@ -1,0 +1,5 @@
+<form method="post" action="/quick-quote/quotes/<%= q.id||job.quote_id %>/resume">
+<input type="hidden" name="_csrf" value="<%= csrf %>">
+<% if(/The Word (copy|file) changed/.test(job.error_message||'')){ %><label><input type="checkbox" name="reviewed_edits" value="yes" required>I reviewed the Word edits; send the current Word file</label><% } %>
+<button>Try again</button>
+</form>

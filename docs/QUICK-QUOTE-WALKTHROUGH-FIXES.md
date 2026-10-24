@@ -1,5 +1,9 @@
 # Quick Quote walkthrough fixes — October 24, 2026
 
+This records the v1 implementation. The later live walkthrough confirmed
+eventual SharePoint metadata visibility and metadata-only eTag changes; see
+[v2 timing/content fixes and migration 015](QUICK-QUOTE-TIMING-V2.md).
+
 ## Send identity and diagnostics
 
 The confirmed code defect was divergent copy identity: fill used Client ID +

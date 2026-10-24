@@ -10,6 +10,11 @@ import { genericPricing } from "../engagement-types.js";
 const uncertain=e=>!e.status||e.status>=500||e.status===408;
 export class QuoteDelivery {
   constructor({store,resolver,graph,extractText,prices,config,env=process.env}){Object.assign(this,{store,resolver,graph,extractText,prices,config,env});}
+  async contentTags(working){
+    const tags=await this.graph.read(`/drives/${encodeURIComponent(working.driveId)}/items/${encodeURIComponent(working.itemId)}?$select=id,eTag,cTag`);
+    if(tags?.id!==working.itemId||!tags.eTag||!tags.cTag)throw new Error('The working Word file content tag could not be verified. Check Graph file access before sending.');
+    return {...working,eTag:tags.eTag,cTag:tags.cTag};
+  }
   async fill(id,user,{instanceRef}={}){
     const ctx=await this.store.begin(id,user,"Fill");let fillId,writing=false;
     try{
@@ -23,9 +28,10 @@ export class QuoteDelivery {
       await this.store.current(ctx);
       writing=mode==="live";
       const result=await deliverQuoteDocument({prepared,graph:this.graph,env:this.env});
-      const etag=result.item?.eTag||working.eTag;
+      let etag=result.item?.eTag||working.eTag,ctag=result.item?.cTag;
       if(mode==="live"&&!result.item?.eTag)throw new Error("Live fill succeeded without a confirmed resulting eTag; reconciliation is required.");
-      await this.store.filled(fillId,"Succeeded",etag);
+      if(mode==='live'&&!ctag){const tags=await this.contentTags(working);etag=tags.eTag;ctag=tags.cTag;}
+      await this.store.filled(fillId,"Succeeded",etag,ctag);
       await this.store.log(ctx,"quote fill "+mode,fillId);
       await this.store.release(ctx);
       return {mode,report:prepared.report,url:working.webUrl,next:key==="BII-QSOW"?"Review in Word -> set Signature Status = Ready to send -> send the eSignature request from the email Flow 7 sends you.":"Review the quote in Word before sending."};
@@ -43,8 +49,9 @@ export class QuoteDelivery {
       if(!["COM-PRP","ENG-PRJ"].includes(key))throw new Error("BII uses manual eSignature; automated sending supports Managed IT and Project quotes.");
       const fill=await this.store.latestFill(id);
       if(!fill||fill.document_key!==key||fill.mode!=="live"||fill.status!=="Succeeded"||fill.snapshot_hash!==ctx.hash)throw new Error("A current successful live fill is required before sending.");
-      const working=await this.resolver.working(ctx.p,key,id,fill.item_id);
+      let working=await this.resolver.working(ctx.p,key,id,fill.item_id);
       if(fill.drive_id!==working.driveId||fill.item_id!==working.itemId)throw new Error("The working quote differs from the latest fill.");
+      if(fill.ctag)working=await this.contentTags(working);
       const fields=json(fill.fields_json),config=await this.config();
       let pdf,name,to,cc;
       const correlationId=randomUUID();
@@ -56,14 +63,16 @@ export class QuoteDelivery {
         if(saved.parentReference?.id!==working.folderId)throw new Error("The saved sent PDF is missing from Commercial.");
         pdf=Buffer.from(a.pdf_bytes);name=a.pdf_name;to=a.sent_to;cc=a.sent_cc;pdfItemId=a.pdf_item_id;attemptId=a.id;
       }else{
-        if(working.eTag!==fill.etag&&input.reviewed_edits!=="yes")throw new Error("The Word copy changed. Tick I reviewed the Word edits before sending.");
-        if(working.eTag===fill.etag&&json(fill.report).unfilled.length)throw new Error("The live fill still has unfilled fields. Complete them in Word first.");
+        const sameContent=fill.ctag?working.cTag===fill.ctag:working.eTag===fill.etag;
+        if(!sameContent&&input.reviewed_edits!=="yes")throw new Error("The Word copy changed. Tick I reviewed the Word edits before sending.");
+        if(sameContent&&json(fill.report).unfilled.length)throw new Error("The live fill still has unfilled fields. Complete them in Word first.");
         ({to,cc}=recipients(ctx.p,ctx.actor,mode,input));
-        const before=working.eTag;
+        const before=fill.ctag?working.cTag:working.eTag;
         pdf=await this.graph.quoteContent(working.driveId,working.itemId,true);
         inspectPdfText(await this.extractText(pdf));
-        const after=await this.resolver.working(ctx.p,key,id,fill.item_id);
-        if(after.eTag!==before)throw new Error("The Word file changed during PDF conversion. Review and try again.");
+        let after=await this.resolver.working(ctx.p,key,id,fill.item_id);
+        if(fill.ctag)after=await this.contentTags(after);
+        if((fill.ctag?after.cTag:after.eTag)!==before)throw new Error("The Word file changed during PDF conversion. Review and try again.");
         if(!Buffer.isBuffer(pdf)||pdf.length>3*1000*1000)throw new Error("Quote PDF exceeds the email attachment limit.");
         name=working.name.replace(/\.docx$/i,"")+" - SENT "+chicagoDate()+".pdf";
       }
@@ -86,6 +95,6 @@ export class QuoteDelivery {
       await this.store.sent(ctx,attemptId,{mode,to,cc,pdfItemId},result);
       await this.store.release(ctx);
       return {mode,attemptId,status:mode==="live"?"Sent":"Dryrun",requestId:result.requestId};
-    }catch(e){const unknown=effect&&uncertain(e);if(attemptId)await this.store.failed(attemptId,unknown?"Unknown":"Failed",phase,e);await this.store.release(ctx,unknown);throw e;}
+    }catch(e){const unknown=effect&&uncertain(e);if(attemptId)await this.store.failed(attemptId,unknown?"Unknown":"Failed",phase,e);await this.store.release(ctx,unknown);if(e.code==='QUOTE_COPY_NOT_VISIBLE')e.safeToWaitForCopy=!attemptId&&!effect&&!ctx.attempt;throw e;}
   }
 }

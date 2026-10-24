@@ -9,6 +9,7 @@ import { canQuote,quoteSend,quoteApprove,adminOnly } from "../src/quote-permissi
 import { senderMailbox,quoteEmail,DEFAULT_BODY,DEFAULT_SUBJECT,inspectPdfText } from "../src/docfill/send-policy.js";
 import { quoteDocumentSamples } from "../scripts/lib/quote-document-samples.js";
 import { SharePointQuotes } from "../src/docfill/sharepoint-quotes.js";
+import { missingCopy } from '../src/docfill/copy-visibility.js';
 import { validateProjectQuote,priceProject } from "../src/project-pricing.js";
 import { buildProjectFill } from "../src/docfill/project-fields.js";
 const qSample=quoteDocumentSamples()[0];
@@ -27,7 +28,7 @@ function harness(options={}){
   release:async(ctx,unknown)=>{events.push(["release",unknown]);if(!unknown)leased=false;},
   latestFill:async()=>options.noFill?null:fill,
   createFill:async(ctx,key,w,data,mode)=>{events.push(["fill",mode]);fill.report=JSON.stringify(data.report);return 1;},
-  filled:async(id,status,etag)=>{events.push(["filled",status]);fill.status=status;fill.etag=etag;},
+  filled:async(id,status,etag,ctag)=>{events.push(["filled",status]);fill.status=status;fill.etag=etag;if(ctag)fill.ctag=ctag;},
   log:async()=>events.push(["audit"]),
   createAttempt:async(ctx,data)=>{const a={...data,id:attempts.length+1,status:"Preparing",phase:"SavePdf",mode:data.mode,mailbox:data.mailbox,sent_to:data.to,sent_cc:data.cc,pdf_name:data.name,pdf_bytes:data.pdf,snapshot_hash:ctx.hash};attempts.push(a);events.push(["attempt"]);return a.id;},
   savedPdf:async(id,item)=>{attempts[id-1].pdf_item_id=item;events.push(["pdfSaved"]);},
@@ -38,7 +39,7 @@ function harness(options={}){
  const graph={
   quoteContent:async()=>Buffer.from("%PDF-verified sample"),
   read:async()=>({id:"sent-pdf",parentReference:{id:"commercial"}}),
-  replaceQuoteWorkingCopy:async(d,i,etag)=>{events.push(["put",etag]);if(options.putFail)throw Object.assign(new Error("changed"),{status:409});return {id:i,eTag:"new-etag"};},
+  replaceQuoteWorkingCopy:async(d,i,etag)=>{events.push(["put",etag]);if(options.putFail)throw Object.assign(new Error("changed"),{status:409});return {id:i,eTag:"new-etag",cTag:"new-content"};},
   createSentQuotePdf:async(d,folder,name)=>{events.push(["savePdf",folder,name]);if(options.pdfFail)throw Object.assign(new Error("PDF conflict"),{status:409});return {id:"sent-pdf"};},
   sendQuoteMail:async(box,message,correlation)=>{events.push(["mail",box,message,correlation]);if(options.mailFail)throw Object.assign(new Error("Access policy refused"),{status:403});if(options.timeout)throw new Error("timeout");return {messageId:null,requestId:"graph-request"};},
  };
@@ -173,3 +174,59 @@ test("only an exact promoted Approved master is selected, never a Draft BII mast
  status="Approved";const resolved=await resolver.resolve(quoteDocumentSamples()[1].quote,{client_id:"CL-1"},"BII-QSOW");assert.equal(resolved.master.status,"Approved");assert.ok(Buffer.isBuffer(resolved.master.content));
 });
 test("disabled accounts cannot retain quote permissions",()=>{assert.equal(canQuote({...profile,enabled:0},"quote.send"),false);});
+
+test('new live fill records the post-write content tag, not the template content tag',async()=>{
+ const h=harness();h.working.cTag='template-content';await h.service.fill(h.q.id,profile);
+ assert.equal(h.fill.ctag,'new-content');assert.equal(h.fill.etag,'new-etag');
+ assert.equal(h.events.find(e=>e[0]==='put')[1],'etag','If-Match still uses current eTag');
+});
+
+test('fill reads explicit drive tags when the PUT result omits cTag',async()=>{
+ const h=harness(),reads=[];
+ h.graph.replaceQuoteWorkingCopy=async()=>({id:'item',eTag:'written'});
+ h.graph.read=async path=>{reads.push(path);return {id:'item',eTag:'metadata-after-fill',cTag:'written-content'};};
+ await h.service.fill(h.q.id,profile);assert.equal(h.fill.ctag,'written-content');assert.equal(h.fill.etag,'metadata-after-fill');assert.match(reads[0],/\?\$select=id,eTag,cTag$/);
+});
+
+test('metadata-only eTag changes before/during PDF conversion send without an edit review',async()=>{
+ const h=harness();h.fill.ctag='content-1';h.working.eTag='metadata-before';let reads=0;
+ h.graph.read=async()=>({id:'item',eTag:'metadata-'+ ++reads,cTag:'content-1'});
+ await h.service.send(h.q.id,profile);assert.equal(h.q.status,'Sent');assert.equal(reads,2);
+});
+
+test('a real content change requires review and Quick Quote displays its retry checkbox',async()=>{
+ const h=harness();h.fill.ctag='approved-content';h.graph.read=async()=>({id:'item',eTag:'new-metadata',cTag:'edited-content'});
+ await assert.rejects(()=>h.service.send(h.q.id,profile),/The Word copy changed/);assert.ok(!h.events.some(e=>e[0]==='mail'));
+ const html=await ejs.renderFile('views/quick-send-status.ejs',{q:h.q,job:{status:'Failed',error_message:'The Word copy changed. Tick I reviewed the Word edits before sending.'},csrf:'test'});
+ assert.match(html,/name="reviewed_edits" value="yes" required/);assert.match(html,/I reviewed the Word edits; send the current Word file/);
+});
+
+test('reviewed content edits send the current Word file with the normal PDF checks',async()=>{
+ const h=harness();h.fill.ctag='approved-content';h.graph.read=async()=>({id:'item',eTag:'metadata-new',cTag:'edited-content'});
+ await h.service.send(h.q.id,profile,{reviewed_edits:'yes'});assert.equal(h.q.status,'Sent');assert.equal(h.events.filter(e=>e[0]==='mail').length,1);
+});
+
+test('content changing during PDF conversion is refused even with review checked',async()=>{
+ const h=harness();h.fill.ctag='approved-content';let reads=0;
+ h.graph.read=async()=>({id:'item',eTag:'metadata-'+reads,cTag:++reads===1?'edited-content':'edited-again'});
+ await assert.rejects(()=>h.service.send(h.q.id,profile,{reviewed_edits:'yes'}),/changed during PDF/);assert.ok(!h.events.some(e=>['mail','savePdf'].includes(e[0])));
+});
+
+test('legacy fills retain eTag comparison and require review for metadata changes',async()=>{
+ const h=harness();h.working.eTag='metadata-only';
+ await assert.rejects(()=>h.service.send(h.q.id,profile),/The Word copy changed/);
+ await h.service.send(h.q.id,profile,{reviewed_edits:'yes'});assert.equal(h.q.status,'Sent');
+});
+
+test('a new cTag baseline cannot silently fall back when Graph omits the current content tag',async()=>{
+ const h=harness();h.fill.ctag='approved-content';h.graph.read=async()=>({id:'item',eTag:'metadata-only'});
+ await assert.rejects(()=>h.service.send(h.q.id,profile,{reviewed_edits:'yes'}),/content tag could not be verified/);assert.ok(!h.events.some(e=>e[0]==='mail'));
+});
+
+test('only a missing copy before any delivery effect is safe for automatic visibility waiting',async()=>{
+ const before=harness();before.resolver.working=async()=>{throw missingCopy();};
+ await assert.rejects(()=>before.service.send(before.q.id,profile),e=>e.safeToWaitForCopy===true);assert.equal(before.attempts.length,0);
+ const after=harness();let reads=0;after.resolver.working=async()=>{if(++reads===3)throw missingCopy();return after.working;};
+ await assert.rejects(()=>after.service.send(after.q.id,profile),e=>e.safeToWaitForCopy===false);
+ assert.equal(after.attempts.length,1);assert.equal(after.attempts[0].pdf_item_id,'sent-pdf');assert.ok(!after.events.some(e=>e[0]==='mail'));
+});

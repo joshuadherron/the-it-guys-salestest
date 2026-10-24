@@ -18,6 +18,7 @@ import { linkBusinessRecord,lockBusinessRequests } from "../businesses.js";
 import { assertProjectApproval } from "../project-quotes.js";
 import { requestMatchesQuote,isProspectSync } from "../quote-request-scope.js";
 import { psaDefinition,psaItems,signedPsa } from '../bii-psa.js';
+import { COPY_TIMEOUT_MESSAGE,missingCopy,utcTime } from './copy-visibility.js';
 
 const canonical = value => Array.isArray(value) ? value.map(canonical)
   : value && typeof value === "object" ? Object.fromEntries(Object.keys(value).sort().map(key=>[key,canonical(value[key])])) : value;
@@ -28,7 +29,7 @@ export const proposalApprovalSnapshot = q => createHash("sha256").update(JSON.st
 ])).digest("hex");
 
 export class ProposalStore {
-  constructor({sp,graph,deliveryStore,env=process.env,run=query,tx=transaction,getProspect=prospect,getDiscovery=discovery,log=audit,sync=dispatchProspectSync}) { Object.assign(this,{sp,graph,deliveryStore,env,query:run,transaction:tx,prospect:getProspect,discoveryData:getDiscovery,audit:log,sync}); }
+  constructor({sp,graph,deliveryStore,env=process.env,run=query,tx=transaction,getProspect=prospect,getDiscovery=discovery,log=audit,sync=dispatchProspectSync,clock=()=>Date.now()}) { Object.assign(this,{sp,graph,deliveryStore,env,query:run,transaction:tx,prospect:getProspect,discoveryData:getDiscovery,audit:log,sync,clock}); }
   async acquire(id,user) {
     return this.transaction(async c=>{
       const [initial]=await this.query("SELECT * FROM quotes WHERE id=?",[id],c);
@@ -123,11 +124,30 @@ export class ProposalStore {
       const r=await this.requestStatus(requestId);
       if(['Failed','Rejected'].includes(r.status))throw new Error('PSA request '+r.status+': '+(r.message||'Check request history.'));
       if(r.status!=='Done')return {step:'psa_requested',waiting:true,manualRequestId:r.manualRequestId||null};
-      if(!open.length)return {step:'psa_requested',waiting:true};
+      if(!open.some(i=>String(i.instanceRef)===String(ctx.q.id)))return this.waitForCopy(ctx,requestId,'psa_waiting');
     }
     if(open.length)return {done:true};
     await this.request(ctx,'CreateWorkingCopy',lane,{workflowId:definition.id,instanceRef:String(ctx.q.id)},null);
     return {step:'psa_requested',waiting:true};
+  }
+  async waitForCopy(ctx,requestId=ctx.state.copy_request_id,step='copy_waiting'){
+    if(!requestId)throw missingCopy();
+    const result=await this.requestStatus(requestId);
+    if(['Failed','Rejected'].includes(result.status))throw new Error('Working copy request '+result.status+': '+(result.message||'Check request history.'));
+    if(result.status==='Done'){
+      const done=utcTime(result.doneAt);
+      if(!Number.isFinite(done))throw new Error('Copy completion time is unavailable. Check the saved request history.');
+      if(this.clock()-done>=10*60*1000)throw Object.assign(new Error(COPY_TIMEOUT_MESSAGE),{code:'QUOTE_COPY_TIMEOUT',status:409});
+    }
+    return {step,waiting:true,message:'Waiting for SharePoint to finish the copy…',manualRequestId:result.manualRequestId||null};
+  }
+  async doneTime(request,remote){
+    if(request.done_at)return request.done_at;
+    const modified=remote?.lastModifiedDateTime||remote?.fields?.Modified;
+    const observed=modified&&Number.isFinite(utcTime(modified))?utcTime(modified):this.clock();
+    const doneAt=new Date(observed).toISOString().slice(0,19).replace('T',' ');
+    await this.query('UPDATE sp_requests SET done_at=COALESCE(done_at,?) WHERE id=?',[doneAt,request.id]);
+    return doneAt;
   }
   async record(ctx) { return this.sp.client(ctx.p); }
   async link(ctx,row) {
@@ -152,7 +172,7 @@ export class ProposalStore {
   async copy(ctx,lane) {
     const all=(await this.sp.workItems(ctx.p.client_id,true)).filter(i=>i.workflowId===lane.workflow);
     let items=all.filter(i=>String(i.instanceRef)===String(ctx.q.id));
-    if(!items.length&&ctx.state.working_item_id)items=all.filter(i=>String(i.id)===String(ctx.state.working_item_id));
+    if(!items.length&&ctx.state.working_item_id&&!ctx.state.copy_request_id)items=all.filter(i=>!i.instanceRef&&String(i.id)===String(ctx.state.working_item_id));
     if(!items.length&&!ctx.state.copy_request_id&&!genericEngagement(ctx.p)) {
       const legacy=all.filter(i=>!i.instanceRef&&!["Complete","Cancelled","Not Required"].includes(i.status));
       const claims=await this.query("SELECT working_item_id FROM quote_proposal_states WHERE working_item_id IS NOT NULL AND quote_id<>?",[ctx.q.id]);
@@ -242,17 +262,17 @@ export class ProposalStore {
             const item=matches[0],status=item.fields[s.maps.requests["Processing Status"].name],message=item.fields[s.maps.requests["Result Message"].name]||"";
             await this.query("UPDATE sp_requests SET item_id=?,status=?,result_message=? WHERE id=?",[item.id,status,message,id]);
             await this.audit(undefined,{email:"system"},"auto reconcile exact request title","sp_request",id);
-            return {status,message};
+            return {status,message,...(status==='Done'?{doneAt:await this.doneTime(r,item)}:{})};
           }
           return {status:r.status,message:r.result_message,waiting:true,manualRequestId:age>=600?id:null};
         }
         return {status:r.status,message:r.result_message,waiting:true};
       }
-      return {status:r.status,message:r.result_message};
+      return {status:r.status,message:r.result_message,...(r.status==='Done'?{doneAt:await this.doneTime(r)}:{})};
     }
     const remote=await this.sp.request(r.item_id),s=this.sp.ready();
     const status=remote.fields[s.maps.requests["Processing Status"].name],message=remote.fields[s.maps.requests["Result Message"].name]||"";
     await this.query("UPDATE sp_requests SET status=?,result_message=? WHERE id=?",[status,message,id]);
-    return {status,message};
+    return {status,message,...(status==='Done'?{doneAt:await this.doneTime(r,remote)}:{})};
   }
 }
