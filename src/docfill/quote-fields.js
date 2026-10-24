@@ -1,7 +1,9 @@
 import {chicagoLongDate} from "./chicago-date.js";
 import { mitFields } from "./managed-reference.js";
 import { managedReferenceFacts } from "./managed-facts.js";
-import {priceManagedServices,priceQuote,platforms} from "../pricing.js";
+import {priceManagedServices,priceQuote,platforms,regulatedPackagePrice} from "../pricing.js";
+import { assertBiiApprovalInputs,regulatedDataText } from "../bii-options.js";
+import { date } from "../security.js";
 const money=n=>"$"+Number(n).toLocaleString("en-US",{minimumFractionDigits:Number(n)%1?2:0,maximumFractionDigits:2});
 const count=(o,k)=>Number(o[k]||0);
 const required=(obj,key)=>{const v=obj?.[key];if(v===undefined||v===null||v==="")throw new Error("Missing owner-entered document field: "+key);return String(v)};
@@ -41,6 +43,7 @@ export function buildBiiFill({quote,prospect,owner={},prices}){
  const input=quote.inputs;
  if(!input.includeBii)throw new Error("Quote does not include BII.");
  if(input.pricingMode==="managed_v20")throw new Error("Combined Managed/BII quote requires a separately priced and approved BII scope before BII document fill.");
+ assertBiiApprovalInputs(input);
  const calc=priceQuote(input,prices);
  if(calc.pending.length)throw new Error("Pricing review required: "+calc.pending.join("; "));
  if(Math.abs(Number(quote.total)-calc.total)>.005)throw new Error("Approved BII total differs from current pricing.");
@@ -51,13 +54,16 @@ export function buildBiiFill({quote,prospect,owner={},prices}){
  const xdevices=Math.max(0,devices-Number(prices.included_devices));
  const xmail=Math.max(0,count(input,"mailboxes")-Number(prices.included_mailboxes));
  const dell=count(input,"dell");
+ const packageCost=regulatedPackagePrice(count(input,"users"),prices);
+ const regulated=input.regulatedPackage===true;
+ const biiDate=value=>formatDate(typeof value==="string"&&/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}(?:\.\d+)?$/.test(value)?value.replace(" ","T")+"Z":value);
  const fields={
  "QSOW.ClientShortName":prospect.business_name,"QSOW.ClientLegalName":required(owner,"legalName"),
  "QSOW.QuoteId":String(quote.id),"QSOW.PreparedFor":required(owner,"preparedFor"),
- "QSOW.IssueDate":formatDate(quote.approved_at||new Date().toISOString()),
+ "QSOW.IssueDate":biiDate(quote.approved_at||new Date().toISOString()),
  "QSOW.BackupContact":required(owner,"backupContact"),"QSOW.Location":required(owner,"location"),
  "QSOW.PrimaryDomain":required(owner,"domain"),"QSOW.TargetTiming":required(owner,"targetTiming"),
- "QSOW.Total":money(calc.total),"QSOW.AddonsNote":calc.total>Number(prices.foundation)?"+ add-ons listed in §2":"",
+ "QSOW.Total":money(calc.total),"QSOW.AddonsNote":calc.total>Number(prices.foundation)?"+ add-ons and scope listed in §2":"",
  "QSOW.SummaryText":required(owner,"summary"),"QSOW.Users":String(input.users),
  "QSOW.Devices":String(devices),"QSOW.DeviceTypes":required(owner,"deviceTypes"),
  "QSOW.DevicesIncludedUsed":String(Math.min(devices,Number(prices.included_devices))),
@@ -73,16 +79,25 @@ export function buildBiiFill({quote,prospect,owner={},prices}){
  "QSOW.Exceptions":required(owner,"exceptions"),"LABEL.Hardware":"Hardware.",
  "QSOW.HardwareText":owner.hardwareText||"","LABEL.Locations":"Additional locations.",
  "QSOW.LocationText":owner.locationText||"","LABEL.Regulated":"Protected health information.",
- "QSOW.RegulatedText":owner.regulatedText||"",
+ "QSOW.RegulatedText":owner.regulatedText||regulatedDataText,
+ "QSOW.RegulatedUsers":count(input,"users")+ (count(input,"users")===1?" user":" users"),
+ "QSOW.RegulatedCost":money(regulated?packageCost:0),
+ "LABEL.Operating":"Business already operating.",
+ "QSOW.PilotGroup":input.pilotGroup||"","QSOW.WaveCount":String(input.waveCount??""),
+ "QSOW.WaveBasis":input.waveBasis||"","QSOW.WaveDates":input.waveDates||"",
+ "QSOW.AfterHoursWindows":input.afterHoursWindows||"none",
+ "QSOW.AssessmentDate":input.assessed?biiDate(date(input.assessmentDate)+"T12:00:00Z"):"",
  "QSOW.ExtraExclusions":owner.extraExclusions?"; "+owner.extraExclusions:"",
  "QSOW.ExtraAssumption":owner.extraAssumption?"; "+owner.extraAssumption:"",
  "QSOW.SignerNameTitle":required(owner,"signer")
  };
  const rates={"RATE.Foundation":money(prices.foundation),"RATE.User":money(prices.additional_user)+" each",
  "RATE.Device":money(prices.additional_device)+" each","RATE.Mailbox":money(prices.additional_mailbox)+" each",
- "RATE.NewDell":money(prices.dell_deployment)+" each"};
+ "RATE.NewDell":money(prices.dell_deployment)+" each",
+ "RATE.RegulatedBase":money(prices.regulatedBase),"RATE.RegulatedUser":money(prices.regulatedUser)};
  return {fields,flags:{"IF.NewDell":!!dell,"IF.DataMigration":false,"IF.Hardware":!!owner.hardwareText,
- "IF.Locations":!!owner.locationText,"IF.Regulated":!!owner.regulatedText},
+ "IF.Locations":!!owner.locationText,"IF.Regulated":regulated,"IF.RegulatedPackage":regulated,
+ "IF.Operating":input.operatingBusiness===true,"IF.Assessed":input.assessed===true},
  repeats:{"REPEAT.Deliverable":(owner.deliverables||[]).map(t=>({"Deliverable.Text":t})),
  "REPEAT.Exclusion":(owner.exclusions||[]).map(t=>({"Exclusion.Text":t})),
  "REPEAT.PricedLine":[]},rates};

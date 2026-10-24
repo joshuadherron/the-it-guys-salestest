@@ -153,7 +153,7 @@ test("BII automation is refused even for quote.send users",async()=>{
 });
 test("only an exact promoted Approved master is selected, never a Draft BII master",async()=>{
  let status="Draft",downloads=0;
- const graph={all:async path=>path.endsWith("/columns")?[{name:"key",displayName:"Document Key"},{name:"state",displayName:"Status"}]:path.includes("/items?")?[{fields:{key:"BII-QSOW",state:status},driveItem:{id:"master",name:"BII-QSOW-v1.6.docx",parentReference:{driveId:"master-drive"}}}]:[{id:"masters",displayName:"Operational Standards & Templates"}],quoteContent:async()=>{downloads++;return readFile(new URL("./fixtures/BII-QSOW-v1.6.docx",import.meta.url));}};
+ const graph={all:async path=>path.endsWith("/columns")?[{name:"key",displayName:"Document Key"},{name:"state",displayName:"Status"}]:path.includes("/items?")?[{fields:{key:"BII-QSOW",state:status},driveItem:{id:"master",name:"BII-QSOW-v1.7.docx",parentReference:{driveId:"master-drive"}}}]:[{id:"masters",displayName:"Operational Standards & Templates"}],quoteContent:async()=>{downloads++;return readFile(new URL("./fixtures/BII-QSOW-v1.7.docx",import.meta.url));}};
  const resolver=new SharePointQuotes({ready:()=>({siteId:"site"})},graph);resolver.working=async()=>({itemId:"working"});
  await assert.rejects(()=>resolver.resolve(quoteDocumentSamples()[1].quote,{client_id:"CL-1"},"BII-QSOW"),/promoted Approved/);assert.equal(downloads,0);
  status="Approved";const resolved=await resolver.resolve(quoteDocumentSamples()[1].quote,{client_id:"CL-1"},"BII-QSOW");assert.equal(resolved.master.status,"Approved");assert.ok(Buffer.isBuffer(resolved.master.content));

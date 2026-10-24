@@ -18,6 +18,6 @@ export function quoteDocumentSamples() {
   const biiOwner = { ...common, location: "One office", targetTiming: "Within the agreed implementation schedule", deviceTypes: "Six Windows computers and one Mac", exceptions: "No additional exceptions", signer: "Sample Owner, Managing Member", hardwareText: "Hardware is quoted separately.", deliverables: ["Configure the included business environment.", "Complete the agreed implementation handoff."], exclusions: ["Hardware purchases are quoted separately.", "No custom migration work is included."] };
   return [
     { key: "COM-PRP", name: "COM-PRP-v1.8.docx", quote: managedQuote, data: buildManagedFill({ quote: managedQuote, prospect, owner: managedOwner }) },
-    { key: "BII-QSOW", name: "BII-QSOW-v1.6.docx", quote: biiQuote, data: buildBiiFill({ quote: biiQuote, prospect, owner: biiOwner, prices }) },
+    { key: "BII-QSOW", name: "BII-QSOW-v1.7.docx", quote: biiQuote, data: buildBiiFill({ quote: biiQuote, prospect, owner: biiOwner, prices }) },
   ];
 }

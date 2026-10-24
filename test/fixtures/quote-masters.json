@@ -9,6 +9,11 @@
     "BII-QSOW-v1.6.docx": {
       "sha256": "afe4bbec59ef426be4d0be5584030874e73fc84f21888a0b4e36d75940546da4",
       "uniqueTagCount": 60
+    },
+    "BII-QSOW-v1.7.docx": {
+      "sha256": "c21451d63870a9058db311ec12ed7380de48dde719bf5299332fbea85314fa55",
+      "uniqueTagCount": 74,
+      "source": "Owner-supplied The_IT_Guys_BII_Short_Form_Quote_SOW_Template_v1.7.docx, 2026-10-23; BII Standard v1.5 Pass10 reference"
     }
   }
 }

@@ -13,7 +13,7 @@ terms, not work. Existing authentication, CSRF, roles and quote permissions appl
 | Project approval and document generation require complete intake and unchanged intake revision | Ensure delivery context | Informational for sales; validate complete current intake at work authorization instead |
 | Discovery edits and new drafts revoke existing approved quotes | Keep pricing current | Remove automatic revocation; saved approved commercial snapshots stay immutable; explicit revisions need approval |
 | Corrected opportunity discovery required for internal quote approval | Avoid stale service context | Advisory; quote type, saved scope and prices still validated |
-| Pre-quote assessment findings block pricing approval | Surface implementation risk | Warning with explicit Continue Anyway acknowledgement, recorded with selected findings |
+| Pre-quote assessment findings block pricing approval | Surface implementation risk | BII and Managed IT use warnings plus the owner’s Continue Anyway override, recorded as acknowledged. Conditions are never ticked automatically. The optional BT-7.32 assessment is not a stop condition |
 | Manually sent project proposal requires successful live SharePoint fill | Prove proposal storage | Remove; explicit actual-send confirmation and audit remain |
 | Qualified stage required for opening project SharePoint record | Enforce pipeline order | Remove stage prerequisite; keep complete intake, hold, identity and flow checks at this external boundary |
 | Legacy CreateClient requires completed discovery and qualified stage | Create initial governed structure, may start existing flows | Preserve discovery until existing flow contract separates record creation from service activation; remove only local stage prerequisite |

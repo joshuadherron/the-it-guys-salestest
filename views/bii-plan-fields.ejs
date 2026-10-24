@@ -1,0 +1,19 @@
+<fieldset data-bii-plan><legend>BII regulated data and operating-business plan</legend>
+<label><input type="checkbox" name="regulatedPackage" value="yes" <%= biiInput.regulatedPackage?'checked':'' %>>Regulated Data Package (patient / medical data)</label>
+<p>Defaults from patient/medical information in discovery. Josh can change the selection. Uses the same in-scope user count as the Foundation user line.</p>
+<label><input type="checkbox" name="operatingBusiness" value="yes" data-operating-business <%= biiInput.operatingBusiness?'checked':'' %>>Staff already work in Microsoft 365</label>
+<div data-operating-fields <%= biiInput.operatingBusiness?'':'hidden' %>>
+<p>Prepare, one sign-in window, a one-week pilot, then W team days. No client size limit. Complete the dated plan before approval; drafts may be incomplete.</p>
+<label>Pilot group<input name="pilotGroup" maxlength="4000" value="<%= biiInput.pilotGroup||'' %>"></label>
+<label>Wave count (W)<input name="waveCount" data-wave-count type="number" min="1" step="1" value="<%= biiInput.waveCount??'' %>"></label>
+<label>Wave basis<select name="waveBasis"><option value="">Choose…</option><% for(const basis of ['department','location','department and location']){ %><option <%= biiInput.waveBasis===basis?'selected':'' %>><%= basis %></option><% } %></select></label>
+<label>Wave dates<textarea name="waveDates" maxlength="4000"><%= biiInput.waveDates||'' %></textarea></label>
+<label>After-hours windows (or none)<textarea name="afterHoursWindows" maxlength="4000"><%= biiInput.afterHoursWindows??'none' %></textarea></label>
+<p>Scheduled after-hours work uses the normal project rate, with no premium or additional price line.</p>
+<% const waves=Number(biiInput.waveCount),days=Number.isSafeInteger(waves)&&waves>=1&&waves<=Number.MAX_SAFE_INTEGER-12?12+waves:'—'; %>
+<p><output data-bii-plan-length aria-live="polite">Plan length: 11 + W + 1 = <%= days %> business days</output></p>
+</div>
+<label><input type="checkbox" name="assessed" value="yes" data-assessed <%= biiInput.assessed?'checked':'' %>>A read-only assessment was completed</label>
+<div data-assessment-date <%= biiInput.assessed?'':'hidden' %>><label>Assessment date<input name="assessmentDate" type="date" value="<%= biiInput.assessmentDate||'' %>"></label></div>
+<p data-assessment-hint <%= biiInput.operatingBusiness&&!biiInput.assessed?'':'hidden' %>>A free read-only assessment is available before quoting (BT-7.32).</p>
+</fieldset>

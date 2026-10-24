@@ -1,5 +1,16 @@
 # Quote/SOW document generation — approved implementation decisions
 
+## October 23 BII v1.7 update
+
+BII now uses the supplied **BII-QSOW v1.7** master, with 74 distinct tags (the
+original 60 plus 14). It replaces the unpromoted v1.6 pin. COM-PRP and ENG-PRJ
+are unchanged. New BII mappings cover the Regulated Data Package, operating-business
+plan and optional completed assessment. Scheduled after-hours windows add no price
+line. See [the active BII quote/fill contract](BII-QSOW-v1.7.md) for all tags,
+required price seeding, dates, approval behavior and acceptance tests. The sections
+below retain the original integration history; later live-fill and gate decisions
+supersede their initial rollout limitations.
+
 Owner approval: Managed IT Quote Template v1.8 is approved (confirmed 2026-10-15). The owner authorized the narrowly scoped working-copy file-content write described in the supplied handoff. **Contractual documents remain separate:** BII-QSOW v1.6 and COM-PRP v1.8. Never merge the agreements.
 
 ## Deployment gates

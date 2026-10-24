@@ -79,6 +79,7 @@
 </div>
 <% if(selected.docInput.pricingMode!=="managed_v20"){ %>
 <h4>Custom BII scope</h4>
+<%- include('bii-plan-fields',{biiInput:selected.docInput}) %>
 <div class="grid">
 <% for(const [i,label] of oneOffItems.entries()){const item=selected.docInput.oneOff?.[label]||{}; %>
 <div><label><input type="checkbox" name="oneoff_<%= i %>" value="yes" <%= item.selected?"checked":"" %>> <%= label %></label><input type="number" name="amount_<%= i %>" min="0" step="0.01" aria-label="<%= label %> custom price" value="<%= item.amount??"" %>" placeholder="Owner price"></div>
@@ -96,11 +97,12 @@
 <div class="grid">
 <% for(const [key,label] of (selected.docInput.pricingMode==="managed_v20"
  ? [["serviceTier","Service tier"],["users","Managed users"],["computers","Business computers"],["assignedPhones","Assigned company phones"],["assignedTablets","Assigned company tablets"],["monitoringDevices","Monitoring-only devices"],["servers","Managed servers"],["extraDevices","Additional/shared devices"],["backupUsers","M365 backup users"],["onsiteHours","Monthly on-site hours"],["onboarding","One-time onboarding"],["workstationBackups","Workstation backups"],["workstationBackupPrice","Workstation backup unit price"],["serverBackups","Server backups"],["serverBackupPrice","Server backup unit price"],["includeBii","BII included"]]
- : [["users","Integration users"],["windows","Windows devices"],["mac","Mac devices"],["ios","Company iOS devices"],["android","Company Android devices"],["unallocated","Unassigned-platform devices"],["mailboxes","Mailbox migrations"],["dell","Dell deployments"],["phones","Personal/BYOD phones"],["locations","Locations"],["includeBii","BII included"]])){ %>
+ : [["users","Integration users"],["windows","Windows devices"],["mac","Mac devices"],["ios","Company iOS devices"],["android","Company Android devices"],["unallocated","Unassigned-platform devices"],["mailboxes","Mailbox migrations"],["dell","Dell deployments"],["phones","Personal/BYOD phones"],["locations","Locations"],["includeBii","BII included"],["regulatedPackage","Regulated Data Package"],["operatingBusiness","Business already operating"],["pilotGroup","Pilot group"],["waveCount","Wave count (W)"],["waveBasis","Wave basis"],["waveDates","Wave dates"],["afterHoursWindows","After-hours windows"],["assessed","Assessment completed"],["assessmentDate","Assessment date"]])){ %>
 <div><strong><%= label %></strong><p><%= typeof selected.docInput[key]==="boolean"?(selected.docInput[key]?"Yes":"No"):(selected.docInput[key]??"Not specified") %></p></div>
 <% } %>
 </div>
 <% const savedLines=selected.savedLines; %>
+<% if(selected.docInput.pricingMode!=='managed_v20'&&selected.docInput.operatingBusiness){ const waves=Number(selected.docInput.waveCount); %><p>Plan length: 11 + W + 1 = <%= Number.isSafeInteger(waves)&&waves>=1?12+waves:'—' %> business days</p><% if(!selected.docInput.assessed){ %><p>A free read-only assessment is available before quoting (BT-7.32).</p><% }} %>
 <div class="table-wrap">
 <table><thead><tr><th>Saved line item</th><th>Quantity</th><th>Unit price</th><th>Amount</th><th>Billing</th></tr></thead>
 <tbody>
@@ -132,7 +134,7 @@
 <form method="post" action="/quotes/<%= selected.id %>/approve">
 <input type="hidden" name="_csrf" value="<%= csrf %>">
 <h3>Pre-quote stop conditions</h3>
-<p>Tick any condition that applies. Findings are warnings for pricing. Required assessment and service readiness still apply before work starts.</p>
+<p><%= selected.docInput.pricingMode==='managed_v20'?'Tick any condition that applies. Findings are warnings for pricing. Required assessment and service readiness still apply before work starts.':'Tick any BT-7.30 condition that applies. Findings are warnings for pricing. Select Continue Anyway to approve pricing with selected findings; approval does not authorize work or service activation.' %></p>
 <% if(!selected.docInput.confirmed){ %>
 <label>
 <input type="checkbox" name="confirm_counts" value="yes" required> I confirm the saved draft counts, including zero values and devices counted once.
@@ -143,6 +145,7 @@
 <input type="checkbox" name="stop_<%= stop.id %>" value="yes"> <%= stop.label %> · <%= stop.status %>
 </label>
 <% } %>
+<% if(selected.docInput.pricingMode!=='managed_v20'){ %><p>The free scripted assessment (BT-7.32) is optional and is not a stop condition.</p><% } %>
 <label>
 <input type="checkbox" name="reviewed" value="yes" required> I reviewed every stop condition.</label>
 <label><input type="checkbox" name="continue_anyway" value="yes">Continue Anyway with selected assessment findings. Pricing approval does not authorize work.</label>
@@ -193,7 +196,7 @@
 <div><h3>Managed Services estimate</h3><div id="quote-calculation"></div><p id="quote-preview-status" role="status"></p></div>
 </details>
 <details class="card" id="bii-services-section"><summary><strong>BII Services</strong> · One-time implementation <span class="quote-summary-control" onclick="event.stopPropagation()"><label><input type="checkbox" name="includeBii" value="yes" form="bii-pricing-form" <%= input.includeBii ? "checked" : "" %>> Include Standard BII Integration</label></span></summary>
-<p>BII foundation, included allowances and additional-unit rates are calculated from the existing centrally configured BII prices. This is a one-time implementation estimate, not part of the monthly Managed IT total.</p>
+<p>BII starts at $3,750 and scales with complexity. Foundation allowances and additional-unit rates use centrally configured BII prices. This is a one-time implementation estimate, not part of the monthly Managed IT total.</p>
 <form id="bii-pricing-form" method="post" action="<%= editing && editing.docInput.pricingMode!=="managed_v20"?"/quotes/"+editing.id+"/edit":"/prospects/"+p.id+"/quotes" %>" class="card" data-quote-calculator data-calculate-url="/prospects/<%= p.id %>/quotes/calculate" data-preview-target="bii-quote-calculation" data-status-target="bii-preview-status">
 <input type="hidden" name="_csrf" value="<%= csrf %>">
 <fieldset >
@@ -210,6 +213,7 @@
 </div>
 <% } %>
 </div>
+<%- include('bii-plan-fields',{biiInput:input}) %>
 <h2>Priced by Josh</h2>
 <p>OWNER ONE-OFF — NOT STANDARD UNIT PRICE for custom items below. Mirrored additional locations are calculated separately at 30% of the owner-confirmed repeatable BII implementation labor applicable to those locations.</p>
 <div class="row">
@@ -264,5 +268,6 @@ document.addEventListener("DOMContentLoaded",()=>{
 <script src="/quote-review-edit.js?v=1" defer></script>
 <script src="/onboarding-guidance.js?v=1" defer></script>
 <script src="/quote-calculator.js?v=20261015-10" defer></script>
+<script src="/bii-quote-plan.js?v=1" defer></script>
 </div>
 <%- include('footer') %>

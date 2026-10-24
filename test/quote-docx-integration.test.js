@@ -14,7 +14,7 @@ for (const sample of quoteDocumentSamples()) {
     const provenance = JSON.parse(await readFile(new URL("./fixtures/quote-masters.json", import.meta.url), "utf8"));
     assert.equal(createHash("sha256").update(master).digest("hex"), provenance.masters[sample.name].sha256, "Preserve the original approved binary master");
     const tags = await listTags(master);
-    assert.equal(tags.length, sample.key === "COM-PRP" ? 62 : 60);
+    assert.equal(tags.length, sample.key === "COM-PRP" ? 62 : 74);
     assertTagset(sample.key, tags);
     const { buffer, report } = await fillDocx(master, sample.data);
     assert.deepEqual(report.unfilled, []);

@@ -20,6 +20,7 @@ import { projectQuoteRoutes } from "./src/project-quotes.js";
 import { projectSharePointRoutes } from "./src/project-sharepoint.js";
 import { projectDocumentRoutes } from "./src/docfill/project-routes.js";
 import { engagementGuard } from "./src/engagement-guard.js";
+import { ensureRegulatedPrices } from "./src/price-config.js";
 export const app = express();
 const mode = process.env.SHAREPOINT_WRITE_MODE || "dryrun";
 if (!["dryrun", "live"].includes(mode))
@@ -175,6 +176,7 @@ app.use(async (err, req, res, _next) => {
 });
 const port = Number(process.env.PORT || 3000);
 
+await ensureRegulatedPrices();
 app.listen(port, () => {
   console.log("Sales app listening.");
 });

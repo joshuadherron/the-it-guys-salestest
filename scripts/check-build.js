@@ -18,5 +18,5 @@ const sources=["server.js",...await files("src"),...await files("public"),...awa
 for(const path of sources)execFileSync(process.execPath,["--check",path],{stdio:"pipe"});
 const views=(await files("views")).filter(p=>p.endsWith(".ejs"));
 for(const path of views)ejs.compile(await readFile(path,"utf8"),{filename:path});
-for(const [key,name] of [["COM-PRP","COM-PRP-v1.8.docx"],["BII-QSOW","BII-QSOW-v1.6.docx"],["ENG-PRJ","ENG-PRJ-v1.0.docx"]])assertTagset(key,await listTags(await readFile(join("test","fixtures",name))));
+for(const [key,name] of [["COM-PRP","COM-PRP-v1.8.docx"],["BII-QSOW","BII-QSOW-v1.7.docx"],["ENG-PRJ","ENG-PRJ-v1.0.docx"]])assertTagset(key,await listTags(await readFile(join("test","fixtures",name))));
 console.log(`Production validation passed: ${sources.length} JavaScript sources, ${views.length} EJS views, both pinned legacy DOCX masters and ENG-PRJ v1.0. No transpilation is required.`);

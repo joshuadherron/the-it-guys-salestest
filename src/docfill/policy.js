@@ -15,13 +15,13 @@ export const quoteLane = (input, requestedKey, env=process.env) => {
   if (requestedKey && !["COM-PRP", "BII-QSOW"].includes(requestedKey)) throw new Error("Unsupported quote document key.");
   if (requestedKey === "COM-PRP" && input?.pricingMode !== "managed_v20") throw new Error("Managed IT template requires a Managed IT quote.");
   if (requestedKey === "BII-QSOW" && input?.pricingMode === "managed_v20") throw new Error("Combined quotes require a separately approved and priced BII scope before BII document generation.");
-  if (requestedKey === "BII-QSOW" && input?.includeBii === true) return { key:"BII-QSOW", workflow:"BII-05", label:"BII Quote & SOW", template:"v1.6" };
+  if (requestedKey === "BII-QSOW" && input?.includeBii === true) return { key:"BII-QSOW", workflow:"BII-05", label:"BII Quote & SOW", template:"v1.7" };
   if (requestedKey === "BII-QSOW") throw new Error("This quote does not include BII.");
   if (input?.pricingMode === "managed_v20" && requestedKey !== "BII-QSOW") {
     if (input.serviceTier !== "managed") throw new Error("Only Managed IT quotes are supported by the Managed IT document template.");
     return { key:"COM-PRP", workflow:"MIT-05", label:"Managed IT Quote", template:"v1.8" };
   }
-  if (input?.includeBii === true) return { key:"BII-QSOW", workflow:"BII-05", label:"BII Quote & SOW", template:"v1.6" };
+  if (input?.includeBii === true) return { key:"BII-QSOW", workflow:"BII-05", label:"BII Quote & SOW", template:"v1.7" };
   throw new Error("Select BII Integration or Managed IT before generating a quote document.");
 };
 export function assertQuoteFillEligible({canSend,status,clientId,workingCopies,requestsPending=false,signatureStatus,completionStatus}) {
