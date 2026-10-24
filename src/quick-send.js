@@ -10,6 +10,7 @@ import { priceProject } from "./project-pricing.js";
 import { assertBiiApprovalInputs } from "./bii-options.js";
 import { genericPricing } from "./engagement-types.js";
 import { quoteLane } from "./docfill/policy.js";
+import { recipients,sendMode } from './docfill/send-policy.js';
 import { psaDefinition,psaItems,signedPsa,PSA_MISSING } from './bii-psa.js';
 
 const canonical=value=>Array.isArray(value)?value.map(canonical):value&&typeof value==="object"?Object.fromEntries(Object.keys(value).sort().map(k=>[k,canonical(value[k])])):value;
@@ -36,6 +37,7 @@ export class QuickSend {
       let [q]=await this.run("SELECT * FROM quotes WHERE id=? FOR UPDATE",[id],c);
       const [actor]=await this.run("SELECT * FROM allowlist WHERE email=? AND enabled=TRUE",[user.email],c);eligible(p,actor);
       const [job]=await this.run("SELECT * FROM quote_quick_sends WHERE quote_id=? FOR UPDATE",[id],c);
+      recipients(p,actor,sendMode(this.env),job?json(job.options_json):options);
       if(job&&job.status!=="WaitingApproval"){
         if(job.snapshot_hash!==snapshot(q))fail("This quote changed after Send. Create and review a revised quote before sending again.",409);
         return job;

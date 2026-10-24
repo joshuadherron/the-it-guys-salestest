@@ -54,7 +54,9 @@ export class SharePointQuotes {
     const folder=await this.graph.read(`/drives/${encodeURIComponent(drive.parentReference.driveId)}/items/${encodeURIComponent(fresh.parentReference?.id)}`);
     if(!folder.folder||folder.name!=="Commercial")throw new Error("The quote must be in the client's Commercial folder.");
     if(!fresh.eTag)throw new Error("The working quote is missing its eTag.");
-    return {...fresh,driveId:drive.parentReference.driveId,itemId:drive.id,folderId:folder.id,workflowId:workflow,status:"Open",signatureStatus:item.signatureStatus};
+    const fields=Object.fromEntries(['Title','TIG_ClientID','TIG_WorkflowID',schema.quoteInstanceColumn].filter(Boolean).map(key=>[key,row.fields[key]??'']));
+    const fieldsPath=`/sites/${schema.siteId}/lists/${schema.clientOpsId}/items/${encodeURIComponent(item.id)}/fields`;
+    return {...fresh,driveId:drive.parentReference.driveId,itemId:drive.id,folderId:folder.id,workflowId:workflow,status:"Open",signatureStatus:item.signatureStatus,sharepoint:{fieldsPath,fields}};
   }
   async resolve(quote,prospect,key,quoteId){
     quoteLane(quote.inputs,key,this.env);
