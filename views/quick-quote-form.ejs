@@ -1,0 +1,36 @@
+<%- include('header') %><h1>Build quote · <%= p.business_name %></h1>
+<p>1. Choose a business · <strong>2. Build your quote</strong> · 3. Preview → Send</p>
+<nav><% for(const [key,label] of [['managed_it','Managed IT'],['bii','BII'],['project','Project']]){ %><a class="button <%= type===key?'':'secondary' %>" href="?type=<%= key %>"><%= label %></a> <% } %></nav>
+<% if(p.hold){ %><p class="hold">Security hold: draft and preview are available. Sending requires Josh to resolve the hold.</p><% } %>
+<form method="post" class="card" data-quick-quote>
+<input type="hidden" name="_csrf" value="<%= csrf %>"><input type="hidden" name="type" value="<%= type %>">
+<% if(type==='project'){ %>
+<label>Scope<textarea name="scope" maxlength="10000" required><%= input.scope||'' %></textarea></label>
+<label>Pricing basis<select name="basis"><option value="estimate">Estimate</option><option value="fixed" <%= input.basis==='fixed'?'selected':'' %>>Fixed-price scope</option></select></label>
+<div class="table-scroll"><table><thead><tr><th>Description</th><th>Kind</th><th>Quantity</th><th>Unit price</th><th>Billing</th></tr></thead><tbody data-quick-lines>
+<% for(const line of (input.lines?.length?input.lines:[{},{},{},{}])){ %><tr>
+<td><input name="line_label" value="<%= line.label||'' %>" maxlength="1000" aria-label="Description"></td>
+<td><select name="line_kind"><% for(const kind of ['labor','materials','equipment','deliverable','other']){ %><option <%= line.kind===kind?'selected':'' %>><%= kind %></option><% } %></select></td>
+<td><input name="line_quantity" type="number" min="0.001" step="0.001" value="<%= line.quantity??1 %>" aria-label="Quantity"></td>
+<td><input name="line_unitPrice" type="number" min="0" step="0.01" value="<%= line.unitPrice??0 %>" aria-label="Unit price"></td>
+<td><select name="line_billing"><option value="one_time">One-time</option><option value="monthly" <%= line.billing==='monthly'?'selected':'' %>>Monthly</option></select></td></tr><% } %>
+</tbody></table></div><button type="button" data-quick-add>Add item</button>
+<label><input type="checkbox" name="confirm_recurring" value="yes">I explicitly included the listed monthly charges</label>
+<% for(const [key,label] of [['exclusions','Exclusions'],['assumptions','Assumptions / dependencies'],['terms','Estimate / acceptance terms']]){ %><label><%= label %><textarea name="<%= key %>" maxlength="10000" <%= key==='terms'?'required':'' %>><%= input[key]||'' %></textarea></label><% } %>
+<% }else{ %>
+<h2><%= type==='managed_it'?'Managed IT quantities and pricing':'BII scope and pricing' %></h2>
+<% if(type==='managed_it'){ %><input type="hidden" name="serviceTier" value="managed">
+<div class="grid"><% for(const [key,label] of [['users','Managed users'],['computers','Business computers'],['assignedPhones','Company phones'],['assignedTablets','Company tablets'],['servers','Managed servers'],['extraDevices','Additional/shared devices'],['backupUsers','M365 backup users'],['onsiteHours','Monthly on-site hours'],['onboarding','One-time onboarding'],['workstationBackups','Workstation backups'],['serverBackups','Server backups']]){ %><label><%= label %><input name="<%= key %>" type="number" min="0" step="<%= key==='onboarding'?'0.01':'1' %>" value="<%= input[key]??0 %>" required></label><% } %>
+<% for(const key of ['workstationBackupPrice','serverBackupPrice']){ %><label><%= key==='workstationBackupPrice'?'Workstation backup monthly unit price':'Server backup monthly unit price' %><input name="<%= key %>" type="number" min="0" step="0.01" value="<%= input[key]??'' %>"></label><% } %></div>
+<label><input type="checkbox" name="includeBii" value="yes" <%= input.includeBii?'checked':'' %>>Include the existing separately priced standard BII foundation line (one-time). BII contractual scope requires its own BII quote.</label>
+<% }else{ %><div class="grid"><% for(const [key,label] of [['users','Integration users'],['windows','Windows devices'],['mac','Mac devices'],['ios','Company iOS devices'],['android','Company Android devices'],['unallocated','Unassigned-platform devices'],['mailboxes','Mailbox migrations'],['dell','Dell deployments'],['phones','Personal/BYOD phones'],['locations','Locations']]){ %><label><%= label %><input name="<%= key %>" type="number" min="0" step="1" value="<%= input[key]??0 %>" required></label><% } %></div>
+<%- include('bii-plan-fields',{biiInput:input}) %>
+<label>Additional-location labor base<input name="locationLaborBase" type="number" min="0" step="0.01" value="<%= input.locationLaborBase??'' %>"></label>
+<% for(const [i,label] of oneOffItems.entries()){ %><label><input type="checkbox" name="oneoff_<%= i %>" value="yes" <%= input.oneOff?.[label]?.selected?'checked':'' %>><%= label %><input type="number" name="amount_<%= i %>" min="0" step="0.01" value="<%= input.oneOff?.[label]?.amount??'' %>" aria-label="<%= label %> price"></label><% } %>
+<% } %>
+<h2>Proposal facts</h2><p>Review the known facts below. Enter missing facts here; discovery is optional for quoting.</p>
+<%- include('quick-quote-facts',{lane:{key:type==='managed_it'?'COM-PRP':'BII-QSOW'},prefill}) %>
+<% } %>
+<button>Preview</button></form>
+<script src="/quick-quote.js" defer></script><script src="/bii-quote-plan.js" defer></script>
+<%- include('footer') %>

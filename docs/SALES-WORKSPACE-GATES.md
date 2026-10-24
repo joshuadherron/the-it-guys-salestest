@@ -1,5 +1,10 @@
 # Sales workspace and governed lifecycle audit
 
+October 24 Quick Quote supersedes the sales click sequence below: **choose/add
+business → build quote → Preview → Send**. See [QUICK-QUOTE.md](QUICK-QUOTE.md)
+for each removed gate and its current Send or acceptance/authorization protection,
+durable progress, migration 014, and external flow/PSA verification limits.
+
 The workspace stores sales context, estimates and outcomes. SharePoint owns the
 governed service lifecycle. Pipeline stage describes sales progress; it is not an
 authorization to deliver services. Internal quote approval approves prices and
@@ -13,10 +18,10 @@ terms, not work. Existing authentication, CSRF, roles and quote permissions appl
 | Project approval and document generation require complete intake and unchanged intake revision | Ensure delivery context | Informational for sales; validate complete current intake at work authorization instead |
 | Discovery edits and new drafts revoke existing approved quotes | Keep pricing current | Remove automatic revocation; saved approved commercial snapshots stay immutable; explicit revisions need approval |
 | Corrected opportunity discovery required for internal quote approval | Avoid stale service context | Advisory; quote type, saved scope and prices still validated |
-| Pre-quote assessment findings block pricing approval | Surface implementation risk | BII and Managed IT use warnings plus the owner’s Continue Anyway override, recorded as acknowledged. Conditions are never ticked automatically. The optional BT-7.32 assessment is not a stop condition |
+| Pre-quote assessment findings block pricing approval | Surface implementation risk | Optional preview selections; Send becomes Send anyway and records acknowledgement without a second checkbox. Conditions are never auto-ticked. BT-7.32 is optional and never a stop condition |
 | Manually sent project proposal requires successful live SharePoint fill | Prove proposal storage | Remove; explicit actual-send confirmation and audit remain |
 | Qualified stage required for opening project SharePoint record | Enforce pipeline order | Remove stage and complete-intake prerequisites; keep hold, identity and flow checks at this external boundary |
-| Legacy CreateClient requires completed discovery and qualified stage | Create initial governed structure, may start existing flows | Preserve discovery until existing flow contract separates record creation from service activation; remove only local stage prerequisite |
+| Legacy CreateClient requires completed discovery and qualified stage | Create initial governed structure | Removed from proposal Send: available discovery plus discoveryComplete; acceptance/work authorization retains discovery and lifecycle gates. Legacy admin handoff remains separate; deployed flow acceptance of partial discovery needs verification |
 | Project CreateClient requires completed intake | Establish governed project record | Removed. Send a partial snapshot with intakeComplete and approved quoteContext when a quote is involved; enforce complete current intake at customer work authorization/handoff |
 | Discovery submit/completion checks | Define the meaning of a completed questionnaire | Preserve; drafts can be updated without marking complete; history and revision checks remain |
 | Existing-customer transition requires linked client and service context | Prevent wrong-client/service activation | Preserve for lifecycle transition, not quote preparation |
@@ -26,6 +31,8 @@ terms, not work. Existing authentication, CSRF, roles and quote permissions appl
 | Duplicate clients, business identity locks, active/uncertain requests | Prevent duplicate or ambiguous external writes | Preserve |
 | Existing Business Technology Projects record reuse requires new-record flow configuration | Ensure new-record routing | Remove for verified existing-record reuse; keep before creating any new external record |
 | Quote instance references, eTags, immutable hashes, unresolved fields, send/PDF reconciliation | Prevent wrong documents, overwrites and duplicate email | Preserve |
+| Separate approval / record / preparation / fill buttons | Review and prepare accurate documents | Removed from Quick Quote. Preview → Send records permitted approval and automatically runs the existing preparation/delivery checks |
+| Confirm-counts and mandatory reviewed-every-condition boxes | Affirm pricing review | Removed from Quick Quote. Preview is the review; price/line/config, document rate and snapshot validation remain mandatory at Send |
 | Signed agreements, BAA flags, stage blockers, standardization and transition checks in guided-workflow/work-items/SharePoint | Contractual, compliance and managed responsibility | Preserve |
 | Client identity/type changes with commercial or workflow history; completed discovery owner controls | Preserve identity and reviewed history | Preserve permissions, archives and reconciliation |
 

@@ -215,7 +215,7 @@ test("operating and assessed never auto-select BT-7.30 stop conditions",async()=
     const update=h.writes.find(w=>w.sql.startsWith("UPDATE quotes SET status='Approved'"));
     assert.ok(update);assert.equal(JSON.parse(update.args[1])[0].selected,false);
   }
-  const view=await readFile("views/quotes.ejs","utf8");
+  const view=await readFile("views/quick-quote-preview.ejs","utf8");
   const stop=view.match(/<input[^>]*name="stop_[\s\S]*?value="yes"[^>]*>/);
   assert.ok(stop);assert.ok(!stop[0].includes("checked"));
 });
@@ -234,15 +234,12 @@ test("BII drafts can save incomplete plans and retain the new inputs for owner r
   const write=h.writes.find(w=>w.sql.startsWith("INSERT INTO quotes")),saved=JSON.parse(write.args[1]);
   assert.equal(saved.operatingBusiness,true);assert.equal(saved.assessed,true);assert.equal(saved.regulatedPackage,true);assert.equal(saved.waveCount,null);
 });
-test("both approval lanes show an unticked Continue Anyway override and BII retains optional assessment wording",async()=>{
-  const view=await readFile("views/quotes.ejs","utf8");
-  const start=view.indexOf("<h3>Pre-quote stop conditions</h3>"),end=view.indexOf("</form>",start);
+test("both lanes show optional unticked findings on preview with Send and retain optional assessment wording",async()=>{
   for(const pricingMode of ["managed_v20",undefined]){
-    const html=ejs.render(view.slice(start,end),{selected:{docInput:{...plan,pricingMode,confirmed:true}},stops:[{id:1,label:"Review finding",status:"Review"}]});
-    assert.match(html,/<input type="checkbox" name="continue_anyway" value="yes">/);
+    const html=await ejs.renderFile("views/quick-quote-preview.ejs",{q:{id:19,status:"Draft",total:100},p:{id:86,business_name:"Example"},input:{...plan,pricingMode},lines:[],hash:"test",preview:{report:{unfilled:[]}},error:null,job:null,stops:[{id:1,label:"Review finding",status:"Review"}],canApprove:true,user:{role:"owner"},mode:"dryrun",csrf:"test"});
+    assert.ok(html.includes('data-send-label="Send"'));assert.ok(!html.includes('name="continue_anyway"'));assert.ok(!html.includes('name="reviewed"'));
     assert.match(html,/<input type="checkbox" name="stop_1" value="yes">/);
-    assert.ok(html.includes("Findings are warnings for pricing."));
-    if(!pricingMode)assert.ok(html.includes("The free scripted assessment (BT-7.32) is optional and is not a stop condition."));
+    assert.ok(html.includes("The free scripted assessment (BT-7.32) is optional and is not a stop condition."));
   }
 });
 

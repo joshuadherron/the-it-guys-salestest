@@ -39,10 +39,11 @@ export class QuoteDelivery {
     try{
       senderProfile(ctx.actor);
       const quote={...ctx.q,inputs:json(ctx.q.inputs),line_items:json(ctx.q.line_items)};
-      if(quoteLane(quote.inputs).key!=="COM-PRP")throw new Error("BII uses manual eSignature; automated sending is Managed IT only.");
+      const key=quoteLane(quote.inputs,undefined,this.env).key;
+      if(!["COM-PRP","ENG-PRJ"].includes(key))throw new Error("BII uses manual eSignature; automated sending supports Managed IT and Project quotes.");
       const fill=await this.store.latestFill(id);
-      if(!fill||fill.document_key!=="COM-PRP"||fill.mode!=="live"||fill.status!=="Succeeded"||fill.snapshot_hash!==ctx.hash)throw new Error("A current successful live fill is required before sending.");
-      const working=await this.resolver.working(ctx.p,"COM-PRP",undefined,fill.item_id);
+      if(!fill||fill.document_key!==key||fill.mode!=="live"||fill.status!=="Succeeded"||fill.snapshot_hash!==ctx.hash)throw new Error("A current successful live fill is required before sending.");
+      const working=await this.resolver.working(ctx.p,key,undefined,fill.item_id);
       if(fill.drive_id!==working.driveId||fill.item_id!==working.itemId)throw new Error("The working quote differs from the latest fill.");
       const fields=json(fill.fields_json),config=await this.config();
       let pdf,name,to,cc;
@@ -61,7 +62,7 @@ export class QuoteDelivery {
         const before=working.eTag;
         pdf=await this.graph.quoteContent(working.driveId,working.itemId,true);
         inspectPdfText(await this.extractText(pdf));
-        const after=await this.resolver.working(ctx.p,"COM-PRP",undefined,fill.item_id);
+        const after=await this.resolver.working(ctx.p,key,undefined,fill.item_id);
         if(after.eTag!==before)throw new Error("The Word file changed during PDF conversion. Review and try again.");
         if(!Buffer.isBuffer(pdf)||pdf.length>3*1000*1000)throw new Error("Quote PDF exceeds the email attachment limit.");
         name=working.name.replace(/\.docx$/i,"")+" - SENT "+chicagoDate()+".pdf";
@@ -78,7 +79,7 @@ export class QuoteDelivery {
       phase="Email";
       current=await this.store.current(ctx);senderProfile(current.actor);
       if(current.actor.display_name!==ctx.actor.display_name||current.actor.sender_title!==ctx.actor.sender_title||current.actor.sender_phone!==ctx.actor.sender_phone)throw new Error("Sender profile changed. Review before sending.");
-      await this.resolver.working(ctx.p,"COM-PRP",undefined,fill.item_id);
+      await this.resolver.working(ctx.p,key,undefined,fill.item_id);
       await this.store.sending(attemptId,ctx.actor,message,correlationId);effect=true;
       const result=await this.graph.sendQuoteMail(mailbox,message,correlationId);
       await this.store.sent(ctx,attemptId,{mode,to,cc,pdfItemId},result);

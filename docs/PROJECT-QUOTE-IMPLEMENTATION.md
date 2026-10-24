@@ -1,5 +1,13 @@
 # Project quote DOCX implementation guide
 
+October 24 Quick Quote update: Project now uses **choose/add business → build
+quote → Preview → Send**, including the shared PDF/email transport. The quote
+path has no separate approval, folder, preparation or fill clicks. Partial intake
+and PRJ-05 readiness rules remain; customer authorization still requires complete
+current intake. Apply migration 014 before deployment. See [QUICK-QUOTE.md](QUICK-QUOTE.md)
+for progress persistence, email behavior and the full gate audit. The older manual
+preparation forms described below remain troubleshooting paths.
+
 Prepared: October 22, 2026. Repository: `joshuadherron/the-it-guys-salestest`.
 
 ## 1. Current implementation and retired configuration message

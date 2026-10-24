@@ -41,6 +41,15 @@ export function validateEmailTemplate(subject, body) {
 }
 export function quoteEmail({ quote, prospect, actor, fields, config, mode, to, cc, pdf, name, requestId }) {
   senderProfile(actor);
+  if(fields["ENG.QuoteId"]){
+    if(!quote.quote_number)fail("Stored quote number is missing. Open the quote preview before sending.");
+    if(!fields["ENG.Scope"]||!fields["ENG.Terms"]||!fields["ENG.OneTimeTotal"])fail("Approved project scope, terms and totals are required.");
+    return {message:{subject:(mode==="dryrun"?"[DRYRUN] ":"")+"Your project quote from The IT Guys - "+quote.quote_number,
+      body:{contentType:"Text",content:`Hi ${prospect.contact_name?.trim().split(/\s+/)[0]||"there"}, attached is project quote ${quote.quote_number}. Please review its scope, prices and terms. You can reply accepting the quote and referencing ${quote.quote_number}.\n\n${actor.display_name}, ${actor.sender_title}\nThe IT Guys LLC\n${actor.sender_phone}`},
+      toRecipients:[{emailAddress:{address:to}}],ccRecipients:cc?[{emailAddress:{address:cc}}]:[],
+      attachments:[{"@odata.type":"#microsoft.graph.fileAttachment",name,contentType:"application/pdf",contentBytes:pdf.toString("base64")}],
+      internetMessageHeaders:[{name:"x-tig-quote-attempt",value:requestId}]},saveToSentItems:true};
+  }
   const subject = config?.subject_template || DEFAULT_SUBJECT, body = config?.body_template || DEFAULT_BODY;
   validateEmailTemplate(subject, body);
   const values = { QuoteId: quote.quote_number, FirstName: prospect.contact_name?.trim().split(/\s+/)[0] || "there", MonthlyTotal: fields["MIT.MonthlyTotal"], Onboarding: fields["MIT.Onboarding"], "BAA phrase": fields["MIT.BAAAccept"] || "", SenderName: actor.display_name, SenderTitle: actor.sender_title, SenderPhone: actor.sender_phone };

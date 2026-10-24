@@ -9,6 +9,8 @@ import { canQuote,quoteSend,quoteApprove,adminOnly } from "../src/quote-permissi
 import { senderMailbox,quoteEmail,DEFAULT_BODY,DEFAULT_SUBJECT,inspectPdfText } from "../src/docfill/send-policy.js";
 import { quoteDocumentSamples } from "../scripts/lib/quote-document-samples.js";
 import { SharePointQuotes } from "../src/docfill/sharepoint-quotes.js";
+import { validateProjectQuote,priceProject } from "../src/project-pricing.js";
+import { buildProjectFill } from "../src/docfill/project-fields.js";
 const qSample=quoteDocumentSamples()[0];
 const profile={email:"alanna@theitguys.us",role:"sales",quote_send:1,quote_approve:0,display_name:"Alanna Herron",sender_title:"Co-owner",sender_phone:"409-555-0100"};
 const owner={legalName:"Example Services LLC",preparedName:"Example Owner",preparedTitle:"Director",preparedEmail:"owner@example.test",backupContact:"Administrator",siteCount:1,domain:"example.test",serviceStartMode:"after_contracts",summary:"The IT Guys will support the selected users and the listed business devices.",deviceKinds:["computers","phones","tablets"],onboardingMode:"standard",onboardingFee:350,onsiteMode:"block",onsiteHours:1,clientTerms:"None.",sizingMode:"today",hipaa:true};
@@ -86,6 +88,18 @@ test("live send saves one PDF before shared-mailbox email and records Sent attri
  assert.match(saved[2],/ - SENT \d{4}-\d{2}-\d{2}\.pdf$/);assert.ok(h.events.indexOf(saved)<h.events.indexOf(mail));
  assert.equal(mail[1],"sales@theitguys.us");assert.equal(mail[2].saveToSentItems,true);assert.equal(mail[2].message.toRecipients[0].emailAddress.address,"jane@example.test");assert.equal(mail[2].message.ccRecipients.length,1);assert.match(mail[2].message.body.content,/Alanna Herron, Co-owner/);
  assert.deepEqual([h.q.status,h.q.sent_by,h.q.sent_to,h.q.sent_cc,h.q.sent_pdf_item_id],["Sent",profile.email,"jane@example.test","one@example.test","sent-pdf"]);assert.ok(h.events.some(e=>e[0]==="audit"));
+});
+test("Project uses the existing PDF save/email path with ENG-PRJ and project acceptance wording",async()=>{
+ const h=harness();
+ h.q.inputs=validateProjectQuote({scope:"Repair email",terms:"Accept by email referencing Quote ID.",basis:"fixed",lines:[{label:"Repair",kind:"labor",quantity:1,unitPrice:300}]},"project");
+ h.q.line_items=priceProject(h.q.inputs).lines;h.q.total=300;
+ h.fill.document_key="ENG-PRJ";h.fill.snapshot_hash=snapshot(h.q);h.fill.fields_json=JSON.stringify(buildProjectFill({quote:h.q,prospect:h.p}).fields);
+ const keys=[];h.resolver.working=async(_p,key)=>{keys.push(key);return h.working;};
+ await h.service.send(h.q.id,profile);
+ assert.deepEqual(keys,["ENG-PRJ","ENG-PRJ","ENG-PRJ"]);
+ const mail=h.events.find(e=>e[0]==="mail")[2];assert.match(mail.message.subject,/project quote/);assert.match(mail.message.body.content,/referencing Q-2026-010/);
+ assert.ok(!mail.message.body.content.includes("Master Services Agreement"));assert.equal(h.q.status,"Sent");
+ assert.equal(h.events.filter(e=>e[0]==="savePdf").length,1);assert.equal(h.events.filter(e=>e[0]==="mail").length,1);
 });
 test("dryrun sends only to clicking user, drops CC, prefixes subject and saves no PDF",async()=>{
  const h=harness({mode:"dryrun"});await h.service.send(h.q.id,profile,{cc:"external@example.test"});

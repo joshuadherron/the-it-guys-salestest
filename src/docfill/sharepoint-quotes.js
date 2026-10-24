@@ -13,7 +13,6 @@ export class SharePointQuotes {
     if(generic)assertProjectCapability(schema);
     const workflow=generic?projectDocument(key,this.env).workflow:key==="COM-PRP"?"MIT-05":"BII-05";
     const allItems=await this.sp.workItems(prospect.client_id,true);
-    assertNoPending(await this.sp.requests(),schema,{...prospect,work_item_ids:allItems.map(i=>i.id)});
     const items=allItems.filter(i=>i.workflowId===workflow&&i.clientId===prospect.client_id&&!["Complete","Cancelled","Not Required"].includes(i.status) && (!quoteId || String(i.instanceRef)===String(quoteId)));
     if(itemId){
       const found=[];
@@ -25,6 +24,9 @@ export class SharePointQuotes {
     }
     if(items.length!==1)throw new Error("Expected exactly one open quote working copy for this client.");
     const item=items[0];
+    const instance=quoteId||item.instanceRef;
+    const pending=await this.sp.requests();
+    assertNoPending(instance?pending.filter(r=>requestMatchesQuote({fields:r.fields},prospect,instance,item.id)):pending,schema,{...prospect,work_item_ids:[item.id]});
     if(key==="BII-QSOW"&&item.signatureStatus!=="Preparing")throw new Error("BII quote signature preparation has already started.");
     const row=await this.graph.read(`/sites/${schema.siteId}/lists/${schema.clientOpsId}/items/${encodeURIComponent(item.id)}?$expand=fields,driveItem`);
     if(row.fields?.TIG_ClientID!==prospect.client_id||row.fields?.TIG_WorkflowID!==workflow||["Complete","Cancelled","Not Required"].includes(row.fields?.TIG_CompletionStatus))throw new Error("Quote working copy changed or belongs to another client.");
@@ -67,3 +69,4 @@ export class SharePointQuotes {
     return {documentKey:key,status:"Approved",name:d.name,content};
   }
 }
+import { requestMatchesQuote } from "../quote-request-scope.js";

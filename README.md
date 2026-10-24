@@ -2,6 +2,18 @@
 
 Internal Express/EJS application for Alanna and Josh at `sales.theitguys.us`. Node.js **22.13 or later within 22.x**, MySQL 8, no compilation/native build, no SPA, no ORM. SharePoint remains the client/document system of record. Workflow changes use **Workflow Requests**. Explicit user-triggered quote delivery additionally permits the two narrow file exceptions documented below.
 
+## Sales flow
+
+Use **Quick Quote**: choose/add a business → choose Managed IT, BII or Project and
+build the quote → **Preview → Send**. Send records permitted approval (or queues
+Waiting for Josh), creates/reuses the SharePoint folder, syncs the prospect,
+creates a quote-specific copy, fills it and delivers without intermediate clicks.
+Managed IT and Project use the shared PDF/email transport; BII ends at Ready for
+signature. Work authorization remains separate. Progress resumes when an
+authorized user reopens the quote; no background worker is installed.
+Migration **014_quick_quote_sends.sql** is required before deployment.
+See [Quick Quote rollout and flow limitations](docs/QUICK-QUOTE.md).
+
 ## Local setup
 
 1. Install Node 22 and MySQL 8. Create an empty `utf8mb4` database and a dedicated database account. For setup, the account needs CREATE/ALTER plus normal SELECT/INSERT/UPDATE/DELETE privileges. Use a separate migration account in production if practical.

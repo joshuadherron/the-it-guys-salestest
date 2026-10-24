@@ -9,7 +9,6 @@ import { canQuote } from "../quote-permissions.js";
 import { buildFields,assertNoPending,submitRequest } from "../sharepoint.js";
 import { lookupId } from "../sharepoint-runtime.js";
 import { snapshot } from "./delivery-store.js";
-import { quoteLane } from "./policy.js";
 import { servicePlan } from "../service-plan.js";
 import { duplicateClients } from "../existing-client-rules.js";
 import { dispatchProspectSync } from "../prospect-sync.js";
@@ -17,6 +16,7 @@ import { genericEngagement,projectLane } from "../engagement-types.js";
 import { assertProjectCapability,projectDiscovery } from "../project-contract.js";
 import { linkBusinessRecord,lockBusinessRequests } from "../businesses.js";
 import { assertProjectApproval } from "../project-quotes.js";
+import { requestMatchesQuote } from "../quote-request-scope.js";
 
 const canonical = value => Array.isArray(value) ? value.map(canonical)
   : value && typeof value === "object" ? Object.fromEntries(Object.keys(value).sort().map(key=>[key,canonical(value[key])])) : value;
@@ -90,13 +90,20 @@ export class ProposalStore {
     if(!s.quoteInstanceColumn && !ctx.p.client_id && !(old?.mode==="live"&&old.status==="Succeeded"&&old.snapshot_hash===ctx.hash))
       throw new Error("Client Operations needs a verified text Instance Reference column populated by Create Working Copy. Configure QUOTE_INSTANCE_REF_COLUMN to its actual internal name and check the connection.");
     const own=[ctx.state.record_request_id,ctx.state.record_sync_request_id,ctx.state.copy_request_id].filter(Boolean);
-    const active=await this.query("SELECT id FROM sp_requests WHERE (prospect_id=? OR prospect_id IN (SELECT id FROM prospects WHERE client_id=?)) AND status IN ('Preparing','Pending','Processing','Unknown')",[ctx.p.id,ctx.p.client_id||""]);
-    if(active.some(r=>!own.some(id=>String(id)===String(r.id))))throw new Error("Another Workflow Request for this opportunity is active or uncertain. Reconcile it first.");
+    const clientId=String(ctx.p.client_id||"").trim();
+    const active=clientId?await this.query("SELECT id,prospect_id,request_json FROM sp_requests WHERE (prospect_id=? OR prospect_id IN (SELECT id FROM prospects WHERE client_id=?)) AND status IN ('Preparing','Pending','Processing','Unknown')",[ctx.p.id,clientId])
+      :await this.query("SELECT id,prospect_id,request_json FROM sp_requests WHERE prospect_id=? AND status IN ('Preparing','Pending','Processing','Unknown')",[ctx.p.id]);
+    const relevant=active.filter(r=>String(r.prospect_id)===String(ctx.p.id)||!r.prospect_id||this.sameInstance(r.request_json,s,ctx));
+    if(relevant.some(r=>!own.some(id=>String(id)===String(r.id))))throw new Error("Another Workflow Request for this opportunity is active or uncertain. Reconcile it first.");
     const ownRemote=[];
     for(const id of own){const [r]=await this.query("SELECT item_id FROM sp_requests WHERE id=?",[id]);if(r?.item_id)ownRemote.push(String(r.item_id));}
-    assertNoPending((await this.sp.requests()).filter(r=>!ownRemote.includes(String(r.id))),s,ctx.p);
-    const operations=await this.query("SELECT client_id FROM quote_operation_locks WHERE client_id=?",[ctx.p.client_id||""]);
+    assertNoPending((await this.sp.requests()).filter(r=>!ownRemote.includes(String(r.id))&&(this.sameInstance({fields:r.fields},s,ctx)||this.requestOpportunity(r.fields,s)===ctx.p.opp)),s,ctx.p);
+    const operations=clientId?await this.query("SELECT client_id FROM quote_operation_locks WHERE client_id=?",[clientId]):[];
     if(operations.length)throw new Error("A quote fill/send is active or uncertain. Reconcile it before saving.");
+  }
+  requestOpportunity(fields,s){try{return JSON.parse(fields?.[s.maps.requests.Payload.name]||"{}").opportunityId;}catch{return null;}}
+  sameInstance(raw,_schema,ctx){
+    return requestMatchesQuote(raw,ctx.p,ctx.q.id,ctx.state.working_item_id);
   }
   async record(ctx) { return this.sp.client(ctx.p); }
   async link(ctx,row) {
@@ -104,13 +111,8 @@ export class ProposalStore {
     if(!clientId)throw new Error("SharePoint record has no Client ID. Wait for the flow to finish.");
     const stage=row.fields[s.maps.clients["Current Stage"].name]||null;
     if(String(stage).startsWith("Closed"))throw new Error("This SharePoint engagement is closed. Josh must review it before saving a proposal.");
-    const spec=quoteLane(json(ctx.q.inputs),undefined,this.env);
-    const lane=spec.lane||(spec.key==="COM-PRP"?"Managed IT":"Business IT Integration");
-    const configured=s.maps.clients["Service Lanes"];
-    if(configured) {
-      const value=row.fields[configured.name],lanes=Array.isArray(value)?value:[value];
-      if(!lanes.includes(lane)&&!genericEngagement(ctx.p))throw new Error("The quote lane is not enabled on this SharePoint record. Complete the existing additional-service transition before creating its proposal copy.");
-    }
+    // A sales copy does not enroll this business in the quoted service lane.
+    // Acceptance/activation paths still enforce service readiness.
     const changed=ctx.p.client_id!==clientId||ctx.p.sharepoint_record_id!==clientId||String(ctx.p.client_item_id)!==String(row.id);
     if(changed)await this.transaction(async c=>{
       await this.query("UPDATE prospects SET client_id=?,sharepoint_record_id=?,client_item_id=? WHERE id=?",[clientId,clientId,row.id,ctx.p.id],c);
@@ -144,18 +146,16 @@ export class ProposalStore {
       return projectDiscovery(ctx.p,intake,ctx.q);
     }
     const d=await this.discoveryData(ctx.p.id);
-    if(d.answers._opportunity_type&&d.status!=="Ready for Review")throw new Error("Review discovery for the corrected opportunity type before saving its proposal.");
-    if(mvd(d.answers).length)throw new Error("Complete discovery before opening the SharePoint record.");
     const [capture]=await this.query("SELECT actor FROM discovery_versions WHERE prospect_id=? AND revision=?",[ctx.p.id,d.revision]);
     const [release]=await this.query("SELECT actor,notes FROM activities WHERE prospect_id=? AND type='note' AND notes LIKE 'Release hold: %' ORDER BY id DESC LIMIT 1",[ctx.p.id]);
-    return discoverySnapshot(ctx.p,d,{capturedBy:capture?.actor||null,releasedBy:release?.actor||null,releaseNote:release?.notes?.slice(14)||null});
+    return {...discoverySnapshot(ctx.p,d,{capturedBy:capture?.actor||null,releasedBy:release?.actor||null,releaseNote:release?.notes?.slice(14)||null}),discoveryComplete:d.status==="Ready for Review"&&mvd(d.answers).length===0};
   }
   async request(ctx,action,lane,options,field) {
     if(this.env.SHAREPOINT_WRITE_MODE!=="live")throw new Error("Creating the missing SharePoint record or quote copy requires Workflow Requests live mode. Ask Josh to configure it; nothing was sent.");
     const s=this.sp.ready(); let body,id;
     await this.transaction(async c=>{
       const p=await this.prospect(ctx.p.id,c);
-      if(p.business_id)await lockBusinessRequests(p,this.query,c,[ctx.state.record_request_id,ctx.state.record_sync_request_id,ctx.state.copy_request_id].filter(Boolean));
+      if(p.business_id)await lockBusinessRequests(p,this.query,c,[ctx.state.record_request_id,ctx.state.record_sync_request_id,ctx.state.copy_request_id].filter(Boolean),ctx.q.id);
       Object.assign(ctx.p,{client_id:p.client_id,client_item_id:p.client_item_id});
       const [q]=await this.query("SELECT * FROM quotes WHERE id=? FOR UPDATE",[ctx.q.id],c);
       const [actor]=await this.query("SELECT * FROM allowlist WHERE email=? AND enabled=TRUE",[ctx.actor.email],c);
@@ -196,7 +196,27 @@ export class ProposalStore {
   async requestStatus(id) {
     const [r]=await this.query("SELECT * FROM sp_requests WHERE id=?",[id]);
     if(!r)throw new Error("Proposal request history is missing. Ask Josh to reconcile it.");
-    if(!r.item_id)return {status:r.status,message:r.result_message};
+    if(!r.item_id){
+      if(["Unknown","Preparing"].includes(r.status)){
+        const created=typeof r.created_at==="string"&&/^\d{4}-\d{2}-\d{2} /.test(r.created_at)?r.created_at.replace(" ","T")+"Z":r.created_at;
+        const age=(Date.now()-new Date(created).getTime())/1000;
+        if(age>=120){
+          const title=json(r.request_json).fields[this.sp.ready().maps.requests.Title.name];
+          if(!title)throw new Error("Saved request title is missing. Ask Josh to reconcile this request.");
+          const s=this.sp.ready(),matches=(await this.sp.requests(false)).filter(item=>item.fields[s.maps.requests.Title.name]===title);
+          if(matches.length>1)throw new Error("Multiple requests have this exact title. Josh must reconcile them in SharePoint.");
+          if(matches.length){
+            const item=matches[0],status=item.fields[s.maps.requests["Processing Status"].name],message=item.fields[s.maps.requests["Result Message"].name]||"";
+            await this.query("UPDATE sp_requests SET item_id=?,status=?,result_message=? WHERE id=?",[item.id,status,message,id]);
+            await this.audit(undefined,{email:"system"},"auto reconcile exact request title","sp_request",id);
+            return {status,message};
+          }
+          return {status:r.status,message:r.result_message,waiting:true,manualRequestId:age>=600?id:null};
+        }
+        return {status:r.status,message:r.result_message,waiting:true};
+      }
+      return {status:r.status,message:r.result_message};
+    }
     const remote=await this.sp.request(r.item_id),s=this.sp.ready();
     const status=remote.fields[s.maps.requests["Processing Status"].name],message=remote.fields[s.maps.requests["Result Message"].name]||"";
     await this.query("UPDATE sp_requests SET status=?,result_message=? WHERE id=?",[status,message,id]);

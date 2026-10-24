@@ -15,6 +15,15 @@ Admin is an explicit allowlist flag, separate from the existing sales/owner role
 - `QUOTE_SENDER_MAILBOX` must name the dedicated shared mailbox, such as sales@theitguys.us. Missing configuration disables Send with a named reason. workflow@ and the known personal sender mailboxes are rejected. Do not use a personal mailbox as this configuration.
 - Masters resolve only from Operational Standards & Templates, using a unique Approved row, the exact document key, a pinned versioned filename and the approved tag set. Managed IT accepts COM-PRP-v1.8.docx or The_IT_Guys_Managed_IT_Quote_Template_v1.8.docx. BII accepts BII-QSOW-v1.6.docx or The_IT_Guys_BII_Short_Form_Quote_SOW_Template_v1.6.docx. The long names were verified in the live library on 2026-10-20. If both aliases are Approved, resolution refuses the duplicate rather than choosing one. Older versions and DRAFT suffixes are not accepted; downloaded contents must pass the exact tag-set check before the resolver returns a master. The key and status columns resolve by exact display names Document Key and Status by default. If production uses other labels, set `QUOTE_MASTER_KEY_COLUMN` and `QUOTE_MASTER_STATUS_COLUMN` to their verified internal names. Missing or ambiguous columns fail closed. No approval is inferred from a local fixture.
 
+## Quick Quote sales entry point
+
+Use **choose/add business → build quote → Preview → Send**. Approval and automatic
+preparation now run inside Send; the manual forms below are retained for history,
+diagnosis and email-only retry. Managed IT and Project share the PDF/email
+transport; BII remains eSignature. Apply migration 014 before deployment. See
+[QUICK-QUOTE.md](QUICK-QUOTE.md) for durable polling/resume, optional findings,
+Waiting for Josh, uncertain-request matching and external flow limitations.
+
 ## Shared mailbox and Exchange scope
 
 Josh must create the shared mailbox and give the team normal shared-mailbox access. Keep application Mail.Send scoped to Josh's existing notification mailbox plus the new shared quote mailbox, and denied for other mailboxes. Quote sends use `/users/{QUOTE_SENDER_MAILBOX}/sendMail`; existing internal notifications retain their prior Josh-only transport. They never use workflow@.

@@ -36,6 +36,7 @@ export function projectQuoteRoutes(app,deps={query,transaction,audit,prospect}) 
     const quotes=await query("SELECT * FROM quotes WHERE prospect_id=? ORDER BY id DESC",[p.id]);
     const selected=req.query.quote?quotes.find(q=>String(q.id)===String(integer(req.query.quote))):null;
     if(req.query.quote&&!selected)fail("Quote not found for this opportunity.",404);
+    if(selected&&p.engagement_type!=="hourly"&&req.query.legacy!=="yes")return res.redirect(`/quick-quote/quotes/${selected.id}`);
     const [intake]=await query(intakeSelect,[p.id]);
     res.render("project-quotes",{p,engagementTypes,quotes,selected,input:selected?json(selected.inputs):null,json,config:await projectConfig(query),canApprove:canQuote(req.session.user,"quote.approve")&&req.session.user.role==="owner",canSend:canQuote(req.session.user,"quote.send"),missing:missingIntake(p.engagement_type,intake?json(intake.answers):{},p),intakeComplete:!!intake?.complete});
   });

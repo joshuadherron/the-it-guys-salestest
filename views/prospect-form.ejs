@@ -1,14 +1,16 @@
 <%- include('header') %>
-<h1><%= p.id?'Edit opportunity':'A new conversation' %></h1>
-<p>Start with the basic business information. Add the rest as you learn it. For an existing customer, save the opportunity, then use Customer relationship / Link existing client. Josh selects the existing SharePoint client before handoff.</p>
+<h1><%= p.id?'Edit opportunity':'Add prospect' %></h1>
+<p><%= p.id?'Update this opportunity’s details.':'Enter a business name to save a new prospect. Add contact details now if you have them; everything else can wait.' %></p>
 <form method="post" action="/prospects<%= p.id?'/'+p.id:'' %>" class="card">
 <input type="hidden" name="_csrf" value="<%= csrf %>">
 <% if(p.id&&p.engagement_type){ %><input type="hidden" name="original_engagement_type" value="<%= p.engagement_type %>"><% } %>
+<% if(!p.id){ %><%- include('business-choice',{p,businesses:typeof businesses==='undefined'?[]:businesses}) %><% }else if(p.business_id){ %><p><a href="/businesses/<%= p.business_id %>">All opportunities for this business</a></p><% } %>
+<% if(!p.id){ %><details><summary>Opportunity details (optional)</summary><% } %>
 <fieldset><legend>Opportunity</legend>
-<% if(!p.id){ %><label>Existing business<select name="business_id"><option value="">Create a new business</option><% for(const b of (typeof businesses==='undefined'?[]:businesses)){ %><option value="<%= b.id %>" data-business-name="<%= b.name %>" <%= String(p.business_id)===String(b.id)?'selected':'' %>><%= b.name %> · <%= b.relationship_status %></option><% } %></select></label><p>Choose the existing business for another sale. Its name and SharePoint record will be reused.</p><% }else if(p.business_id){ %><p><a href="/businesses/<%= p.business_id %>">All opportunities for this business</a></p><% } %>
 <label>Engagement type<select name="engagement_type"><% for(const [key,label] of Object.entries(engagementTypes)){ %><option value="<%= key %>" <%= (p.engagement_type||'project')===key?'selected':'' %>><%= label %></option><% } %></select></label>
 <% if(p.id){ %><p>Josh can correct this type before quoting or starting SharePoint workflows. Existing discovery is archived and the new type's discovery must be reviewed. Security holds remain in place. <a href="/prospects/<%= p.id %>/discovery-history">Discovery history</a></p><% } %>
 <label>Opportunity / work title<input name="opportunity_title" maxlength="255" value="<%= p.opportunity_title||'' %>" placeholder="For example: Outlook repair or office network upgrade"></label></fieldset>
+<% if(!p.id){ %></details><% } %>
 
 <fieldset>
 <legend>Basic business information</legend>
@@ -18,7 +20,7 @@
   ['contact_name','Contact Name'],
   ['phone','Phone'],
   ['email','Email'],
-  ...locationFields
+  ...(p.id?locationFields:[])
 ]){ %>
 <div>
 <label for="<%= key %>"><%= label %></label>
@@ -39,6 +41,7 @@
 <p class="muted" id="zip-lookup-status" aria-live="polite"></p>
 </fieldset>
 
+<% if(!p.id){ %><details><summary>More details (optional)</summary><fieldset><legend>Address</legend><div class="grid"><% for(const [key,label] of locationFields){ %><label><%= label %><input id="<%= key %>" name="<%= key %>" value="<%= p[key]||'' %>"></label><% } %></div></fieldset><% } %>
 <fieldset>
 <legend>Additional prospect information</legend>
 <div class="grid">
@@ -83,7 +86,9 @@
 </div>
 </fieldset>
 
+<% if(!p.id){ %></details><% } %>
 <button>Save prospect</button>
+<% if(!p.id&&(user.quote_send===true||user.quote_send===1)){ %><button name="next" value="quote">Save and build a quote</button><% } %>
 </form>
 <script src="/opportunity-form.js" defer></script>
 <%- include('footer') %>

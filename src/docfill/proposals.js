@@ -24,7 +24,7 @@ export class ProposalPreparation {
       await fillDocx(master.content,data); // Includes the existing RATE and document-field checks before any request.
       await this.store.validate(ctx,lane);
       for(const [field,label,step] of [["record_request_id","SharePoint record","record_requested"],["record_sync_request_id","Sales Prospects record sync","record_ready"],["copy_request_id","Quote working copy","copy_requested"]]) {
-        if(ctx.state[field] && !await this.wait(ctx,field,label))return {step,waiting:true};
+        if(ctx.state[field] && !await this.wait(ctx,field,label))return {step,waiting:true,manualRequestId:ctx.manualRequestId||null};
       }
       const previous=await this.store.latestFill(id);
       if(previous?.status==="Succeeded" && previous.mode==="live" && previous.snapshot_hash===ctx.hash) {
@@ -70,6 +70,7 @@ export class ProposalPreparation {
   }
   async wait(ctx,field,label) {
     const r=await this.store.requestStatus(ctx.state[field]);
+    if(r.waiting){ctx.manualRequestId=r.manualRequestId||null;return false;}
     if(r.status==="Done") return true;
     if(["Rejected","Failed"].includes(r.status)) {
       await this.store.save(ctx,{[field]:null});
