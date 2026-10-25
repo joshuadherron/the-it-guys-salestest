@@ -7,6 +7,7 @@ import { inspectPdfText,senderMailbox,senderProfile,sendMode,recipients,quoteEma
 import { chicagoDate } from "./chicago-date.js";
 import { buildProjectFill } from "./project-fields.js";
 import { genericPricing } from "../engagement-types.js";
+import { quoteContentHash } from './content-hash.js';
 const uncertain=e=>!e.status||e.status>=500||e.status===408;
 export class QuoteDelivery {
   constructor({store,resolver,graph,extractText,prices,config,env=process.env}){Object.assign(this,{store,resolver,graph,extractText,prices,config,env});}
@@ -24,7 +25,7 @@ export class QuoteDelivery {
       const owner=ctx.q.document_facts?json(ctx.q.document_facts):{};
       const data=genericPricing(quote.inputs)?buildProjectFill({quote,prospect:ctx.p}):key==="COM-PRP"?buildManagedFill({quote,prospect:ctx.p,owner}):buildBiiFill({quote,prospect:ctx.p,owner,prices:await this.prices()});
       const prepared=await prepareQuoteDocument({canSend:true,quote,clientId:ctx.p.client_id,workingCopies:[working],requestsPending:false,completionStatus:"Open",signatureStatus:key==="BII-QSOW"?working.signatureStatus:undefined,masterCopies:[master],expectedKey:key,data});
-      fillId=await this.store.createFill(ctx,key,working,{report:prepared.report,fields:data.fields},mode);
+      fillId=await this.store.createFill(ctx,key,working,{report:prepared.report,fields:data.fields,contentHash:await quoteContentHash(prepared.buffer)},mode);
       await this.store.current(ctx);
       writing=mode==="live";
       const result=await deliverQuoteDocument({prepared,graph:this.graph,env:this.env});
@@ -63,7 +64,12 @@ export class QuoteDelivery {
         if(saved.parentReference?.id!==working.folderId)throw new Error("The saved sent PDF is missing from Commercial.");
         pdf=Buffer.from(a.pdf_bytes);name=a.pdf_name;to=a.sent_to;cc=a.sent_cc;pdfItemId=a.pdf_item_id;attemptId=a.id;
       }else{
-        const sameContent=fill.ctag?working.cTag===fill.ctag:working.eTag===fill.etag;
+        let sameContent=fill.ctag?working.cTag===fill.ctag:working.eTag===fill.etag;
+        let beforeHash=fill.content_hash;
+        if(!sameContent&&fill.ctag&&fill.content_hash){
+          beforeHash=await quoteContentHash(await this.graph.quoteContent(working.driveId,working.itemId));
+          sameContent=beforeHash===fill.content_hash;
+        }
         if(!sameContent&&input.reviewed_edits!=="yes")throw new Error("The Word copy changed. Tick I reviewed the Word edits before sending.");
         if(sameContent&&json(fill.report).unfilled.length)throw new Error("The live fill still has unfilled fields. Complete them in Word first.");
         ({to,cc}=recipients(ctx.p,ctx.actor,mode,input));
@@ -72,7 +78,10 @@ export class QuoteDelivery {
         inspectPdfText(await this.extractText(pdf));
         let after=await this.resolver.working(ctx.p,key,id,fill.item_id);
         if(fill.ctag)after=await this.contentTags(after);
-        if((fill.ctag?after.cTag:after.eTag)!==before)throw new Error("The Word file changed during PDF conversion. Review and try again.");
+        if((fill.ctag?after.cTag:after.eTag)!==before){
+          const sameBody=fill.ctag&&fill.content_hash&&await quoteContentHash(await this.graph.quoteContent(after.driveId,after.itemId))===beforeHash;
+          if(!sameBody)throw new Error("The Word file changed during PDF conversion. Review and try again.");
+        }
         if(!Buffer.isBuffer(pdf)||pdf.length>3*1000*1000)throw new Error("Quote PDF exceeds the email attachment limit.");
         name=working.name.replace(/\.docx$/i,"")+" - SENT "+chicagoDate()+".pdf";
       }

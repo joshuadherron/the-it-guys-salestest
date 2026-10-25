@@ -12,6 +12,8 @@ import { SharePointQuotes } from "../src/docfill/sharepoint-quotes.js";
 import { missingCopy } from '../src/docfill/copy-visibility.js';
 import { validateProjectQuote,priceProject } from "../src/project-pricing.js";
 import { buildProjectFill } from "../src/docfill/project-fields.js";
+import JSZip from 'jszip';
+import { quoteContentHash } from '../src/docfill/content-hash.js';
 const qSample=quoteDocumentSamples()[0];
 const profile={email:"alanna@theitguys.us",role:"sales",quote_send:1,quote_approve:0,display_name:"Alanna Herron",sender_title:"Co-owner",sender_phone:"409-555-0100"};
 const owner={legalName:"Example Services LLC",preparedName:"Example Owner",preparedTitle:"Director",preparedEmail:"owner@example.test",backupContact:"Administrator",siteCount:1,domain:"example.test",serviceStartMode:"after_contracts",summary:"The IT Guys will support the selected users and the listed business devices.",deviceKinds:["computers","phones","tablets"],onboardingMode:"standard",onboardingFee:350,onsiteMode:"block",onsiteHours:1,clientTerms:"None.",sizingMode:"today",hipaa:true};
@@ -251,4 +253,77 @@ test('only a missing copy before any delivery effect is safe for automatic visib
  const after=harness();let reads=0;after.resolver.working=async()=>{if(++reads===3)throw missingCopy();return after.working;};
  await assert.rejects(()=>after.service.send(after.q.id,profile),e=>e.safeToWaitForCopy===false);
  assert.equal(after.attempts.length,1);assert.equal(after.attempts[0].pdf_item_id,'sent-pdf');assert.ok(!after.events.some(e=>e[0]==='mail'));
+});
+
+test('fill persists a hash of the uploaded buffer rather than the master or rewritten metadata',async()=>{
+ const h=harness();let savedHash,uploaded;
+ const create=h.store.createFill,put=h.graph.replaceQuoteWorkingCopy;
+ h.store.createFill=async(...args)=>{savedHash=args[3].contentHash;return create(...args);};
+ h.graph.replaceQuoteWorkingCopy=async(...args)=>{uploaded=args[3];return put(...args);};
+ await h.service.fill(h.q.id,profile);
+ assert.equal(savedHash,await quoteContentHash(uploaded));
+ assert.notEqual(savedHash,await quoteContentHash(await readFile('test/fixtures/COM-PRP-v1.8.docx')));
+ const calls=[],store=new DeliveryStore({query:async(sql,args)=>{calls.push({sql,args});return {insertId:8};}});
+ await store.createFill({q:h.q,p:h.p,actor:profile,hash:'snapshot'},'COM-PRP',h.working,{report:{},fields:{},contentHash:savedHash},'live');
+ assert.match(calls[0].sql,/ctag,content_hash,report/);assert.equal(calls[0].args[8],savedHash);
+});
+
+async function hashSendFixture(project=false){
+ const h=harness();
+ if(project){
+  h.q.inputs=validateProjectQuote({scope:'Repair email',terms:'Accept by email referencing Quote ID.',basis:'fixed',lines:[{label:'Repair',kind:'labor',quantity:1,unitPrice:300}]},'project');
+  const priced=priceProject(h.q.inputs);Object.assign(h.q,{line_items:priced.lines,total:priced.total});
+  h.fill.document_key='ENG-PRJ';h.fill.fields_json=JSON.stringify(buildProjectFill({quote:h.q,prospect:h.p}).fields);h.fill.snapshot_hash=snapshot(h.q);
+ }
+ const zip=new JSZip();zip.file('word/document.xml','<document>Approved body</document>');zip.file('word/header1.xml','<header>Header</header>');zip.file('word/footer1.xml','<footer>Footer</footer>');
+ const original=await zip.generateAsync({type:'nodebuffer'});
+ h.fill.ctag='uploaded';h.fill.content_hash=await quoteContentHash(original);
+ zip.file('docProps/core.xml','<title>SharePoint title</title>');zip.file('customXml/item1.xml','<properties>Promoted columns</properties>');
+ let current=await zip.generateAsync({type:'nodebuffer'}),ctag='properties-rewritten',revision=0;const downloads=[];
+ h.graph.read=async()=>({id:'item',eTag:'metadata',cTag:ctag});
+ h.graph.quoteContent=async(_drive,_item,pdf)=>{downloads.push(pdf?'pdf':'docx');return pdf?Buffer.from('%PDF current contents'):current;};
+ return {...h,downloads,edit:async(part='word/document.xml')=>{zip.file(part,'<edited>Owner changed this</edited>');current=await zip.generateAsync({type:'nodebuffer'});ctag='owner-edited-'+ ++revision;},rewrite:async()=>{zip.file('docProps/core.xml','<title>Another SharePoint update</title>');current=await zip.generateAsync({type:'nodebuffer'});ctag='properties-rewritten-again';}};
+}
+
+for(const project of [false,true])test(`${project?'Project':'Managed IT'} cTag rewrite with equal body hash sends without reviewed edits, including during PDF conversion`,async()=>{
+ const h=await hashSendFixture(project),extract=h.service.extractText;
+ h.service.extractText=async pdf=>{await h.rewrite();return extract(pdf);};
+ await h.service.send(h.q.id,profile);
+ assert.equal(h.q.status,'Sent');assert.deepEqual(h.downloads,['docx','pdf','docx']);
+});
+
+for(const part of ['word/document.xml','word/header1.xml','word/footer1.xml'])test(`changed ${part} still requires explicit reviewed edits`,async()=>{
+ const h=await hashSendFixture();await h.edit(part);
+ await assert.rejects(()=>h.service.send(h.q.id,profile),/The Word copy changed/);
+ assert.deepEqual(h.downloads,['docx']);assert.equal(h.attempts.length,0);
+ await h.service.send(h.q.id,profile,{reviewed_edits:'yes'});assert.equal(h.q.status,'Sent');
+});
+
+for(const review of [false,true])test(`a real body change during PDF conversion is refused ${review?'after explicit review':'without prior edits'}`,async()=>{
+ const h=await hashSendFixture();if(review)await h.edit('word/header1.xml');else h.fill.ctag='properties-rewritten';
+ h.service.extractText=async()=>{await h.edit();return 'Verified PDF';};
+ await assert.rejects(()=>h.service.send(h.q.id,profile,review?{reviewed_edits:'yes'}:{}),/changed during PDF/);
+ assert.equal(h.attempts.length,0);assert.ok(!h.events.some(e=>['savePdf','mail'].includes(e[0])));
+});
+
+test('reviewed body edits followed by property-only PDF-time rewrites compare against the reviewed body',async()=>{
+ const h=await hashSendFixture();await h.edit();
+ h.service.extractText=async()=>{await h.rewrite();return 'Verified PDF';};
+ await h.service.send(h.q.id,profile,{reviewed_edits:'yes'});assert.equal(h.q.status,'Sent');
+});
+
+test('fills without content_hash retain cTag refusal without downloading the Word copy',async()=>{
+ const h=await hashSendFixture();h.fill.content_hash=null;
+ await assert.rejects(()=>h.service.send(h.q.id,profile),/The Word copy changed/);assert.deepEqual(h.downloads,[]);
+});
+
+test('a property-only cTag change first appearing during PDF conversion passes the body check',async()=>{
+ const h=await hashSendFixture();h.fill.ctag='properties-rewritten';
+ h.service.extractText=async()=>{await h.rewrite();return 'Verified PDF';};
+ await h.service.send(h.q.id,profile);assert.equal(h.q.status,'Sent');assert.deepEqual(h.downloads,['pdf','docx']);
+});
+
+test('a failed Word hash download cannot approve content or create a send attempt',async()=>{
+ const h=await hashSendFixture();h.graph.quoteContent=async()=>{throw new Error('Download unavailable');};
+ await assert.rejects(()=>h.service.send(h.q.id,profile),/Download unavailable/);assert.equal(h.attempts.length,0);
 });

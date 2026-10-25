@@ -49,7 +49,7 @@ export class DeliveryStore {
   async release(ctx,unknown=false){if(!unknown)await this.query("DELETE FROM quote_operation_locks WHERE client_id=? AND token=?",[ctx.p.client_id,ctx.token]);}
   async latestFill(id){const [row]=await this.query("SELECT * FROM quote_fills WHERE quote_id=? ORDER BY id DESC LIMIT 1",[id]);return row;}
   async createFill(ctx,key,working,data,mode){
-    const result=await this.query("INSERT INTO quote_fills (quote_id,client_id,document_key,snapshot_hash,drive_id,item_id,etag,ctag,report,fields_json,mode,status,actor,web_url) VALUES (?,?,?,?,?,?,?,?,?,?,?,'Preparing',?,?)",[ctx.q.id,ctx.p.client_id,key,ctx.hash,working.driveId,working.itemId,working.eTag,null,JSON.stringify(data.report),JSON.stringify(data.fields),mode,ctx.actor.email,working.webUrl||null]);
+    const result=await this.query("INSERT INTO quote_fills (quote_id,client_id,document_key,snapshot_hash,drive_id,item_id,etag,ctag,content_hash,report,fields_json,mode,status,actor,web_url) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,'Preparing',?,?)",[ctx.q.id,ctx.p.client_id,key,ctx.hash,working.driveId,working.itemId,working.eTag,null,data.contentHash||null,JSON.stringify(data.report),JSON.stringify(data.fields),mode,ctx.actor.email,working.webUrl||null]);
     return result.insertId;
   }
   async filled(id,status,etag,ctag){await this.query("UPDATE quote_fills SET status=?,etag=COALESCE(?,etag),ctag=COALESCE(?,ctag) WHERE id=?",[status,etag||null,ctag||null,id]);}
