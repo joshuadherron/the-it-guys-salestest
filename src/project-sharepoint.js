@@ -12,13 +12,24 @@ import { assertProjectCapability,projectCapability,projectDiscovery } from "./pr
 import { buildFields,assertNoPending,submitRequest } from "./sharepoint.js";
 import { duplicateClients } from "./existing-client-rules.js";
 import { linkBusinessRecord,lockBusinessRequests } from "./businesses.js";
+import { isProspectSync } from './quote-request-scope.js';
+
+function assertProjectRequests(items,schema,p){
+  for(const request of items.filter(r=>!isProspectSync(r,schema))){
+    try{assertNoPending([request],schema,p);}
+    catch(e){
+      const map=schema.maps.requests,fields=request.fields||{};
+      fail(`SharePoint request #${request.id||'unknown'} (${fields[map['Request Type'].name]||'unknown action'} / ${fields[map['Processing Status'].name]||'unknown status'}) blocks opening this record. ${e.message} Wait for it to finish or reconcile the existing request; no new record was requested.`,409);
+    }
+  }
+}
 
 export function projectSharePointRoutes(app,deps={query,transaction,audit,prospect,sp,graph,refresh,env:process.env}) {
   const {query,transaction,audit,prospect,sp,graph,refresh,env}=deps;
   app.get("/prospects/:id/project-sharepoint",quoteSend,async(req,res)=>{
     const p=await prospect(req.params.id);if(!genericEngagement(p))return res.redirect(`/prospects/${p.id}/handoff`);
     let error=null,record=null,prerequisites=[];
-    try {const s=sp.ready();await refresh(p,{sp,query,transaction,audit});record=await sp.client(p);if(!record)prerequisites=projectCapability(s);}catch(e){error=e.message;}
+    try {const s=sp.ready();await refresh(p,{sp,query,transaction,audit});record=await sp.client(p);if(!record){prerequisites=projectCapability(s);assertProjectRequests(await sp.requests(),s,p);}}catch(e){error=e.message;}
     const requests=await query("SELECT * FROM sp_requests WHERE prospect_id IN (SELECT id FROM prospects WHERE business_id=?) ORDER BY id DESC LIMIT 30",[p.business_id]);
     const quoteId=req.query.quote?integer(req.query.quote):null;
     res.render("project-sharepoint",{p,record,error,prerequisites,requests,engagementTypes,projectLane,quoteId});
@@ -50,7 +61,7 @@ export function projectSharePointRoutes(app,deps={query,transaction,audit,prospe
       }
       const discovery=projectDiscovery(p,intake,quote);
       if(duplicateClients(p,await sp.clients(),schema).length)fail("A possible SharePoint customer already exists. Link it on Customer relationship before creating a record.",409);
-      assertNoPending(await sp.requests(),schema,p);
+      assertProjectRequests(await sp.requests(),schema,p);
       if(env.SHAREPOINT_WRITE_MODE!=="live")fail("Project SharePoint creation is disabled until Workflow Requests live mode is explicitly configured. Nothing was sent.",409);
       body=buildFields(schema,"CreateClient",p,projectLane,actor.email,new Date(),lookupId(actor.email),{discovery},env);
       body.fields[schema.maps.requests.Title.name]=`SALESAPP-${p.opp}-BUSINESS-${p.business_id}-${randomUUID()}`;
