@@ -161,7 +161,7 @@ function harness(register,options={}) {
     throw new Error("Unexpected query: "+sql);
   };
   const graphCalls=[];
-  const sp={ready:()=>options.schema||schema,client:async()=>options.remoteRecord,clients:async()=>[],requests:async()=>[]};
+  const sp={ready:()=>options.schema||schema,client:async()=>options.remoteRecord,clients:async()=>[],requests:async()=>options.remoteRequests||[]};
   register({get:(path,...handlers)=>routes.set("GET "+path,handlers),post:(path,...handlers)=>routes.set("POST "+path,handlers)},{query,transaction:async fn=>fn({transaction:true}),audit:async(...args)=>audits.push(args),prospect:async()=>({...opportunity}),sp,graph:{createWorkflowRequest:async(...args)=>{graphCalls.push(args);if(options.transportError)throw new Error("timeout");return {id:"remote-88"};}},refresh:async()=>{},env:{...env,...options.env}});
   const req={params:{id:"17"},body:{},query:{},session:{user:{...owner,...options.actor}}},res={status(){return this;},send(v){this.sent=v;},render(view,data){this.view=view;this.data=data;},redirect(v){this.redirected=v;}};
   const call=async key=>{for(const handler of routes.get(key)){let proceed=false;await handler(req,res,()=>{proceed=true;});if(!proceed)break;}};
@@ -275,6 +275,40 @@ test("duplicate prevention blocks simultaneous and uncertain business requests b
     const h=harness(projectSharePointRoutes,{pending:[{id:99,status}]});await assert.rejects(()=>h.call("POST /prospects/:id/project-sharepoint"),/Reconcile/);assert.equal(h.graphCalls.length,0);
   }
   const h=harness(projectSharePointRoutes);await h.call("POST /prospects/:id/project-sharepoint");await assert.rejects(()=>h.call("POST /prospects/:id/project-sharepoint"),/Reconcile/);assert.equal(h.graphCalls.length,1);
+});
+
+for(const status of ['Pending','Processing'])test(`project record ignores routine ${status} prospect sync locally and remotely`,async()=>{
+  const sync={id:202,fields:{'Request Type':'Upsert Prospect','Processing Status':status,Payload:JSON.stringify({action:'UpsertProspect',opportunityId:p.opp})}};
+  const h=harness(projectSharePointRoutes,{pending:[{id:202,action:'UpsertProspect',status}],remoteRequests:[sync]});
+  await h.call('GET /prospects/:id/project-sharepoint');assert.equal(h.res.data.error,null);
+  await h.call('POST /prospects/:id/project-sharepoint');assert.equal(h.graphCalls.length,1);
+  assert.equal(h.graphCalls[0][2]['Request Type'],'Create Client');
+});
+
+test('prospect-sync exclusion uses runtime SharePoint field names',async()=>{
+  const s=structuredClone(schema);s.maps.requests['Request Type'].name='RequestTypeInternal';s.maps.requests['Processing Status'].name='StatusInternal';s.maps.requests.Payload.name='PayloadInternal';
+  const h=harness(projectSharePointRoutes,{schema:s,remoteRequests:[{id:203,fields:{RequestTypeInternal:'Upsert Prospect',StatusInternal:'Pending',PayloadInternal:JSON.stringify({action:'UpsertProspect',opportunityId:p.opp})}}]});
+  await h.call('POST /prospects/:id/project-sharepoint');assert.equal(h.graphCalls.length,1);
+});
+
+for(const status of ['Pending','Processing'])test(`remote ${status} service creation still blocks with request identity and 409`,async()=>{
+  const h=harness(projectSharePointRoutes,{remoteRequests:[{id:204,fields:{'Request Type':'Create Client','Processing Status':status,Payload:JSON.stringify({action:'CreateClient',opportunityId:p.opp})}}]});
+  await h.call('GET /prospects/:id/project-sharepoint');assert.match(h.res.data.error,new RegExp(`#204 \\(Create Client / ${status}\\)`));
+  await assert.rejects(()=>h.call('POST /prospects/:id/project-sharepoint'),e=>e.status===409&&e.message.includes(`#204 (Create Client / ${status})`));
+  assert.equal(h.graphCalls.length,0);assert.equal(h.writes.length,0);
+});
+
+test('unreadable remote pending payload stays blocked while unrelated readable service requests do not',async()=>{
+  const bad=harness(projectSharePointRoutes,{remoteRequests:[{id:205,fields:{'Request Type':'Create Client','Processing Status':'Pending',Payload:'invalid JSON'}}]});
+  await assert.rejects(()=>bad.call('POST /prospects/:id/project-sharepoint'),e=>e.status===409&&e.message.includes('#205')&&e.message.includes('unreadable Payload'));
+  assert.equal(bad.graphCalls.length,0);
+  const other=harness(projectSharePointRoutes,{remoteRequests:[{id:206,fields:{'Request Type':'Create Client','Processing Status':'Pending',Payload:JSON.stringify({opportunityId:'OPP-OTHER'})}}]});
+  await other.call('POST /prospects/:id/project-sharepoint');assert.equal(other.graphCalls.length,1);
+});
+
+test('existing shared record reuse proceeds without another request despite a routine sync',async()=>{
+  const h=harness(projectSharePointRoutes,{clientId:'CL-9',remoteRecord:{id:'12',fields:{'Client ID':'CL-9'}},pending:[{id:202,action:'UpsertProspect',status:'Pending'}],remoteRequests:[{id:202,fields:{'Request Type':'Upsert Prospect','Processing Status':'Pending',Payload:JSON.stringify({opportunityId:p.opp})}}]});
+  await h.call('POST /prospects/:id/project-sharepoint');assert.equal(h.graphCalls.length,0);assert.ok(h.writes.some(w=>w.sql.startsWith('UPDATE businesses SET client_id')));
 });
 test("uncertain SharePoint transport is recorded Unknown and never blindly replayed",async()=>{
   const h=harness(projectSharePointRoutes,{transportError:true});await assert.rejects(()=>h.call("POST /prospects/:id/project-sharepoint"),/uncertain/);
