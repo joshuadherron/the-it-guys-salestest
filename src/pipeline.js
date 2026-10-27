@@ -356,6 +356,8 @@ export function pipelineRoutes(app) {
   app.get("/prospects/:id/edit", async (req, res) =>
     res.render("prospect-form", {
       p: await prospect(req.params.id),
+      requestedEngagementType:req.query.engagement_type?choice(req.query.engagement_type,['project','hourly']):null,
+      returnToSharePoint:req.query.next==='sharepoint',
       engagementTypes,
       fields,
       frequencies,
@@ -404,7 +406,7 @@ export function pipelineRoutes(app) {
     });
     const updated = await prospect(req.params.id);
     await dispatchProspectSync(updated, req.session.user);
-    res.redirect(`/prospects/${req.params.id}`);
+    res.redirect(req.body.next==='sharepoint'?`/prospects/${updated.id}/${genericEngagement(updated)?'project-sharepoint':'handoff'}`:`/prospects/${req.params.id}`);
   });
   app.post("/prospects/:id/sync", async (req, res) => {
     const p = await prospect(req.params.id);

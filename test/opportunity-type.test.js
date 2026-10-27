@@ -115,6 +115,17 @@ test("SharePoint UI shows the actual type, locked Business Technology Projects l
     assert.ok(html.includes(engagementTypes[type]));assert.ok(html.includes("Business Technology Projects</strong> (selected automatically)"));assert.ok(html.includes("will be reused"));assert.ok(html.includes("Clients needs a unique business identity column."));assert.match(html,/<button disabled/);assert.ok(!html.includes('name="service_scope"'));
   }
 });
+
+for(const target of ['project','hourly'])test(`handoff type-correction form previews ${target} while preserving saved type for server validation`,async()=>{
+ const html=await ejs.renderFile('views/prospect-form.ejs',{p:prospect,requestedEngagementType:target,returnToSharePoint:true,engagementTypes,fields:[],frequencies:[],services:[],locationFields:[],structuredFields:[],stages:[{name:'Qualified'}],owners:[],user:owner,csrf:'csrf',mode:'dryrun'});
+ assert.match(html,new RegExp(`<option value="${target}" selected>`));
+ assert.match(html,/name="original_engagement_type" value="bii"/);
+ assert.match(html,/name="next" value="sharepoint"/);
+ assert.match(html,/Current saved type: <strong>BII \/ Standardization/);
+ assert.match(html,/opening this form does not change the opportunity/);
+ assert.match(html,/Save and continue to SharePoint/);
+ assert.equal(prospect.engagement_type,'bii');
+});
 test("prior flags and archived answers are visible and HTML-escaped",async()=>{
   const html=await ejs.renderFile("views/discovery-history.ejs",{p:prospect,user:owner,csrf:"csrf",mode:"dryrun",engagementTypes,json:JSON.parse,versions:[{revision:8,actor:owner.email,created_at:"2026-10-21",answers:JSON.stringify({answer:"<script>bad</script>",_type_archive:{from:"bii",to:"project",status:"Ready for Review"}})}]});
   assert.ok(html.includes("Archived before type correction"));assert.ok(!html.includes("<script>bad</script>"));

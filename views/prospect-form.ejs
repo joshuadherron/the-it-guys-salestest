@@ -4,10 +4,12 @@
 <form method="post" action="/prospects<%= p.id?'/'+p.id:'' %>" class="card">
 <input type="hidden" name="_csrf" value="<%= csrf %>">
 <% if(p.id&&p.engagement_type){ %><input type="hidden" name="original_engagement_type" value="<%= p.engagement_type %>"><% } %>
+<% if(p.id&&typeof returnToSharePoint!=='undefined'&&returnToSharePoint){ %><input type="hidden" name="next" value="sharepoint"><% } %>
 <% if(!p.id){ %><%- include('business-choice',{p,businesses:typeof businesses==='undefined'?[]:businesses}) %><% }else if(p.business_id){ %><p><a href="/businesses/<%= p.business_id %>">All opportunities for this business</a></p><% } %>
 <% if(!p.id){ %><details><summary>Opportunity details (optional)</summary><% } %>
 <fieldset><legend>Opportunity</legend>
-<label>Engagement type<select name="engagement_type"><% for(const [key,label] of Object.entries(engagementTypes)){ %><option value="<%= key %>" <%= (p.engagement_type||'project')===key?'selected':'' %>><%= label %></option><% } %></select></label>
+<label for="opportunity-type">Engagement type</label><select id="opportunity-type" name="engagement_type"><% for(const [key,label] of Object.entries(engagementTypes)){ %><option value="<%= key %>" <%= (typeof requestedEngagementType!=='undefined'&&requestedEngagementType||p.engagement_type||'project')===key?'selected':'' %>><%= label %></option><% } %></select>
+<% if(p.id&&typeof requestedEngagementType!=='undefined'&&requestedEngagementType&&requestedEngagementType!==p.engagement_type){ %><p>Current saved type: <strong><%= engagementTypes[p.engagement_type] %></strong>. <strong><%= engagementTypes[requestedEngagementType] %></strong> is selected for review. Josh must save this correction before the Project SharePoint path is available; opening this form does not change the opportunity.</p><% } %>
 <% if(p.id){ %><p>Josh can correct this type before quoting or starting SharePoint workflows. Existing discovery is archived and the new type's discovery must be reviewed. Security holds remain in place. <a href="/prospects/<%= p.id %>/discovery-history">Discovery history</a></p><% } %>
 <label>Opportunity / work title<input name="opportunity_title" maxlength="255" value="<%= p.opportunity_title||'' %>" placeholder="For example: Outlook repair or office network upgrade"></label></fieldset>
 <% if(!p.id){ %></details><% } %>
@@ -87,7 +89,7 @@
 </fieldset>
 
 <% if(!p.id){ %></details><% } %>
-<button>Save prospect</button>
+<button><%= p.id&&typeof returnToSharePoint!=='undefined'&&returnToSharePoint?'Save and continue to SharePoint':'Save prospect' %></button>
 <% if(!p.id&&(user.quote_send===true||user.quote_send===1)){ %><button name="next" value="quote">Save and build a quote</button><% } %>
 </form>
 <script src="/opportunity-form.js" defer></script>
