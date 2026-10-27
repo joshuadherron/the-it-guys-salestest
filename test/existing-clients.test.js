@@ -88,6 +88,20 @@ test("EC4 duplicate name requires review and explicit different-company confirma
  await h.call("POST /prospects/:id/handoff",{action:"CreateClient",service_lane:"Managed IT",confirm_different:"yes"});
  assert.equal(h.records[0].action,"CreateClient");
 });
+
+test('MIT/BII record screen offers Project and Hourly paths even when discovery disables the governed button',async()=>{
+ for(const type of ['managed_it','bii']){
+  const h=harness({existing:false,linked:false,engagementType:type});h.p.business_id=9;
+  const page=await h.call('GET /prospects/:id/handoff');
+  const html=await ejs.renderFile('views/handoff.ejs',{...page.data,clientRecord:null,missing:['Discovery incomplete'],ready:false,csrf:'token',user:h.session.user,mode:'dryrun'});
+  assert.match(html,/edit\?engagement_type=project&amp;next=sharepoint#opportunity-type/);
+  assert.match(html,/edit\?engagement_type=hourly&amp;next=sharepoint#opportunity-type/);
+  assert.match(html,/Project \/ One-Time work/);assert.match(html,/Business Technology Projects lane automatically/);
+  assert.match(html,/prospects\/new\?business_id=9&amp;engagement_type=project/);
+  assert.ok(!html.includes('name="service_scope"\n          value="Business Technology Projects"'));
+  assert.equal(h.p.engagement_type,type);assert.equal(h.records.length,0);
+ }
+});
 test("EC5 multiple independent opportunities can select the same client",async()=>{
  const a=harness({existing:false,linked:false}),b=harness({existing:false,linked:false});b.p.id=91;b.p.opp="OPP-0091";
  for(const h of [a,b])await h.call("POST /prospects/:id/relationship",{relationship_type:"existing_client",client_id:"CL-0007",service_lane:"Managed IT"});
